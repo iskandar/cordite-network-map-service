@@ -9,16 +9,18 @@
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>io.cordite.services network-map-service</name>
+  <name>network-map-service</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <kotlin.version>1.2.31</kotlin.version>
+    <kotlin.version>1.2.30</kotlin.version>
     <junit.version>4.12</junit.version>
     <vertx.version>3.5.1</vertx.version>
     <corda.version>corda-3.0</corda.version>
     <logback.version>1.2.3</logback.version>
+    <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
+    <jar.name>network-map-service</jar.name>
   </properties>
 
   <dependencies>
@@ -114,10 +116,28 @@
                 <descriptorRef>jar-with-dependencies</descriptorRef>
               </descriptorRefs>
               <appendAssemblyId>false</appendAssemblyId>
-              <finalName>network-map-service</finalName>
+              <finalName>${jar.name}</finalName>
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>${dockerfile-maven.version}</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <repository>cordite/${jar.name}</repository>
+          <tag>${project.version}</tag>
+        </configuration>
       </plugin>
     </plugins>
   </build>
