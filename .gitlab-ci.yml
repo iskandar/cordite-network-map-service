@@ -21,3 +21,4 @@ docker-publish:
     - docker build -t ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID} .
     - docker tag ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID} ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:latest
     - docker push ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
+    - docker push ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:latest
