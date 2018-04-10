@@ -1,6 +1,7 @@
 package io.cordite.services
 
-import io.netty.handler.codec.http.HttpHeaderValues
+import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -8,15 +9,20 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.StaticHandler
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -28,7 +34,7 @@ import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationSche
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
 
-class NetworkMapApp(private val port: Int) : AbstractVerticle() {
+class NetworkMapApp(private val port: Int, private val signedNodeInfoStorage: SignedNodeInfoStorage) : AbstractVerticle() {
   companion object {
     val logger = loggerFor(NetworkMapApp::class)
     const val WEB_ROOT = "/network-map"
@@ -38,14 +44,14 @@ class NetworkMapApp(private val port: Int) : AbstractVerticle() {
     fun main(args: Array<String>) {
       initialiseSerialisationEnvironment()
       val port = getPort()
-      NetworkMapApp(port).deploy()
+      NetworkMapApp(port, InMemorySignedNodeInfoStorage()).deploy()
     }
 
-    private fun getPort() : Int {
+    private fun getPort(): Int {
       return getVariable("port", "8080").toInt()
     }
 
-    private fun getVariable(name: String, default: String) : String {
+    private fun getVariable(name: String, default: String): String {
       return (System.getenv(name) ?: System.getProperty(name) ?: default)
     }
 
@@ -76,14 +82,35 @@ class NetworkMapApp(private val port: Int) : AbstractVerticle() {
     logger.info("starting network map with port: $port")
 
     val router = Router.router(vertx)
-    router.get("/").handler {
-      it.end("hello, v3")
-    }
-    router.get(WEB_ROOT)
-        .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
+
+    router.post("$WEB_ROOT/publish")
+        .consumes(APPLICATION_OCTET_STREAM.toString())
         .handler {
-        it.getNetworkMap()
-    }
+          it.handleExceptions { postNetworkMap() }
+        }
+
+    router.post("$WEB_ROOT/ack-parameters")
+        .consumes(APPLICATION_OCTET_STREAM.toString())
+        .handler {
+          it.handleExceptions {
+            postAckNetworkParameters()
+          }
+        }
+
+    router.get(WEB_ROOT)
+        .produces(APPLICATION_OCTET_STREAM.toString())
+        .handler { it.handleExceptions { getNetworkMap() } }
+
+    router.get("$WEB_ROOT/node-info/:hash")
+        .produces(APPLICATION_OCTET_STREAM.toString())
+        .handler {
+          it.handleExceptions {
+            val hash = SecureHash.parse(request().getParam("hash"))
+            getNodeInfo(hash)
+          }
+        }
+    router.get("/*")
+        .handler(StaticHandler.create("website")::handle)
 
     vertx
         .createHttpServer()
@@ -93,7 +120,9 @@ class NetworkMapApp(private val port: Int) : AbstractVerticle() {
             logger.error("failed to startup", it.cause())
             startFuture.fail(it.cause())
           } else {
-            logger.info("networkmap service started on http://localhost:$port$WEB_ROOT")
+            logger.info("networkmap service started")
+            logger.info("api mounted on http://localhost:$port$WEB_ROOT")
+            logger.info("website http://localhost:$port")
             startFuture.complete()
           }
         }
@@ -108,7 +137,28 @@ class NetworkMapApp(private val port: Int) : AbstractVerticle() {
     }
   }
 
-  fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
+  private fun RoutingContext.postNetworkMap() {
+    request().bodyHandler { buffer ->
+      val signedNodeInfo = buffer.bytes.deserialize<SignedNodeInfo>()
+      signedNodeInfo.verified()
+      signedNodeInfoStorage.store(signedNodeInfo)
+      response().setStatusCode(HttpResponseStatus.OK.code()).end()
+    }
+  }
+
+  private fun RoutingContext.getNodeInfo(hash: SecureHash) {
+    signedNodeInfoStorage.find(hash)?.let {
+      val bytes = it.serialize().bytes
+      response()
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM)
+          .putHeader(HttpHeaders.CONTENT_LENGTH, bytes.size.toString())
+          .end(Buffer.buffer(bytes))
+    } ?: run {
+      response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end()
+    }
+  }
+
+  private fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
     val keyPair = Crypto.generateKeyPair()
     val cert = X509Utilities.createCertificate(
         CertificateType.NETWORK_MAP,
@@ -118,4 +168,21 @@ class NetworkMapApp(private val port: Int) : AbstractVerticle() {
         keyPair.public)
     return CertificateAndKeyPair(cert, keyPair)
   }
+
+  private fun RoutingContext.postAckNetworkParameters() {
+    request().bodyHandler { buffer ->
+      this.handleExceptions {
+        val signedParameterHash = buffer.bytes.deserialize<SignedData<SecureHash>>()
+        val hash = signedParameterHash.verified()
+        val nodeInfo = signedNodeInfoStorage.find(hash)
+        if (nodeInfo != null) {
+          logger.info("received acknowledgement from node ${nodeInfo.raw.deserialize().legalIdentities}")
+        } else {
+          logger.warn("received acknowledgement from unknown node!")
+        }
+        response().end()
+      }
+    }
+  }
 }
+

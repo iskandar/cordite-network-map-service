@@ -1,0 +1,16 @@
+package io.cordite.services
+
+import net.corda.core.crypto.SecureHash
+import net.corda.nodeapi.internal.SignedNodeInfo
+
+class InMemorySignedNodeInfoStorage : SignedNodeInfoStorage {
+  private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+
+  override fun store(signedNodeInfo: SignedNodeInfo) {
+    nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
+  }
+
+  override fun find(hash: SecureHash): SignedNodeInfo? {
+    return nodeInfoMap[hash]
+  }
+}
