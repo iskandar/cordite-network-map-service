@@ -109,6 +109,15 @@ class NetworkMapApp(private val port: Int, private val signedNodeInfoStorage: Si
             getNodeInfo(hash)
           }
         }
+
+    router.get("$WEB_ROOT/network-parameters/:hash")
+        .produces(APPLICATION_OCTET_STREAM.toString())
+        .handler {
+          it.handleExceptions {
+            val hash = SecureHash.parse(request().getParam("hash"))
+            getNetworkParameters(hash)
+          }
+        }
     router.get("/*")
         .handler(StaticHandler.create("website")::handle)
 
@@ -184,5 +193,18 @@ class NetworkMapApp(private val port: Int, private val signedNodeInfoStorage: Si
       }
     }
   }
+
+  private fun RoutingContext.getNetworkParameters(hash: SecureHash) {
+    val requestedParameters = if (hash == signedNetParams.raw.hash) {
+      signedNetParams
+    } else null
+    requireNotNull(requestedParameters)
+    val bytes = requestedParameters!!.serialize().bytes
+    response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM)
+        .putHeader(HttpHeaders.CONTENT_LENGTH, bytes.size.toString())
+        .end(Buffer.buffer(bytes))
+  }
 }
+
 
