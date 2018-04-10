@@ -126,24 +126,24 @@
         </executions>
       </plugin>
 
-      <plugin>
-        <groupId>com.spotify</groupId>
-        <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>${dockerfile-maven.version}</version>
-        <executions>
-          <execution>
-            <id>default</id>
-            <goals>
-              <goal>build</goal>
-              <goal>push</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <repository>${env.CI_REGISTRY_IMAGE}</repository>
-          <tag>${env.CI_PIPELINE_ID}</tag>
-        </configuration>
-      </plugin>
+      <!--<plugin>-->
+        <!--<groupId>com.spotify</groupId>-->
+        <!--<artifactId>dockerfile-maven-plugin</artifactId>-->
+        <!--<version>${dockerfile-maven.version}</version>-->
+        <!--<executions>-->
+          <!--<execution>-->
+            <!--<id>default</id>-->
+            <!--<goals>-->
+              <!--<goal>build</goal>-->
+              <!--<goal>push</goal>-->
+            <!--</goals>-->
+          <!--</execution>-->
+        <!--</executions>-->
+        <!--<configuration>-->
+          <!--<repository>${env.CI_REGISTRY_IMAGE}</repository>-->
+          <!--<tag>${env.CI_PIPELINE_ID}</tag>-->
+        <!--</configuration>-->
+      <!--</plugin>-->
     </plugins>
   </build>
 </project>
