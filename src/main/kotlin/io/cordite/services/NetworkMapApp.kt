@@ -8,7 +8,8 @@ import io.vertx.ext.web.Router
 class NetworkMapApp(val host: String, val port: Int) : AbstractVerticle() {
   companion object {
     val logger = loggerFor(NetworkMapApp::class)
-    val webroot = "/network-map"
+    const val WEB_ROOT = "/network-map"
+
     @JvmStatic
     fun main(args: Array<String>) {
       val port = (System.getProperty("port") ?: "8080").toInt()
@@ -23,18 +24,24 @@ class NetworkMapApp(val host: String, val port: Int) : AbstractVerticle() {
 
   override fun start(startFuture: Future<Void>) {
     logger.info("starting network map with host: $host port: $port")
+
     val router = Router.router(vertx)
-    router.get("$webroot").handler { it.end("hello") }
+    router.get("/").handler {
+      it.end("hello")
+    }
+    router.get(WEB_ROOT).handler {
+      it.end("hello")
+    }
 
     vertx
         .createHttpServer()
         .requestHandler(router::accept)
-        .listen(port, host) {
+        .listen(port) {
           if (it.failed()) {
             logger.error("failed to startup", it.cause())
             startFuture.fail(it.cause())
           } else {
-            logger.info("networkmap service started on http://$host:$port$webroot")
+            logger.info("networkmap service started on http://$host:$port$WEB_ROOT")
             startFuture.complete()
           }
         }
