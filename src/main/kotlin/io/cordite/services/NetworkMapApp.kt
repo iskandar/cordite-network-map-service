@@ -5,16 +5,24 @@ import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 
-class NetworkMapApp(val host: String, val port: Int) : AbstractVerticle() {
+class NetworkMapApp(private val port: Int) : AbstractVerticle() {
   companion object {
     val logger = loggerFor(NetworkMapApp::class)
     const val WEB_ROOT = "/network-map"
 
     @JvmStatic
     fun main(args: Array<String>) {
-      val port = (System.getProperty("port") ?: "8080").toInt()
+      val port = getPort()
       val host = (System.getProperty("host") ?: "localhost")
-      NetworkMapApp(host, port).deploy()
+      NetworkMapApp(port).deploy()
+    }
+
+    private fun getPort() : Int {
+      return getVariable("port", "8080").toInt()
+    }
+
+    private fun getVariable(name: String, default: String) : String {
+      return (System.getenv(name) ?: System.getProperty(name) ?: default)
     }
   }
 
@@ -23,14 +31,14 @@ class NetworkMapApp(val host: String, val port: Int) : AbstractVerticle() {
   }
 
   override fun start(startFuture: Future<Void>) {
-    logger.info("starting network map with host: $host port: $port")
+    logger.info("starting network map with port: $port")
 
     val router = Router.router(vertx)
     router.get("/").handler {
-      it.end("hello")
+      it.end("hello, v3")
     }
     router.get(WEB_ROOT).handler {
-      it.end("hello")
+      it.end("hello, v3")
     }
 
     vertx
@@ -41,7 +49,7 @@ class NetworkMapApp(val host: String, val port: Int) : AbstractVerticle() {
             logger.error("failed to startup", it.cause())
             startFuture.fail(it.cause())
           } else {
-            logger.info("networkmap service started on http://$host:$port$WEB_ROOT")
+            logger.info("networkmap service started on http://localhost:$port$WEB_ROOT")
             startFuture.complete()
           }
         }
