@@ -10,7 +10,7 @@ read -s PASSWORD
 
 az login
 az container delete --resource-group cordite-network-map --name cordite-network-map
-az container create --resource-group cordite-network-map --name cordite-network-map --image ${IMAGE} --ports ${PORT} --registry-login-server registry.gitlab.com --registry-username ${USERNAME} --registry-password ${PASSWORD} --dns-name-label cordite-network-map
+az container create --resource-group cordite-network-map --name cordite-network-map --image ${IMAGE} --ports ${PORT} --registry-login-server registry.gitlab.com --registry-username ${USERNAME} --registry-password ${PASSWORD} --dns-name-label cordite-network-map -e port=80
 echo 'running: az container show --resource-group cordite-network-map --name cordite-network-map --query "{FQDN:ipAddress.fqdn,ProvisioningState:provisioningState}" --out table'
 az container show --resource-group cordite-network-map --name cordite-network-map --query "{FQDN:ipAddress.fqdn,ProvisioningState:provisioningState}" --out table
 
