@@ -21,7 +21,7 @@
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     <jar.name>network-map-service</jar.name>
-    <env.CI_REGISTRY_IMAGE>local</env.CI_REGISTRY_IMAGE>
+    <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
   </properties>
 
@@ -140,7 +140,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${env.CI_REGISTRY_IMAGE}/${jar.name}</repository>
+          <repository>${env.CI_REGISTRY_IMAGE}</repository>
           <tag>${env.CI_PIPELINE_ID}</tag>
         </configuration>
       </plugin>
