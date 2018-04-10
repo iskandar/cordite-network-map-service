@@ -21,6 +21,8 @@
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     <jar.name>network-map-service</jar.name>
+    <env.CI_REGISTRY_IMAGE>local</env.CI_REGISTRY_IMAGE>
+    <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
   </properties>
 
   <dependencies>
@@ -84,6 +86,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -97,6 +100,7 @@
           </archive>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -121,6 +125,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
@@ -135,11 +140,10 @@
           </execution>
         </executions>
         <configuration>
-          <repository>cordite/${jar.name}</repository>
-          <tag>${project.version}</tag>
+          <repository>${env.CI_REGISTRY_IMAGE}/${jar.name}</repository>
+          <tag>${env.CI_PIPELINE_ID}</tag>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>

@@ -1,0 +1,19 @@
+stages:
+ - build
+ - docker
+
+maven-build:
+  stage: build
+  tags:
+    - script-maven
+  script:
+    - mvn clean install
+
+docker-publish:
+  stage: docker
+  tags:
+    - script-maven
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID} .
+    - docker push ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
