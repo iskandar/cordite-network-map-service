@@ -3,8 +3,9 @@
 1. Wait for you build on master to complete successfully.
 2. Run the command 
 
-```
-./az-deploy.sh```
+    ```
+    ./az-deploy.sh
+    ```
 3. You will be asked for your **gitlab** user credentials
 4. You will be asked to complete a Microsoft Azure challenge-response
 5. Respond to any y/n questions correctly.
