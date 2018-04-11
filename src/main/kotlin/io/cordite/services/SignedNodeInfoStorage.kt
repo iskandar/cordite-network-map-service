@@ -6,4 +6,5 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 interface SignedNodeInfoStorage {
   fun store(signedNodeInfo: SignedNodeInfo)
   fun find(hash: SecureHash) : SignedNodeInfo?
+  fun allHashes() : List<SecureHash>
 }

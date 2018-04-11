@@ -13,4 +13,8 @@ class InMemorySignedNodeInfoStorage : SignedNodeInfoStorage {
   override fun find(hash: SecureHash): SignedNodeInfo? {
     return nodeInfoMap[hash]
   }
+
+  override fun allHashes(): List<SecureHash> {
+    return nodeInfoMap.keys.toList()
+  }
 }

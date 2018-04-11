@@ -138,7 +138,7 @@ class NetworkMapApp(private val port: Int, private val signedNodeInfoStorage: Si
   }
 
   private fun RoutingContext.getNetworkMap() {
-    val networkMap = NetworkMap(listOf(), signedNetParams.raw.hash, parametersUpdate)
+    val networkMap = NetworkMap(signedNodeInfoStorage.allHashes(), signedNetParams.raw.hash, parametersUpdate)
     val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
     response().apply {
       putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
