@@ -1,6 +1,5 @@
 package io.cordite.services.utils
 
-import toHex
 import java.io.File
 import java.io.FileInputStream
 import java.io.SequenceInputStream
