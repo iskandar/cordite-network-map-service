@@ -1,6 +1,6 @@
 # Deployment
 
-1. Wait for you build on master to complete successfully.
+1. Wait for the build on master to complete successfully.
 2. Run the command 
 
     ```
