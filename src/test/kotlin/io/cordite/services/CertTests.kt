@@ -6,7 +6,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
-import java.nio.file.Paths
 
 operator fun Path.div(other: String): Path = resolve(other)
 operator fun File.div(other: String) : File = File(this, other)

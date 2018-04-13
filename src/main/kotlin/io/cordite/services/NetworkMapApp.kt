@@ -58,8 +58,6 @@ open class NetworkMapApp(private val port: Int,
     val jksRegex = ".*\\.jks".toRegex()
     const val WEB_ROOT = "/network-map"
     const val WEB_API = "/api"
-    val stubNetworkParameters = NetworkParameters(minimumPlatformVersion = 1, notaries = emptyList(), maxMessageSize = 10485760, maxTransactionSize = Int.MAX_VALUE, modifiedTime = Instant.now(), epoch = 10, whitelistedContractImplementations = emptyMap())
-
     @JvmStatic
     fun main(args: Array<String>) {
       val options = Options()
@@ -93,6 +91,15 @@ open class NetworkMapApp(private val port: Int,
           AMQP_P2P_CONTEXT)
     }
   }
+
+  private val stubNetworkParameters = NetworkParameters(
+      minimumPlatformVersion = 1,
+      notaries = readNotaries(),
+      maxMessageSize = 10485760,
+      maxTransactionSize = Int.MAX_VALUE,
+      modifiedTime = Instant.now(),
+      epoch = 10,
+      whitelistedContractImplementations = emptyMap())
 
   private var networkParameters = stubNetworkParameters
   private val cacheTimeout = 10.seconds
@@ -133,23 +140,29 @@ open class NetworkMapApp(private val port: Int,
         }
 
     scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
-      val notaries = notaryDir
-          .getFiles(jksRegex)
-          .map {
-            try {
-              it.toX509KeyStore("cordacadevpass")
-            } catch(err: Throwable) {
-              null
-            }
-          }
-          .filter { it != null }
-          .map { it!! }
-          .filter { it.aliases().asSequence().contains(X509Utilities.CORDA_CLIENT_CA) }
-          .map { it.getCertificate(X509Utilities.CORDA_CLIENT_CA) }
-          .map { Party(it) }
+      val notaries = readNotaries()
       println("notaries")
-      notaries.forEach { println("${it.name.toString()} - ${it.owningKey.toBase58String()}") }
+      networkParameters = networkParameters.copy(notaries = notaries, modifiedTime = Instant.now())
+      notaries.forEach { println("${it.identity.name.toString()} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
     }
+  }
+
+  private fun readNotaries(): List<NotaryInfo> {
+    return notaryDir
+        .getFiles(jksRegex)
+        .map {
+          try {
+            it.toX509KeyStore("cordacadevpass")
+          } catch (err: Throwable) {
+            null
+          }
+        }
+        .filter { it != null }
+        .map { it!! }
+        .filter { it.aliases().asSequence().contains(X509Utilities.CORDA_CLIENT_CA) }
+        .map { it.getCertificate(X509Utilities.CORDA_CLIENT_CA) }
+        .map { NotaryInfo(Party(it), true) }
+        .toList()
   }
 
   private fun scheduleDigest(dd: DirectoryDigest, vertx: Vertx, fnChange: (hash: String) -> Unit) = scheduleDigest("", dd, vertx, fnChange)
