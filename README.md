@@ -17,3 +17,10 @@
     ```
 8. When it's ready, the network map is hosted here [http://cordite-network-map.westeurope.azurecontainer.io/](http://cordite-network-map.westeurope.azurecontainer.io/)
 
+# Command line parameters
+
+| Property   | Env Variable   | Default             | Description           |
+| ---------- | -------------- | ------------------- | --------------------- |
+| port       | NMS_PORT       | 8080                | web port              |
+| notary.dir | NMS_NOTARY_DIR | notary-certificates | notary cert directory |
+

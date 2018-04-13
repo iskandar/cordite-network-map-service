@@ -8,9 +8,7 @@
   <title>Cordite Network Map</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
         integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-          integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
-          crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
           integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
           crossorigin="anonymous"></script>
@@ -25,8 +23,70 @@
       <h1>Cordite Network Map</h1>
       <p>This complies with the Network Map REST API standard as described by the
         <a href="https://docs.corda.net/network-map.html">Corda v3 documentation</a></p>
+
+      <h2>Registered Notaries</h2>
+      <div class="form-group">
+        <select id="notaries" class="form-control" name="sometext" multiple="multiple"></select>
+      </div>
     </div>
   </div>
 </div>
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addNotaryModal">
+  Add Notary
+</button>
+<div class="modal fade" id="addNotaryModal" tabindex="-1" role="dialog" aria-labelledby="addNotaryModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addNotaryModalLabel">Add Notary</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+            <label for="name">X500 Name</label>
+            <input type="email" class="form-control" id="name" placeholder="e.g. OU=Cordite Foundation, O=Cordite Guardian Notary, L=London, C=GB">
+          </div>
+          <div class="form-group">
+            <label for="publickey">Public Key</label>
+            <input type="password" class="form-control" id="publickey" placeholder="base58 encoded public key">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  $(document).ready(function () {
+    $.get("/api/notaries", function (data) {
+      setupNotaries(data);
+    });
+  });
+
+  function setupNotaries(data) {
+    console.log("notaries received")
+    const select = $('#notaries');
+    select.change(onSelectNotary);
+    select.empty();
+    for (let notary of data) {
+      const option = $('<option>');
+      option
+        .text(notary.identity.name);
+      option.data('notary', notary);
+      select.append(option);
+    }
+  }
+
+  function onSelectNotary() {
+    const notary = $('#notaries').find('option:selected').data('notary');
+    console.log("selected", notary);
+  }
+</script>
 </body>
 </html>

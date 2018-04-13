@@ -1,4 +1,4 @@
-package io.cordite.services
+package io.cordite.services.storage
 
 import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
