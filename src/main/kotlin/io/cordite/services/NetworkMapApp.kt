@@ -84,12 +84,14 @@ open class NetworkMapApp(private val port: Int,
     }
 
     private fun initialiseSerialisationEnvironment() {
-      nodeSerializationEnv = SerializationEnvironmentImpl(
-          SerializationFactoryImpl().apply {
-            registerScheme(KryoClientSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme())
-          },
-          AMQP_P2P_CONTEXT)
+      if (nodeSerializationEnv == null) {
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+            SerializationFactoryImpl().apply {
+              registerScheme(KryoClientSerializationScheme())
+              registerScheme(AMQPClientSerializationScheme())
+            },
+            AMQP_P2P_CONTEXT)
+      }
     }
   }
 
