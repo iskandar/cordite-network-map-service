@@ -25,6 +25,16 @@
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>corda-releases</id>
+      <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
+    </repository>
+    <repository>
+      <id>jitpack.io</id>
+      <url>https://jitpack.io</url>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -72,6 +82,24 @@
       <groupId>net.corda</groupId>
       <artifactId>corda-jackson</artifactId>
       <version>${corda.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-unit</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.corda</groupId>
+      <artifactId>corda-node</artifactId>
+      <version>${corda.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.corda</groupId>
+      <artifactId>corda-test-utils</artifactId>
+      <version>${corda.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

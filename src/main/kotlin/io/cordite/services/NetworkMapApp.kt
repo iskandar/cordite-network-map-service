@@ -42,6 +42,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
@@ -83,12 +84,14 @@ open class NetworkMapApp(private val port: Int,
     }
 
     private fun initialiseSerialisationEnvironment() {
-      nodeSerializationEnv = SerializationEnvironmentImpl(
-          SerializationFactoryImpl().apply {
-            registerScheme(KryoClientSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme())
-          },
-          AMQP_P2P_CONTEXT)
+      if (nodeSerializationEnv == null) {
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+            SerializationFactoryImpl().apply {
+              registerScheme(KryoClientSerializationScheme())
+              registerScheme(AMQPClientSerializationScheme())
+            },
+            AMQP_P2P_CONTEXT)
+      }
     }
   }
 
@@ -101,19 +104,16 @@ open class NetworkMapApp(private val port: Int,
       epoch = 10,
       whitelistedContractImplementations = emptyMap())
 
-  private var networkParameters = stubNetworkParameters
   private val cacheTimeout = 10.seconds
   private val networkMapCa = createDevNetworkMapCa()
-  private val signedNetParams by lazy {
-    networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-  }
-
-  private val parametersUpdate: ParametersUpdate
+  private lateinit var networkParameters : NetworkParameters
+  private lateinit var signedNetParams : SignedNetworkParameters
+  private lateinit var parametersUpdate: ParametersUpdate
 
   init {
     initialiseJackson()
     initialiseSerialisationEnvironment()
-    parametersUpdate = ParametersUpdate(networkParameters.serialize().hash, "first update", Instant.now())
+    updateNetworkParameters(stubNetworkParameters, "first update")
   }
 
   protected fun deploy() {
@@ -140,9 +140,15 @@ open class NetworkMapApp(private val port: Int,
 
     scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
       val notaries = readNotaries()
-      networkParameters = networkParameters.copy(notaries = notaries, modifiedTime = Instant.now())
-      notaries.forEach { println("${it.identity.name.toString()} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
+      updateNetworkParameters(networkParameters.copy(notaries = notaries, modifiedTime = Instant.now()), "notaries changed")
+      notaries.forEach { println("${it.identity.name} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
     }
+  }
+
+  private fun updateNetworkParameters(networkParameters: NetworkParameters, description: String) {
+    this.networkParameters = networkParameters
+    this.signedNetParams = networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+    this.parametersUpdate = ParametersUpdate(networkParameters.serialize().hash, description, Instant.now())
   }
 
   private fun readNotaries(): List<NotaryInfo> {
