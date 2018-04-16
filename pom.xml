@@ -25,6 +25,20 @@
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>corda-releases</id>
+      <name>corda-releases</name>
+      <layout>default</layout>
+      <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
