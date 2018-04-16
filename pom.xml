@@ -28,15 +28,11 @@
   <repositories>
     <repository>
       <id>corda-releases</id>
-      <name>corda-releases</name>
-      <layout>default</layout>
       <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
+    </repository>
+    <repository>
+      <id>jitpack.io</id>
+      <url>https://jitpack.io</url>
     </repository>
   </repositories>
   <dependencies>
