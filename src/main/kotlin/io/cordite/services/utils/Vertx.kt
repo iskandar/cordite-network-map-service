@@ -1,12 +1,15 @@
 package io.cordite.services.utils
 
+import io.cordite.services.NetworkMapApp
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.utilities.loggerFor
 
+private val logger = loggerFor<NetworkMapApp>()
 
 fun RoutingContext.end(text: String) {
   val length = text.length
@@ -21,6 +24,7 @@ fun RoutingContext.handleExceptions(fn: RoutingContext.() -> Unit) {
   try {
     this.fn()
   } catch (err: Throwable) {
+    logger.error("web request failed", err)
     response()
         .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
         .setStatusMessage(err.message)
