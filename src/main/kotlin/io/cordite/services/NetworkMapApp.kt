@@ -59,6 +59,7 @@ open class NetworkMapApp(private val port: Int,
     val jksRegex = ".*\\.jks".toRegex()
     const val WEB_ROOT = "/network-map"
     const val WEB_API = "/api"
+
     @JvmStatic
     fun main(args: Array<String>) {
       val options = Options()
@@ -122,27 +123,35 @@ open class NetworkMapApp(private val port: Int,
 
   override fun start(startFuture: Future<Void>) {
     logger.info("starting network map with port: $port")
-    val router = createRouter()
+    setupNotaryCertificateWatch()
+    createHttpServer(createRouter()).setHandler(startFuture.completer())
+  }
+
+  private fun setupNotaryCertificateWatch() {
+    scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
+      val notaries = readNotaries()
+      updateNetworkParameters(networkParameters.copy(notaries = notaries, modifiedTime = Instant.now()), "notaries changed")
+      notaries.forEach { println("${it.identity.name} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
+    }
+  }
+
+  private fun createHttpServer(router: Router) : Future<Void> {
+    val result = Future.future<Void>()
     vertx
         .createHttpServer()
         .requestHandler(router::accept)
         .listen(port) {
           if (it.failed()) {
             logger.error("failed to startup", it.cause())
-            startFuture.fail(it.cause())
+            result.fail(it.cause())
           } else {
-            logger.info("networkmap service started")
+            logger.info("network map service started")
             logger.info("api mounted on http://localhost:$port$WEB_ROOT")
             logger.info("website http://localhost:$port")
-            startFuture.complete()
+            result.complete()
           }
         }
-
-    scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
-      val notaries = readNotaries()
-      updateNetworkParameters(networkParameters.copy(notaries = notaries, modifiedTime = Instant.now()), "notaries changed")
-      notaries.forEach { println("${it.identity.name} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
-    }
+    return result
   }
 
   private fun updateNetworkParameters(networkParameters: NetworkParameters, description: String) {
