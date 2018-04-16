@@ -140,7 +140,6 @@ open class NetworkMapApp(private val port: Int,
 
     scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
       val notaries = readNotaries()
-      println("notaries")
       networkParameters = networkParameters.copy(notaries = notaries, modifiedTime = Instant.now())
       notaries.forEach { println("${it.identity.name.toString()} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
     }
