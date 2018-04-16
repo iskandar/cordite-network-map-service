@@ -108,7 +108,6 @@ open class NetworkMapApp(private val port: Int,
     networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
   }
 
-  private val notaries = mutableSetOf(NotaryInfo(Party(CordaX500Name.parse("O=Cordite Guardian Notary,OU=Cordite Foundation,L=London,C=GB"), networkMapCa.keyPair.public), true))
   private val parametersUpdate: ParametersUpdate
 
   init {
@@ -161,6 +160,7 @@ open class NetworkMapApp(private val port: Int,
         .map { it!! }
         .filter { it.aliases().asSequence().contains(X509Utilities.CORDA_CLIENT_CA) }
         .map { it.getCertificate(X509Utilities.CORDA_CLIENT_CA) }
+        .distinct()
         .map { NotaryInfo(Party(it), true) }
         .toList()
   }
@@ -215,15 +215,6 @@ open class NetworkMapApp(private val port: Int,
             getNotaries()
           }
         }
-    router.post("$WEB_API/notaries")
-        .handler { rc ->
-          rc.request().bodyHandler { buffer ->
-            rc.handleExceptions {
-              val ni = Json.decodeValue(buffer, NotaryInfo::class.java)
-              notaries.add(ni)
-            }
-          }
-        }
     val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
     router.get("/*")
         .handler(staticHandler::handle)
@@ -231,7 +222,7 @@ open class NetworkMapApp(private val port: Int,
   }
 
   private fun RoutingContext.getNotaries() {
-    this.end(notaries)
+    this.end(networkParameters.notaries)
   }
 
   private fun RoutingContext.getNetworkMap() {
