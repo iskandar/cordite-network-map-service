@@ -197,6 +197,49 @@ open class NetworkMapApp(private val port: Int,
 
   private fun createRouter(): Router {
     val router = Router.router(vertx)
+    bindCordaNetworkMapAPI(router)
+    bindManagementAPI(router)
+    bindStatic(router)
+    return router
+  }
+
+  private fun bindStatic(router: Router) {
+    val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
+    router.get("/*").handler(staticHandler::handle)
+  }
+
+  private fun bindManagementAPI(router: Router) {
+    router.get("$WEB_API/notaries")
+        .handler {
+          it.handleExceptions {
+            getNotaries()
+          }
+        }
+    router.get("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.getWhitelist()
+          }
+        }
+    router.put("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.request().bodyHandler { body ->
+              it.putWhitelist(body.toString())
+            }
+          }
+        }
+    router.post("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.request().bodyHandler { body ->
+              it.postWhitelist(body.toString())
+            }
+          }
+        }
+  }
+
+  private fun bindCordaNetworkMapAPI(router: Router) {
     router.post("$WEB_ROOT/publish")
         .consumes(APPLICATION_OCTET_STREAM.toString())
         .handler {
@@ -228,38 +271,6 @@ open class NetworkMapApp(private val port: Int,
             getNetworkParameters(hash)
           }
         }
-    router.get("$WEB_API/notaries")
-        .handler {
-          it.handleExceptions {
-            getNotaries()
-          }
-        }
-    router.get("$WEB_API/whitelist")
-        .handler {
-          it.handleExceptions {
-            it.getWhitelist()
-          }
-        }
-    router.put("$WEB_API/whitelist")
-        .handler {
-          it.handleExceptions {
-            it.request().bodyHandler { body ->
-              it.putWhitelist(body.toString())
-            }
-          }
-        }
-    router.post("$WEB_API/whitelist")
-        .handler {
-          it.handleExceptions {
-            it.request().bodyHandler { body ->
-              it.postWhitelist(body.toString())
-            }
-          }
-        }
-    val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
-    router.get("/*")
-        .handler(staticHandler::handle)
-    return router
   }
 
   private fun RoutingContext.getWhitelist() {
