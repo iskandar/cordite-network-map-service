@@ -20,6 +20,10 @@
       font-size: 8pt;
       font-family: monospace;
     }
+    .whitelist {
+      font-size: 10pt;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -29,25 +33,29 @@
       <h1>Cordite Network Map</h1>
       <p>This complies with the Network Map REST API standard as described by the
         <a href="https://docs.corda.net/network-map.html">Corda v3 documentation</a></p>
-
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
       <h2>Registered Notaries</h2>
-      <ul id="notaries" class="list-group">
-
-      </ul>
+      <ul id="notaries" class="list-group"></ul>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h2>Contract Attachments Whitelist</h2>
+      <textarea class="form-control whitelist" id="whitelist" rows="3" readonly></textarea>
     </div>
   </div>
 </div>
 <script>
   $(document).ready(function () {
-    $.get("/api/notaries", function (data) {
-      setupNotaries(data);
-    });
+    $.get("/api/notaries", setupNotaries);
+    $.get("/api/whitelist", setupWhitelist)
   });
 
   function setupNotaries(data) {
-    console.log(data);
     const notaryList = $('#notaries');
-    console.log(notaryList);
     for (let notary of data) {
       console.log(notary);
       const notaryItem = $('<li class="notary list-group-item">');
@@ -62,6 +70,10 @@
     }
   }
 
+  function setupWhitelist(data) {
+    const wl = $('#whitelist');
+    wl.text(data);
+  }
 </script>
 </body>
 </html>

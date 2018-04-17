@@ -275,15 +275,11 @@ open class NetworkMapApp(private val port: Int,
 
   private fun RoutingContext.getWhitelist() {
     val list = whiteListStorage.getAll().map { "${it.first}:${it.second}" }
-    if (request().getHeader(HttpHeaders.CONTENT_TYPE) == TEXT_PLAIN.toString()) {
-      val result = list.joinToString("\n")
-      response()
-          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
-          .putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
-          .end(result)
-    } else {
-      end(list)
-    }
+    val result = list.joinToString("\n")
+    response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+        .putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
+        .end(result)
   }
 
   private fun RoutingContext.putWhitelist(additions: String) {
