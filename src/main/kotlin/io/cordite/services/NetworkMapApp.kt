@@ -373,7 +373,9 @@ open class NetworkMapApp(private val port: Int,
   private fun parseWhiteList(additions: String): List<Pair<String, SecureHash.SHA256>> {
     return additions
         .lines()
-        .map { it.trim().split(':') }
+        .map { it.trim()}
+        .filter { it.isNotEmpty() }
+        .map { it.split(':') }
         .map {
           assert(it.size == 2) { "white list entry $it doesn't match pattern <FQN>:<SHA256>" }
           it[0] to AttachmentId.parse(it[1])
