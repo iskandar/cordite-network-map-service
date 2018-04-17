@@ -5,9 +5,12 @@ import io.cordite.services.keystore.toX509KeyStore
 import io.cordite.services.serialisation.PublicKeyDeserializer
 import io.cordite.services.serialisation.PublicKeySerializer
 import io.cordite.services.storage.InMemorySignedNodeInfoStorage
+import io.cordite.services.storage.InMemoryWhiteListStorage
 import io.cordite.services.storage.SignedNodeInfoStorage
+import io.cordite.services.storage.WhitelistStorage
 import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM
+import io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
@@ -28,6 +31,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -53,7 +57,8 @@ import javax.security.auth.x500.X500Principal
 
 open class NetworkMapApp(private val port: Int,
                          private val notaryDir: File,
-                         private val storage: SignedNodeInfoStorage) : AbstractVerticle() {
+                         private val nodeInfoStorage: SignedNodeInfoStorage,
+                         private val whiteListStorage: WhitelistStorage) : AbstractVerticle() {
   companion object {
     val logger = loggerFor<NetworkMapApp>()
     val jksRegex = ".*\\.jks".toRegex()
@@ -71,7 +76,7 @@ open class NetworkMapApp(private val port: Int,
       }
       val port = portOption.value.toInt()
       val notaryDir = notaryDirectory.value.toFile()
-      NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage()).deploy()
+      NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage(), InMemoryWhiteListStorage()).deploy()
     }
 
     private fun initialiseJackson() {
@@ -103,12 +108,12 @@ open class NetworkMapApp(private val port: Int,
       maxTransactionSize = Int.MAX_VALUE,
       modifiedTime = Instant.now(),
       epoch = 10,
-      whitelistedContractImplementations = emptyMap())
+      whitelistedContractImplementations = whiteListStorage.getAllAsMap())
 
   private val cacheTimeout = 10.seconds
   private val networkMapCa = createDevNetworkMapCa()
-  private lateinit var networkParameters : NetworkParameters
-  private lateinit var signedNetParams : SignedNetworkParameters
+  private lateinit var networkParameters: NetworkParameters
+  private lateinit var signedNetParams: SignedNetworkParameters
   private lateinit var parametersUpdate: ParametersUpdate
 
   init {
@@ -135,7 +140,7 @@ open class NetworkMapApp(private val port: Int,
     }
   }
 
-  private fun createHttpServer(router: Router) : Future<Void> {
+  private fun createHttpServer(router: Router): Future<Void> {
     val result = Future.future<Void>()
     vertx
         .createHttpServer()
@@ -229,10 +234,60 @@ open class NetworkMapApp(private val port: Int,
             getNotaries()
           }
         }
+    router.get("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.getWhitelist()
+          }
+        }
+    router.put("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.request().bodyHandler { body ->
+              it.putWhitelist(body.toString())
+            }
+          }
+        }
+    router.post("$WEB_API/whitelist")
+        .handler {
+          it.handleExceptions {
+            it.request().bodyHandler { body ->
+              it.postWhitelist(body.toString())
+            }
+          }
+        }
     val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
     router.get("/*")
         .handler(staticHandler::handle)
     return router
+  }
+
+  private fun RoutingContext.getWhitelist() {
+    val list = whiteListStorage.getAll().map { "${it.first}:${it.second}" }
+    if (request().getHeader(HttpHeaders.CONTENT_TYPE) == TEXT_PLAIN.toString()) {
+      val result = list.joinToString("\n")
+      response()
+          .putHeader(HttpHeaders.CONTENT_TYPE, TEXT_PLAIN)
+          .putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
+          .end(result)
+    } else {
+      end(list)
+    }
+  }
+
+  private fun RoutingContext.putWhitelist(additions: String) {
+    val items = parseWhiteList(additions)
+    whiteListStorage.add(items)
+    updateNetworkParameters(networkParameters.copy(whitelistedContractImplementations = whiteListStorage.getAllAsMap()), "whitelist extended")
+    response().end()
+  }
+
+  private fun RoutingContext.postWhitelist(replacement: String) {
+    val items = parseWhiteList(replacement)
+    whiteListStorage.clear()
+    whiteListStorage.add(items)
+    updateNetworkParameters(networkParameters.copy(whitelistedContractImplementations = whiteListStorage.getAllAsMap()), "whitelist replaced")
+    response().end()
   }
 
   private fun RoutingContext.getNotaries() {
@@ -240,7 +295,7 @@ open class NetworkMapApp(private val port: Int,
   }
 
   private fun RoutingContext.getNetworkMap() {
-    val networkMap = NetworkMap(storage.allHashes(), signedNetParams.raw.hash, parametersUpdate)
+    val networkMap = NetworkMap(nodeInfoStorage.allHashes(), signedNetParams.raw.hash, parametersUpdate)
     val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
     response().apply {
       putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
@@ -252,13 +307,13 @@ open class NetworkMapApp(private val port: Int,
     request().bodyHandler { buffer ->
       val signedNodeInfo = buffer.bytes.deserialize<SignedNodeInfo>()
       signedNodeInfo.verified()
-      storage.store(signedNodeInfo)
+      nodeInfoStorage.store(signedNodeInfo)
       response().setStatusCode(HttpResponseStatus.OK.code()).end()
     }
   }
 
   private fun RoutingContext.getNodeInfo(hash: SecureHash) {
-    storage.find(hash)?.let {
+    nodeInfoStorage.find(hash)?.let {
       val bytes = it.serialize().bytes
       response()
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM)
@@ -285,7 +340,7 @@ open class NetworkMapApp(private val port: Int,
       this.handleExceptions {
         val signedParameterHash = buffer.bytes.deserialize<SignedData<SecureHash>>()
         val hash = signedParameterHash.verified()
-        val nodeInfo = storage.find(hash)
+        val nodeInfo = nodeInfoStorage.find(hash)
         if (nodeInfo != null) {
           logger.info("received acknowledgement from node ${nodeInfo.raw.deserialize().legalIdentities}")
         } else {
@@ -306,5 +361,15 @@ open class NetworkMapApp(private val port: Int,
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM)
         .putHeader(HttpHeaders.CONTENT_LENGTH, bytes.size.toString())
         .end(Buffer.buffer(bytes))
+  }
+
+  private fun parseWhiteList(additions: String): List<Pair<String, SecureHash.SHA256>> {
+    return additions
+        .lines()
+        .map { it.trim().split(':') }
+        .map {
+          assert(it.size == 2) { "white list entry $it doesn't match pattern <FQN>:<SHA256>" }
+          it[0] to AttachmentId.parse(it[1])
+        }
   }
 }
