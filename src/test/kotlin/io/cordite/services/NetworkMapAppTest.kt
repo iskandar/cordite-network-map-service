@@ -1,9 +1,16 @@
 package io.cordite.services
 
 import com.google.common.io.Files
+import io.netty.handler.codec.http.HttpHeaderValues
+import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpClientOptions
+import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpMethod
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -20,14 +27,15 @@ import kotlin.test.assertNotEquals
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAppTest {
-  private val vertx = Vertx.vertx()
-
   companion object {
     val log = loggerFor<NetworkMapAppTest>()
   }
 
   private val certDir = Files.createTempDir()
   val port = AvailablePortFinder.getNextAvailable()
+  private val vertx = Vertx.vertx()
+  private val clientVertx = Vertx.vertx()
+  private val httpClient = clientVertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
 
   @Before
   fun before(context: TestContext) {
@@ -39,6 +47,48 @@ class NetworkMapAppTest {
   @After
   fun after(context: TestContext) {
     vertx.close(context.asyncAssertSuccess())
+    clientVertx.close(context.asyncAssertSuccess())
+  }
+
+  @Test
+  fun `that we can update the whitelist`(context: TestContext) {
+    val nm = NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
+    val wl0 = nm.getNetworkParameters(nm.getNetworkMap().payload.networkParameterHash).verified().whitelistedContractImplementations
+    context.assertEquals(0, wl0.size)
+    val e1 = generateWhitelistEntry()
+    val e2 = generateWhitelistEntry()
+    api(HttpMethod.PUT, "/whitelist", e1)
+        .map {
+          Thread.sleep(100)
+          val wl1 = nm.getNetworkParameters(nm.getNetworkMap().payload.networkParameterHash).verified().whitelistedContractImplementations
+          context.assertEquals(1, wl1.size)
+          context.assertEquals(1, wl1.entries.first().value.size)
+          val wle1 = wl1.entries.first().let { "${it.key}:${it.value[0]}" }
+          context.assertEquals(e1, wle1)
+        }
+        .compose {
+          api(HttpMethod.PUT, "/whitelist", e2)
+        }
+        .map {
+          Thread.sleep(100)
+          val wl2 = nm.getNetworkParameters(nm.getNetworkMap().payload.networkParameterHash).verified().whitelistedContractImplementations
+          context.assertEquals(1, wl2.size)
+          val asList = wl2.flatMap { it.value.map { sh -> it.key to sh } }.map { "${it.first}:${it.second}" }
+
+          context.assertTrue(asList.contains(e1) && asList.contains(e2))
+        }
+        .compose {
+          api(HttpMethod.POST, "/whitelist", e1)
+        }
+        .map {
+          Thread.sleep(100)
+          val wl1 = nm.getNetworkParameters(nm.getNetworkMap().payload.networkParameterHash).verified().whitelistedContractImplementations
+          context.assertEquals(1, wl1.size)
+          context.assertEquals(1, wl1.entries.first().value.size)
+          val wle1 = wl1.entries.first().let { "${it.key}:${it.value[0]}" }
+          context.assertEquals(e1, wle1)
+        }
+        .setHandler(context.asyncAssertSuccess())
   }
 
   @Test(expected = NullPointerException::class)
@@ -67,12 +117,36 @@ class NetworkMapAppTest {
   private fun copyResource(resourceName: String, parentDir: File) {
     val dstFile = File(parentDir, resourceName)
     dstFile.parentFile.mkdirs()
-    NetworkMapAppTest::class.java.getResourceAsStream("/$resourceName").use { input->
+    NetworkMapAppTest::class.java.getResourceAsStream("/$resourceName").use { input ->
       FileOutputStream(dstFile).use { output ->
         input.copyTo(output)
       }
     }
   }
 
+  private fun api(method: HttpMethod, path: String, payload: String): Future<Buffer> {
+    val result = Future.future<Buffer>()
+    httpClient
+        .request(method, port, "localhost", "${NetworkMapApp.WEB_API}$path")
+        .handler { response ->
+          if (response.statusCode() / 100 != 2) {
+            result.fail(response.statusMessage())
+          } else {
+            response.bodyHandler { buffer ->
+              result.complete(buffer)
+            }
+          }
+        }
+        .exceptionHandler {
+          result.fail(it)
+        }
+        .putHeader(HttpHeaders.CONTENT_LENGTH, payload.length.toString())
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+        .end(payload)
+    return result
+  }
 
+  private fun generateWhitelistEntry(): String {
+    return "${NetworkMapAppTest::class.java.name}:${AttachmentId.randomSHA256()}"
+  }
 }
