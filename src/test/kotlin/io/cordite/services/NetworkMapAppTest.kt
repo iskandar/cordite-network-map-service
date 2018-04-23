@@ -32,6 +32,7 @@ class NetworkMapAppTest {
   }
 
   private val certDir = Files.createTempDir()
+  private val dbDir = Files.createTempDir()
   val port = AvailablePortFinder.getNextAvailable()
   private val vertx = Vertx.vertx()
   private val clientVertx = Vertx.vertx()
@@ -41,7 +42,7 @@ class NetworkMapAppTest {
   fun before(context: TestContext) {
     log.info("temp dir is $certDir")
     certDir.deleteOnExit()
-    vertx.deployVerticle(TestingNetworkMapApp(port = port, notaryDir = certDir), context.asyncAssertSuccess())
+    vertx.deployVerticle(TestingNetworkMapApp(port = port, notaryDir = certDir, dbDir = dbDir), context.asyncAssertSuccess())
   }
 
   @After

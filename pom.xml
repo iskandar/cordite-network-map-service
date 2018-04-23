@@ -27,12 +27,8 @@
 
   <repositories>
     <repository>
-      <id>corda-releases</id>
-      <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
-    </repository>
-    <repository>
-      <id>jitpack.io</id>
-      <url>https://jitpack.io</url>
+      <id>bluebank nexus</id>
+      <url>http://bluebank-nexus.uksouth.cloudapp.azure.com/repository/maven-public/</url>
     </repository>
   </repositories>
   <dependencies>
@@ -168,25 +164,6 @@
           </execution>
         </executions>
       </plugin>
-
-      <!--<plugin>-->
-        <!--<groupId>com.spotify</groupId>-->
-        <!--<artifactId>dockerfile-maven-plugin</artifactId>-->
-        <!--<version>${dockerfile-maven.version}</version>-->
-        <!--<executions>-->
-          <!--<execution>-->
-            <!--<id>default</id>-->
-            <!--<goals>-->
-              <!--<goal>build</goal>-->
-              <!--<goal>push</goal>-->
-            <!--</goals>-->
-          <!--</execution>-->
-        <!--</executions>-->
-        <!--<configuration>-->
-          <!--<repository>${env.CI_REGISTRY_IMAGE}</repository>-->
-          <!--<tag>${env.CI_PIPELINE_ID}</tag>-->
-        <!--</configuration>-->
-      <!--</plugin>-->
     </plugins>
   </build>
 </project>
