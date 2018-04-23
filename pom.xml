@@ -27,6 +27,10 @@
 
   <repositories>
     <repository>
+      <id>bluebank nexus</id>
+      <url>http://bluebank-nexus.uksouth.cloudapp.azure.com/repository/maven-public/</url>
+    </repository>
+    <repository>
       <id>corda-releases</id>
       <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
     </repository>
@@ -94,16 +98,6 @@
       <artifactId>corda-node</artifactId>
       <version>${corda.version}</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>com.github.corda.crash</groupId>
-          <artifactId>crash.shell</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.github.corda.crash</groupId>
-          <artifactId>crash.connectors.ssh</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>net.corda</groupId>
