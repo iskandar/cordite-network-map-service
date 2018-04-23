@@ -99,6 +99,10 @@
           <groupId>com.github.corda.crash</groupId>
           <artifactId>crash.shell</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.github.corda.crash</groupId>
+          <artifactId>crash.connectors.ssh</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
