@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import io.cordite.services.keystore.toX509KeyStore
 import io.cordite.services.serialisation.PublicKeyDeserializer
 import io.cordite.services.serialisation.PublicKeySerializer
-import io.cordite.services.storage.InMemorySignedNodeInfoStorage
-import io.cordite.services.storage.InMemoryWhiteListStorage
-import io.cordite.services.storage.SignedNodeInfoStorage
-import io.cordite.services.storage.WhitelistStorage
+import io.cordite.services.storage.*
 import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM
 import io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN
@@ -70,13 +67,15 @@ open class NetworkMapApp(private val port: Int,
       val options = Options()
       val portOption = options.addOption("port", "8080", "web port")
       val notaryDirectory = options.addOption("notary.dir", "notary-certificates", "notary cert directory")
+      val dbDirectory = options.addOption("db.dir", ".db", "database directory for this service ")
       if (args.contains("--help")) {
         options.printOptions()
         return
       }
       val port = portOption.value.toInt()
       val notaryDir = notaryDirectory.value.toFile()
-      NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage(), InMemoryWhiteListStorage()).deploy()
+      val db = dbDirectory.value.toFile()
+      NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage(), PersistentWhiteListStorage(db)).deploy()
     }
 
     private fun initialiseJackson() {
