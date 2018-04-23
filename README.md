@@ -23,4 +23,5 @@
 | ---------- | -------------- | ------------------- | --------------------- |
 | port       | NMS_PORT       | 8080                | web port              |
 | notary.dir | NMS_NOTARY_DIR | notary-certificates | notary cert directory |
+| db.dir | NMS_DB_DIR | .db | directory for storing state. at present only the whitelist.txt file |
 
