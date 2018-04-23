@@ -30,14 +30,6 @@
       <id>bluebank nexus</id>
       <url>http://bluebank-nexus.uksouth.cloudapp.azure.com/repository/maven-public/</url>
     </repository>
-    <repository>
-      <id>corda-releases</id>
-      <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
-    </repository>
-    <repository>
-      <id>jitpack.io</id>
-      <url>https://jitpack.io</url>
-    </repository>
   </repositories>
   <dependencies>
     <dependency>
