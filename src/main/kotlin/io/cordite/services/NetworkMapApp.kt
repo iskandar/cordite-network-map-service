@@ -83,7 +83,7 @@ open class NetworkMapApp(private val port: Int,
       NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage(), PersistentWhiteListStorage(db)).deploy()
     }
 
-    private fun initialiseJackson() {
+    protected fun initialiseJackson() {
       val module = SimpleModule()
           .addDeserializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameDeserializer)
           .addSerializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameSerializer)
@@ -93,7 +93,7 @@ open class NetworkMapApp(private val port: Int,
       Json.prettyMapper.registerModule(module)
     }
 
-    private fun initialiseSerialisationEnvironment() {
+    protected fun initialiseSerialisationEnvironment() {
       if (nodeSerializationEnv == null) {
         nodeSerializationEnv = SerializationEnvironmentImpl(
             SerializationFactoryImpl().apply {
@@ -105,15 +105,7 @@ open class NetworkMapApp(private val port: Int,
     }
   }
 
-  private val stubNetworkParameters = NetworkParameters(
-      minimumPlatformVersion = 1,
-      notaries = readNotaryNodeInfos(),
-      maxMessageSize = 10485760,
-      maxTransactionSize = Int.MAX_VALUE,
-      modifiedTime = Instant.now(),
-      epoch = 10,
-      whitelistedContractImplementations = whiteListStorage.getAllAsMap())
-
+  private var stubNetworkParameters : NetworkParameters
   private val cacheTimeout = 10.seconds
   private val networkMapCa = createDevNetworkMapCa()
   private lateinit var networkParameters: NetworkParameters
@@ -123,6 +115,14 @@ open class NetworkMapApp(private val port: Int,
   init {
     initialiseJackson()
     initialiseSerialisationEnvironment()
+    stubNetworkParameters = NetworkParameters(
+          minimumPlatformVersion = 1,
+          notaries = readNotaryNodeInfos(),
+          maxMessageSize = 10485760,
+          maxTransactionSize = Int.MAX_VALUE,
+          modifiedTime = Instant.now(),
+          epoch = 10,
+          whitelistedContractImplementations = whiteListStorage.getAllAsMap())
     updateNetworkParameters(stubNetworkParameters, "first update")
   }
 
