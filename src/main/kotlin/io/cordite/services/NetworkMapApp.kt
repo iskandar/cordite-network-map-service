@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import io.cordite.services.keystore.toX509KeyStore
 import io.cordite.services.serialisation.PublicKeyDeserializer
 import io.cordite.services.serialisation.PublicKeySerializer
-import io.cordite.services.storage.*
+import io.cordite.services.storage.InMemorySignedNodeInfoStorage
+import io.cordite.services.storage.PersistentWhiteListStorage
+import io.cordite.services.storage.SignedNodeInfoStorage
+import io.cordite.services.storage.WhitelistStorage
 import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM
 import io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN
@@ -25,8 +28,10 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.readObject
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.deserialize
@@ -102,7 +107,7 @@ open class NetworkMapApp(private val port: Int,
 
   private val stubNetworkParameters = NetworkParameters(
       minimumPlatformVersion = 1,
-      notaries = readNotaries(),
+      notaries = readNotaryNodeInfos(),
       maxMessageSize = 10485760,
       maxTransactionSize = Int.MAX_VALUE,
       modifiedTime = Instant.now(),
@@ -133,7 +138,7 @@ open class NetworkMapApp(private val port: Int,
 
   private fun setupNotaryCertificateWatch() {
     scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
-      val notaries = readNotaries()
+      val notaries = readNotaryNodeInfos()
       updateNetworkParameters(networkParameters.copy(notaries = notaries, modifiedTime = Instant.now()), "notaries changed")
       notaries.forEach { println("${it.identity.name} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
     }
@@ -164,7 +169,7 @@ open class NetworkMapApp(private val port: Int,
     this.parametersUpdate = ParametersUpdate(networkParameters.serialize().hash, description, Instant.now())
   }
 
-  private fun readNotaries(): List<NotaryInfo> {
+  private fun readNotariesJks(): List<NotaryInfo> {
     return notaryDir
         .getFiles(jksRegex)
         .map {
@@ -181,6 +186,43 @@ open class NetworkMapApp(private val port: Int,
         .distinct()
         .map { NotaryInfo(Party(it), true) }
         .toList()
+  }
+
+  private fun readNotaryNodeInfos(): List<NotaryInfo> {
+    return notaryDir
+        .getFiles("nodeInfo.*".toRegex())
+        .map {
+          try {
+            it.toPath().readObject<SignedNodeInfo>()
+          } catch (err: Throwable) {
+            logger.warn("failed to read node info ${it.absolutePath}", err)
+            null
+          }
+        }
+        .filter { it != null }
+        .map { it!!.verified() }
+        .map {
+          try {
+            NotaryInfo(it.notaryIdentity(), true)
+          } catch (err: Throwable) {
+            logger.warn("failed to get notary identity", err)
+            null
+          }
+        }
+        .filter { it != null }
+        .map { it!! }
+        .toList()
+  }
+
+  private fun NodeInfo.notaryIdentity(): Party {
+    return when (legalIdentities.size) {
+    // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+      1 -> legalIdentities[0]
+    // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+    // cluster and is shared by all the other members. This is the notary identity.
+      2 -> legalIdentities[1]
+      else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
+    }
   }
 
   private fun scheduleDigest(dd: DirectoryDigest, vertx: Vertx, fnChange: (hash: String) -> Unit) = scheduleDigest("", dd, vertx, fnChange)
