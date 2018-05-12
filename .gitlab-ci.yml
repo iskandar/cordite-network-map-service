@@ -18,6 +18,7 @@ build:maven:
     MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
   script:
     - mvn $MAVEN_CLI_OPTS clean compile test
+    - cat target/site/jacoco/index.html
   tags:
     - kubernetes
   cache:

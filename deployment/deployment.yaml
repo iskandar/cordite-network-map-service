@@ -1,0 +1,25 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: network-map-service
+  labels:
+    app: network-map-service
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: network-map-service
+    spec:
+      containers:
+        - name: network-map-service
+          image: registry.gitlab.com/cordite/network-map-service/network-map-service:latest
+          env:
+            - name: NMS_PORT
+              value: "80"
+            - name: NMS_NOTARY_DIR
+              value: "/mnt/cordite/alpha/nms/validating-notaries"
+          ports:
+            - containerPort: 80
+      imagePullSecrets:
+        - name: gitlab-registry
