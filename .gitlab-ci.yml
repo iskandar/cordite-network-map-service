@@ -19,6 +19,7 @@ build:maven:
   script:
     - mvn $MAVEN_CLI_OPTS clean compile test
     - cat target/site/jacoco/index.html
+    - ls target/*
   tags:
     - kubernetes
   cache:
