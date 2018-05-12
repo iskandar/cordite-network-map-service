@@ -23,8 +23,22 @@ Go to CI/CD -> Kubernetes -> Add custom cluster. Complete the following fields a
    + Token : `decoded token from previous step`
    + Project namespace : `name space from previous step`  
 
-Click to install Helm Tiller, Ingress, Prometheus, Gitlab Runner on your cluster
+Click to install Helm Tiller, Ingress (not working), Prometheus, Gitlab Runner on your cluster
 
 ### Things they don't tell you
   + $KUBE_CONFIG is a CI variable which deals with all security context on Kube runner
   + Adding label app=<environment> will allow environments to work in gitlab
+
+## Manual setup of Ingress
+Explain of ingress through example:
+https://github.com/kubernetes/ingress-nginx/tree/master/docs/examples/static-ip
+Use Azure portal and create a static public ip in the resource group of the cluster (prefix: MC_*)  
+`brew install helm` if you haven't already got it.
+```
+helm install stable/nginx-ingress --name network-map-service \
+    --set controller.stats.enabled=true \
+    --set controller.metrics.enabled=true \
+    --set controller.service.loadBalancerIP=23.97.163.246 \
+    --set rbac.create=false \
+    --namespace=kubes-system 
+```
