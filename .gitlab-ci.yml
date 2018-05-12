@@ -31,6 +31,8 @@ build:maven:
 
 publish:docker:
   stage: publish
+  variables:
+    DOCKER_HOST=tcp://localhost:2375
   services:
     - docker:dind
   image: docker:latest
