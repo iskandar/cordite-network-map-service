@@ -28,11 +28,12 @@ build:maven:
   artifacts:
     paths:
       - target/network-map-service.jar
+      - target/site/jacoco/index.html
 
 publish:docker:
   stage: publish
   variables:
-    DOCKER_HOST=tcp://localhost:2375
+    DOCKER_HOST: tcp://localhost:2375
   services:
     - docker:dind
   image: docker:latest
