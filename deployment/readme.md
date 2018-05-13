@@ -36,12 +36,13 @@ cat ./deployment/external-dns.yaml \
  | sed s/REPLACE_WITH_YOUR_CF_API_KEY/${CF_API_KEY}/ \
  | kubectl create -n kube-system -f -
 ```
+Follow the logs with `kubectl -n kube-system logs deployment/external-dns`
 
 ## Things they don't tell you
   + $KUBE_CONFIG is a CI variable which deals with all security context on Kube runner
   + Adding label app=<environment> will make environments and metrics work in gitlab
 
-### Creating a new cluster on Azure
+### Creating a new cluster on Azure (not advisable)
 ```
 az login
 az group create --name cordite-edge6 --location uksouth
