@@ -1,13 +1,7 @@
 package io.cordite.services
 
-import com.fasterxml.jackson.databind.module.SimpleModule
-import io.cordite.services.keystore.toX509KeyStore
-import io.cordite.services.serialisation.PublicKeyDeserializer
-import io.cordite.services.serialisation.PublicKeySerializer
-import io.cordite.services.storage.InMemorySignedNodeInfoStorage
-import io.cordite.services.storage.PersistentWhiteListStorage
-import io.cordite.services.storage.SignedNodeInfoStorage
-import io.cordite.services.storage.WhitelistStorage
+import io.cordite.services.serialisation.initialiseSerialisation
+import io.cordite.services.storage.*
 import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_OCTET_STREAM
 import io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN
@@ -17,26 +11,19 @@ import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
-import io.vertx.core.json.Json
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
-import net.corda.client.jackson.JacksonSupport
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.readObject
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -49,21 +36,17 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
-import java.io.File
-import java.security.PublicKey
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
 
 open class NetworkMapApp(private val port: Int,
-                         private val notaryDir: File,
-                         private val nodeInfoStorage: SignedNodeInfoStorage,
-                         private val whiteListStorage: WhitelistStorage) : AbstractVerticle() {
+                         private val signedNetworkParametersStorage: SignedNetworkParametersStorage, // where we store network parameters objects
+                         private val validatingNotaryNodeInfoStorage: SignedNodeInfoStorage, // where we can drop notary nodeinfos - this is scanned
+                         private val notaryInfoStorage: NotaryInfoStorage, // where we store notaryinfo objects
+                         private val nodeInfoStorage: SignedNodeInfoStorage, // where we store nodeinfos
+                         private val textStorage: TextStorage) : AbstractVerticle() {
   companion object {
     val logger = loggerFor<NetworkMapApp>()
-    val jksRegex = ".*\\.jks".toRegex()
     const val WEB_ROOT = "/network-map"
     const val WEB_API = "/api"
 
@@ -82,27 +65,6 @@ open class NetworkMapApp(private val port: Int,
       val db = dbDirectory.value.toFile()
       NetworkMapApp(port, notaryDir, InMemorySignedNodeInfoStorage(), PersistentWhiteListStorage(db)).deploy()
     }
-
-    protected fun initialiseJackson() {
-      val module = SimpleModule()
-          .addDeserializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameDeserializer)
-          .addSerializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameSerializer)
-          .addSerializer(PublicKey::class.java, PublicKeySerializer())
-          .addDeserializer(PublicKey::class.java, PublicKeyDeserializer())
-      Json.mapper.registerModule(module)
-      Json.prettyMapper.registerModule(module)
-    }
-
-    protected fun initialiseSerialisationEnvironment() {
-      if (nodeSerializationEnv == null) {
-        nodeSerializationEnv = SerializationEnvironmentImpl(
-            SerializationFactoryImpl().apply {
-              registerScheme(KryoClientSerializationScheme())
-              registerScheme(AMQPClientSerializationScheme())
-            },
-            AMQP_P2P_CONTEXT)
-      }
-    }
   }
 
   private var stubNetworkParameters : NetworkParameters
@@ -113,8 +75,7 @@ open class NetworkMapApp(private val port: Int,
   private lateinit var parametersUpdate: ParametersUpdate
 
   init {
-    initialiseJackson()
-    initialiseSerialisationEnvironment()
+    initialiseSerialisation()
     stubNetworkParameters = NetworkParameters(
           minimumPlatformVersion = 1,
           notaries = readNotaryNodeInfos(),
@@ -137,7 +98,8 @@ open class NetworkMapApp(private val port: Int,
   }
 
   private fun setupNotaryCertificateWatch() {
-    scheduleDigest(DirectoryDigest(notaryDir, jksRegex), vertx) {
+    scheduleDigest(DirectoryDigest(notaryDir, ".*".toRegex()), vertx) {
+      logger.info("notary directory has changed")
       val notaries = readNotaryNodeInfos()
       updateNetworkParameters(networkParameters.copy(notaries = notaries, modifiedTime = Instant.now()), "notaries changed")
       notaries.forEach { println("${it.identity.name} - ${it.identity.owningKey.toBase58String()} - ${it.validating}") }
@@ -171,7 +133,7 @@ open class NetworkMapApp(private val port: Int,
 
   private fun readNotariesJks(): List<NotaryInfo> {
     return notaryDir
-        .getFiles(jksRegex)
+        .getFiles(notaryNodeInfoPattern)
         .map {
           try {
             it.toX509KeyStore("cordacadevpass")

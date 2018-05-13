@@ -1,14 +1,12 @@
 package io.cordite.services
 
 import io.cordite.services.storage.InMemorySignedNodeInfoStorage
-import io.cordite.services.storage.InMemoryWhiteListStorage
 import io.cordite.services.storage.PersistentWhiteListStorage
-import io.cordite.services.utils.toFile
 import java.io.File
 
-class TestingNetworkMapApp(port: Int = 8080,
+class TestingNetworkMapApp(port: Int = 9000,
                            notaryDir: File = File("test-notary-info-and-cert"),
-                           dbDir : File = File(".db"))
+                           dbDir : File = File("test-notary-info-and-cert"))
   : NetworkMapApp(
     port = port,
     notaryDir = notaryDir,
