@@ -1,3 +1,5 @@
+[![pipeline status](https://gitlab.com/cordite/network-map-service/badges/master/pipeline.svg)](https://gitlab.com/cordite/network-map-service/commits/master)
+
 # Deployment
 
 1. Wait for the build on master to complete successfully.
