@@ -28,12 +28,16 @@ Click to install Helm Tiller, Ingress (not required), Prometheus (metrics), Gitl
 ## External DNS
 We are using CloudFlare and Kube ExternalDNS - https://github.com/kubernetes-incubator/external-dns
 To find out more see - https://github.com/kubernetes-incubator/external-dns/blob/master/docs/tutorials/cloudflare.md  
-You need to set `$CF_API_KEY` to the cloudflare api key. `CF_API_EMAIL` may need to change. Set `$KUBE_NAMESPACE` to the gitlab project name
+You need to set `$CF_API_KEY` to the cloudflare api key. `CF_API_EMAIL` may need to change.
+Only need one of these per domain in the cluster kube-system namespace 
 ```
-cat ./deployment/external-dns.yaml | sed s/REPLACE_WITH_YOUR_CF_API_KEY/${CF_API_KEY}/ | kubectl create -n "$KUBE_NAMESPACE" -o yaml --dry-run -f - | kubectl replace -n "$KUBE_NAMESPACE" --validate=false --force -f -
+kubectl delete -n kube-system -f ./deployment/external-dns.yaml
+cat ./deployment/external-dns.yaml \
+ | sed s/REPLACE_WITH_YOUR_CF_API_KEY/${CF_API_KEY}/ \
+ | kubectl create -n kube-system -f -
 ```
 
-### Things they don't tell you
+## Things they don't tell you
   + $KUBE_CONFIG is a CI variable which deals with all security context on Kube runner
   + Adding label app=<environment> will make environments and metrics work in gitlab
 
@@ -43,3 +47,5 @@ az login
 az group create --name cordite-edge6 --location uksouth
 az aks create --resource-group cordite-edge6 --name cordite-edge --node-count 3 --node-vm-size Standard_B2s --generate-ssh-keys --dns-name-prefix cordite-edge
 ```
+
+### Logs, Kube UI

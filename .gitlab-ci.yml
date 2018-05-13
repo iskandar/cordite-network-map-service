@@ -1,7 +1,8 @@
 stages:
  - build
- - publish
- - deploy
+ - package
+ - staging
+ - production
 
 # For more information on Maven see
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Maven.gitlab-ci.yml
@@ -30,8 +31,8 @@ build:maven:
       - target/network-map-service.jar
       - target/site/jacoco/index.html
 
-publish:docker:
-  stage: publish
+package:docker:
+  stage: package
   variables:
     DOCKER_HOST: tcp://localhost:2375
   services:
@@ -50,7 +51,7 @@ publish:docker:
   
 deploy:edge:
   image: lachlanevenson/k8s-kubectl
-  stage: deploy
+  stage: staging
   script:
     - kubectl config current-context
     - cd deployment
@@ -63,9 +64,9 @@ deploy:edge:
   only:
     - master
 
-deploy:prod:
+deploy:live:
   image: lachlanevenson/k8s-kubectl
-  stage: deploy
+  stage: production
   script:
     - kubectl config current-context
     - cd deployment
@@ -77,3 +78,5 @@ deploy:prod:
     url: https://network-map.cordite.biz
   only:
     - master
+  when:
+    manual
