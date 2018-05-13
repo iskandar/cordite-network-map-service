@@ -29,7 +29,7 @@ kind: Service
 metadata:
   name: network-map-service
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: network-map-service.cordite.biz
+    external-dns.alpha.kubernetes.io/hostname: network-map-dev.cordite.biz
 spec:
   selector:
     app: nginx

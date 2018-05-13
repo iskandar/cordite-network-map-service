@@ -48,7 +48,7 @@ publish:docker:
   only:
     - master
   
-deploy:latest:
+deploy:edge:
   image: lachlanevenson/k8s-kubectl
   stage: deploy
   script:
@@ -60,6 +60,6 @@ deploy:latest:
     - kubernetes
   environment:
     name: network-map-service
-    url: https://nms.cordite.biz
+    url: https://network-map-edge.cordite.biz
   only:
     - master
