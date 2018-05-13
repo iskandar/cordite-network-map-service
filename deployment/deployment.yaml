@@ -1,18 +1,18 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: network-map-service
+  name: network-map-dev
   labels:
-    app: network-map-service
+    app: network-map-dev
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: network-map-service
+        app: network-map-dev
     spec:
       containers:
-        - name: network-map-service
+        - name: network-map-dev
           image: registry.gitlab.com/cordite/network-map-service/network-map-service:latest
           env:
             - name: NMS_PORT
@@ -27,12 +27,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: network-map-service
+  name: network-map-dev
   annotations:
     external-dns.alpha.kubernetes.io/hostname: network-map-dev.cordite.biz
 spec:
   selector:
-    app: nginx
+    app: network-map-dev
   type: LoadBalancer
   ports:
     - protocol: TCP

@@ -5,9 +5,9 @@
 IMAGE_TAG=${CI_PIPELINE_ID:-latest}
 KUBE_NAMESPACE=${KUBE_NAMESPACE:-default}
 GITLAB_USER_EMAIL=${GITLAB_USER_EMAIL:-nobody@example.com}
-CI_ENVIRONMENT_URL=${CI_ENVIRONMENT_URL:-network-map-dev.cordite.biz}
+CI_ENVIRONMENT_SLUG=${CI_ENVIRONMENT_SLUG:-network-map-dev}
 
-echo "$(date) deploying app to namespace ${KUBE_NAMESPACE} with image ${IMAGE_TAG}"
+echo "$(date) deploying app to namespace ${KUBE_NAMESPACE} with image ${IMAGE_TAG} for environment ${CI_ENVIRONMENT_SLUG}"
 
 set -e
 
@@ -40,10 +40,12 @@ kubectl create secret -n "$KUBE_NAMESPACE" \
     --docker-email="$GITLAB_USER_EMAIL" \
     -o yaml --dry-run | kubectl replace -n "$KUBE_NAMESPACE" --force -f -
 
-# Replace deployment
+# delete/recreate external-dns ?
+
+# replace deployment
 cat ./deployment.yaml \
  | sed s/:latest/:${IMAGE_TAG}/ \
- | sed s/network-map-dev.cordite.biz/${CI_ENVIRONMENT_URL}/ \
+ | sed s/network-map-dev/${CI_ENVIRONMENT_SLUG}/ \
  | kubectl create -n "$KUBE_NAMESPACE" -o yaml --dry-run -f - \
  | kubectl replace -n "$KUBE_NAMESPACE" --force -f -
 

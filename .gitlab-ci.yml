@@ -53,13 +53,27 @@ deploy:edge:
   stage: deploy
   script:
     - kubectl config current-context
-    - echo ${CI_ENVIRONMENT_SLUG}
     - cd deployment
-    - ./kube_deploy.sh ${CI_PIPELINE_ID}
+    - ./kube_deploy.sh
   tags:
     - kubernetes
   environment:
-    name: network-map-service
+    name: network-map-edge
     url: https://network-map-edge.cordite.biz
+  only:
+    - master
+
+deploy:prod:
+  image: lachlanevenson/k8s-kubectl
+  stage: deploy
+  script:
+    - kubectl config current-context
+    - cd deployment
+    - ./kube_deploy.sh
+  tags:
+    - kubernetes
+  environment:
+    name: network-map
+    url: https://network-map.cordite.biz
   only:
     - master
