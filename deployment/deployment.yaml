@@ -23,3 +23,18 @@ spec:
             - containerPort: 80
       imagePullSecrets:
         - name: gitlab-registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: network-map-service
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: network-map-service.cordite.biz
+spec:
+  selector:
+    app: nginx
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

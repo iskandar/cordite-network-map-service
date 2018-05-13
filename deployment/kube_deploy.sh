@@ -42,7 +42,5 @@ kubectl create secret -n "$KUBE_NAMESPACE" \
 # Replace deployment
 cat ./deployment.yaml | sed s/:latest/:${IMAGE_TAG}/ | kubectl create -n "$KUBE_NAMESPACE" -o yaml --dry-run -f - | kubectl replace -n "$KUBE_NAMESPACE" --force -f -
 
-# Expose pod using ingress
-
 # once we are done show everything again
 kubectl get all -n "$KUBE_NAMESPACE"

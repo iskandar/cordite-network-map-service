@@ -23,22 +23,23 @@ Go to CI/CD -> Kubernetes -> Add custom cluster. Complete the following fields a
    + Token : `decoded token from previous step`
    + Project namespace : `name space from previous step`  
 
-Click to install Helm Tiller, Ingress (not working), Prometheus, Gitlab Runner on your cluster
+Click to install Helm Tiller, Ingress (not required), Prometheus (metrics), Gitlab Runner (for CI) on your cluster
+
+## External DNS
+We are using CloudFlare and Kube ExternalDNS - https://github.com/kubernetes-incubator/external-dns
+To find out more see - https://github.com/kubernetes-incubator/external-dns/blob/master/docs/tutorials/cloudflare.md  
+You need to set `$CF_API_KEY` to the cloudflare api key. `CF_API_EMAIL` may need to change. Set `$KUBE_NAMESPACE` to the gitlab project name
+```
+cat ./deployment/external-dns.yaml | sed s/REPLACE_WITH_YOUR_CF_API_KEY/${CF_API_KEY}/ | kubectl create -n "$KUBE_NAMESPACE" -o yaml --dry-run -f - | kubectl replace -n "$KUBE_NAMESPACE" --validate=false --force -f -
+```
 
 ### Things they don't tell you
   + $KUBE_CONFIG is a CI variable which deals with all security context on Kube runner
-  + Adding label app=<environment> will allow environments to work in gitlab
+  + Adding label app=<environment> will make environments and metrics work in gitlab
 
-## Manual setup of Ingress
-Explain of ingress through example:
-https://github.com/kubernetes/ingress-nginx/tree/master/docs/examples/static-ip
-Use Azure portal and create a static public ip in the resource group of the cluster (prefix: MC_*)  
-`brew install helm` if you haven't already got it.
+### Creating a new cluster on Azure
 ```
-helm install stable/nginx-ingress --name network-map-service \
-    --set controller.stats.enabled=true \
-    --set controller.metrics.enabled=true \
-    --set controller.service.loadBalancerIP=23.97.163.246 \
-    --set rbac.create=false \
-    --namespace=kubes-system 
+az login
+az group create --name cordite-edge6 --location uksouth
+az aks create --resource-group cordite-edge6 --name cordite-edge --node-count 3 --node-vm-size Standard_B2s --generate-ssh-keys --dns-name-prefix cordite-edge
 ```
