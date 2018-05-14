@@ -1,3 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: network-map-dev
+  labels:
+    app: network-map-dev
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: network-map-dev.cordite.biz
+spec:
+  selector:
+    app: network-map-dev
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: azurefile-nms
+  labels:
+    app: network-map-dev
+provisioner: kubernetes.io/azure-file
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1000
+  - gid=1000
+parameters:
+  storageAccount: corditeedge8
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: network-map-dev
+  labels:
+    app: network-map-dev
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -12,7 +58,7 @@ spec:
         app: network-map-dev
     spec:
       containers:
-        - name: network-map-dev
+        - name: network-map-service
           image: registry.gitlab.com/cordite/network-map-service/network-map-service:latest
           env:
             - name: NMS_PORT
@@ -21,20 +67,12 @@ spec:
               value: "/mnt/cordite/alpha/nms/validating-notaries"
           ports:
             - containerPort: 80
+          volumeMounts:
+            - mountPath: "/mnt/cordite/alpha/nms/validating-notaries"
+              name: volume
       imagePullSecrets:
-        - name: gitlab-registry
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: network-map-dev
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: network-map-dev.cordite.biz
-spec:
-  selector:
-    app: network-map-dev
-  type: LoadBalancer
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
+        - name: nms-registry
+      volumes:
+        - name: volume
+          persistentVolumeClaim:
+            claimName: network-map-dev

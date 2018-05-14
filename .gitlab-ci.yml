@@ -48,8 +48,22 @@ package:docker:
     - kubernetes
   only:
     - master
+
+release:edge:
+  image: lachlanevenson/k8s-kubectl
+  stage: staging
+  script:
+    - kubectl config current-context
+    - kubectl set image deployment/${CI_ENVIRONMENT_SLUG} network-map-service=${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
+  tags:
+    - kubernetes
+  environment:
+    name: network-map-edge
+    url: https://network-map-edge.cordite.biz
+  only:
+    - master
   
-deploy:edge:
+rebuild:edge:
   image: lachlanevenson/k8s-kubectl
   stage: staging
   script:
@@ -63,8 +77,26 @@ deploy:edge:
     url: https://network-map-edge.cordite.biz
   only:
     - master
+  when:
+    manual
 
-deploy:live:
+release:live:
+  image: lachlanevenson/k8s-kubectl
+  stage: staging
+  script:
+    - kubectl config current-context
+    - kubectl set image deployment/${CI_ENVIRONMENT_SLUG} network-map-service=${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
+  tags:
+    - kubernetes
+  environment:
+    name: network-map-live
+    url: https://network-map-edge.cordite.biz
+  only:
+    - master
+  when:
+    manual
+
+rebuild:live:
   image: lachlanevenson/k8s-kubectl
   stage: production
   script:

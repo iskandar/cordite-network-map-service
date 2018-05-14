@@ -47,6 +47,11 @@ Follow the logs with `kubectl -n kube-system logs deployment/external-dns`
 az login
 az group create --name cordite-edge6 --location uksouth
 az aks create --resource-group cordite-edge6 --name cordite-edge --node-count 3 --node-vm-size Standard_B2s --generate-ssh-keys --dns-name-prefix cordite-edge
+az storage account create --resource-group MC_cordite-edge8_cordite-edge8_eastus --name cordite-edge8 --location eastus --sku Standard_LRS
 ```
 
 ### Logs, Kube UI
+```
+kubectl -n network-map-service logs deployment/network-map-edge
+az aks browse --resource-group cordite --name cordite-edge
+```
