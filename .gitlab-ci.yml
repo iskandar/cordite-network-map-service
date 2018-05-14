@@ -54,6 +54,7 @@ deploy:edge:
   stage: staging
   script:
     - kubectl config current-context
+    - kubectl 
     - kubectl set image deployment/${CI_ENVIRONMENT_SLUG} network-map-service=${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
   tags:
     - kubernetes
@@ -89,7 +90,7 @@ deploy:live:
   tags:
     - kubernetes
   environment:
-    name: network-map-live
+    name: network-map
     url: https://network-map-edge.cordite.biz
   only:
     - master
