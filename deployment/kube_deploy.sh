@@ -17,13 +17,13 @@ if [ -z "$CI_REGISTRY" ] ; then
    exit 1
 fi
 
-if [ -z "$CI_REGISTRY_USER" ] ; then
-   echo "CI_REGISTRY_USER not set. Value needs to be set to docker registry user"
+if [ -z "$NMS_REG_USER" ] ; then
+   echo "NMS_REG_USER not set. Value needs to be set to docker registry user"
    exit 1
 fi
 
-if [ -z "$CI_REGISTRY_PASSWORD" ] ; then
-   echo "CI_REGISTRY_PASSWORD not set. Value needs to be set to docker registry password"
+if [ -z "$NMS_REG_TOKEN" ] ; then
+   echo "NMS_REG_TOKEN not set. Value needs to be set to docker registry password"
    exit 1
 fi
 
@@ -35,8 +35,8 @@ kubectl get all,pv,pvc,sc -n "$KUBE_NAMESPACE"
 kubectl create secret -n "$KUBE_NAMESPACE" \
     docker-registry nms-registry \
     --docker-server="$CI_REGISTRY" \
-    --docker-username="${CI_REGISTRY_USER}" \
-    --docker-password="${CI_REGISTRY_PASSWORD}" \
+    --docker-username="${NMS_REG_USER}" \
+    --docker-password="${NMS_REG_TOKEN}" \
     --docker-email="$GITLAB_USER_EMAIL" \
     -o yaml --dry-run | kubectl replace -n "$KUBE_NAMESPACE" --force -f -
 
