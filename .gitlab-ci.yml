@@ -49,7 +49,7 @@ package:docker:
   only:
     - master
 
-release:edge:
+deploy:edge:
   image: lachlanevenson/k8s-kubectl
   stage: staging
   script:
@@ -80,9 +80,9 @@ rebuild:edge:
   when:
     manual
 
-release:live:
+deploy:live:
   image: lachlanevenson/k8s-kubectl
-  stage: staging
+  stage: production
   script:
     - kubectl config current-context
     - kubectl set image deployment/${CI_ENVIRONMENT_SLUG} network-map-service=${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:${CI_PIPELINE_ID}

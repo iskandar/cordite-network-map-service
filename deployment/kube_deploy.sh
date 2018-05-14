@@ -28,8 +28,8 @@ if [ -z "$CI_REGISTRY_PASSWORD" ] ; then
 fi
 
 # before we start show everything
-echo "all resources under namespace ${KUBE_NAMESPACE} and label app=${CI_ENVIRONMENT_SLUG}"
-kubectl get all,pv,pvc,sc -n "$KUBE_NAMESPACE" -l app=${CI_ENVIRONMENT_SLUG}
+echo "all resources under namespace ${KUBE_NAMESPACE}"
+kubectl get all,pv,pvc,sc -n "$KUBE_NAMESPACE"
 
 # re-create gitlab reg secret
 kubectl create secret -n "$KUBE_NAMESPACE" \
@@ -41,14 +41,14 @@ kubectl create secret -n "$KUBE_NAMESPACE" \
     -o yaml --dry-run | kubectl replace -n "$KUBE_NAMESPACE" --force -f -
 
 # delete & create deployment
-kubectl delete all,pv,pvc,sc -n "$KUBE_NAMESPACE" -l app=${CI_ENVIRONMENT_SLUG}
+kubectl delete deployment,svc,pv,pvc,sc -n "$KUBE_NAMESPACE" -l app=${CI_ENVIRONMENT_SLUG}
 cat ./deployment.yaml \
  | sed s/:latest/:${IMAGE_TAG}/ \
  | sed s/network-map-dev/${CI_ENVIRONMENT_SLUG}/ \
  | kubectl create -n "$KUBE_NAMESPACE" -f -
 
 # once we are done show everything again
-kubectl get all,pv,pvc,sc -n "$KUBE_NAMESPACE" -l app=${CI_ENVIRONMENT_SLUG}
+kubectl get all,pv,pvc,sc -n "$KUBE_NAMESPACE"
 
 echo "to see the logs run $kubectl -n $KUBE_NAMESPACE logs deployment/${CI_ENVIRONMENT_SLUG}"
 echo "to wait for the public IP to be available use $kubectl -n $KUBE_NAMESPACE -l app=${CI_ENVIRONMENT_SLUG} get services --watch"
