@@ -1,6 +1,5 @@
 package io.cordite.services.utils
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.toHexString
 import java.io.File
 import java.io.FileInputStream

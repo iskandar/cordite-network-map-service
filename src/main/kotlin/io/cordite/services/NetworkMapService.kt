@@ -54,7 +54,7 @@ class NetworkMapService(
     private val log = loggerFor<NetworkMapService>()
   }
 
-  private val ca = getDevNetworkMapCa()
+  private val certs = getDevNetworkMapCa()
 
   private val templateNetworkParameters = NetworkParameters(
       minimumPlatformVersion = 1,
@@ -69,37 +69,6 @@ class NetworkMapService(
   init {
     initialiseSerialisation()
     processInputDirectory()
-  }
-
-  private fun processInputDirectory() {
-    val digest = inputsStorage.digest()
-    val lastDigest = textStorage.getBlocking(LAST_DIGEST_KEY)
-    if (lastDigest != digest) {
-      val networkMapParameters = createNetworkParameters()
-      refreshNetworkMap(networkMapParameters)
-      textStorage.putBlocking(LAST_DIGEST_KEY, digest)
-    }
-  }
-
-  private fun refreshNetworkMap(networkMapParameters: SignedNetworkParameters) {
-    val networkMap = createNetworkMap(networkMapParameters)
-    signedNetworkMapStorage.putBlocking(NETWORK_MAP_KEY, networkMap)
-  }
-
-  private fun createNetworkMap(networkMapParameters: SignedNetworkParameters): NetworkMap {
-    val nodeHashes = signedNodeInfoStorage.getKeysBlocking().map { SecureHash.parse(it) }
-    return NetworkMap(nodeHashes, networkMapParameters.raw.hash, ParametersUpdate(networkMapParameters.raw.hash, "input files updates", Instant.now()))
-  }
-
-  private fun createNetworkParameters() : SignedNetworkParameters {
-    val copy = templateNetworkParameters.copy(
-        notaries = inputsStorage.readNotaries(),
-        whitelistedContractImplementations = inputsStorage.readWhiteList(),
-        modifiedTime = Instant.now()
-    )
-    val signed = copy.signWithCert(ca.keyPair.private, ca.certificate)
-    signedNetworkParametersStorage.putBlocking(signed.raw.hash.toString(), signed)
-    return signed
   }
 
   override fun start(startFuture: Future<Void>) {
@@ -176,6 +145,10 @@ class NetworkMapService(
         }
   }
 
+  private fun getNetworkParameters(hash: SecureHash.SHA256) : SignedNetworkParameters {
+    return signedNetworkParametersStorage.getBlocking(hash.toString())
+  }
+
 
   private fun RoutingContext.postAckNetworkParameters() {
     request().bodyHandler { buffer ->
@@ -232,12 +205,46 @@ class NetworkMapService(
           }
         }
         .catch {
-          this.end(result.cause())
+          this.end(it)
         }
   }
 
   private fun RoutingContext.getNodeInfo(hash: SecureHash) {
     signedNodeInfoStorage.get(hash.toString())
   }
+
+  private fun processInputDirectory() {
+    val digest = inputsStorage.digest()
+    val lastDigest = textStorage.getBlocking(LAST_DIGEST_KEY)
+    if (lastDigest != digest) {
+      val networkMapParameters = createNetworkParameters()
+      refreshNetworkMap(networkMapParameters)
+      textStorage.putBlocking(LAST_DIGEST_KEY, digest)
+    }
+  }
+
+  private fun refreshNetworkMap(networkMapParameters: SignedNetworkParameters) {
+    val networkMap = createNetworkMap(networkMapParameters)
+
+    signedNetworkMapStorage.putBlocking(NETWORK_MAP_KEY, networkMap.signWithCert(certs.keyPair.private, certs.certificate))
+  }
+
+  private fun createNetworkMap(networkMapParameters: SignedNetworkParameters): NetworkMap {
+    val nodeHashes = signedNodeInfoStorage.getKeysBlocking().map { SecureHash.parse(it) }
+    return NetworkMap(nodeHashes, networkMapParameters.raw.hash, ParametersUpdate(networkMapParameters.raw.hash, "input files updates", Instant.now()))
+  }
+
+  private fun createNetworkParameters() : SignedNetworkParameters {
+    val copy = templateNetworkParameters.copy(
+        notaries = inputsStorage.readNotaries(),
+        whitelistedContractImplementations = inputsStorage.readWhiteList(),
+        modifiedTime = Instant.now()
+    )
+    val signed = copy.signWithCert(certs.keyPair.private, certs.certificate)
+    signedNetworkParametersStorage.putBlocking(signed.raw.hash.toString(), signed)
+    return signed
+  }
+
+
 
 }

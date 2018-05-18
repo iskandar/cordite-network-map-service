@@ -4,11 +4,9 @@ import io.cordite.services.utils.DirectoryDigest
 import io.cordite.services.utils.executeBlocking
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import net.corda.core.internal.readAll
 import java.io.File
-import kotlin.reflect.KClass
 
-abstract class AbstractSimpleNameValueStore<T : Any>(protected val dir: File, private val vertx: Vertx) : Storage<T> {
+abstract class AbstractSimpleNameValueStore<T : Any>(private val dir: File, private val vertx: Vertx) : Storage<T> {
     private val digest = DirectoryDigest(dir)
 
   init {
@@ -44,7 +42,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(protected val dir: File, pr
   }
 
   override fun getBlocking(key: String): T {
-    read(key) ?: throw RuntimeException("could not find key $key")
+    return read(key) ?: throw RuntimeException("could not find key $key")
   }
 
   override fun getKeys(): Future<List<String>> {
