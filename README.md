@@ -1,21 +1,17 @@
-# Deployment
+[![pipeline status](https://gitlab.com/cordite/network-map-service/badges/master/pipeline.svg)](https://gitlab.com/cordite/network-map-service/commits/master)
 
-1. Wait for the build on master to complete successfully.
-2. Run the command:
 
-    ```
-    ./az-deploy.sh
-    ```
-3. You will be asked for your **gitlab** user credentials.
-4. You will be asked to complete a Microsoft Azure challenge-response.
-5. Respond to any y/n questions correctly.
-6. Wait. It takes about 30-60 seconds to fully deploy the container.
-7. If you want to manually check the status of the deployment, run the command: <br>
 
-    ```
-    az container show --resource-group cordite-network-map --name cordite-network-map --query "{FQDN:ipAddress.fqdn,ProvisioningState:provisioningState}" --out table
-    ```
-8. When it's ready, the network map is hosted here [http://cordite-network-map.westeurope.azurecontainer.io/](http://cordite-network-map.westeurope.azurecontainer.io/).
+# CI/CD
+  + This repo is integrated to Azure AKS. See CI/CD->Kubernetes for details of which cluster.
+  + The cluster has a runner deployed and all CI jobs in gitlab-ci.yaml spawn pods in the cluster to run.
+  + network-map-service environment can be built using `./deployment/kube_deploy.sh`
+  + DNS is provided by CloudFlare and configured using [external-dns](https://github.com/kubernetes-incubator/external-dns)
+  + external-dns runs in the kube-system namespace and is deployed using `./deployment/external-dns.yaml'
+  + More details on CI/CD and recreating this integration can be found in `./deployment/readme.md`
+  + Persistent storge mapped to NMS_DB_DIR under storage account `corditeedge8` as an Azure file share
+  + Release CI job uses deployment rollout strategy to release newer version of image
+  + Pods can scale horizontally by changing `replicas: 1` in `./deployment/deployment.yaml`
 
 # Command line parameters
 
