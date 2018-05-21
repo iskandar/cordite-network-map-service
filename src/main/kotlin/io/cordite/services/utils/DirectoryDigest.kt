@@ -1,5 +1,7 @@
 package io.cordite.services.utils
 
+import io.vertx.core.Future
+import io.vertx.core.Vertx
 import net.corda.core.utilities.toHexString
 import java.io.File
 import java.io.FileInputStream
@@ -19,6 +21,12 @@ class DirectoryDigest(private val path: File,
         MessageDigest.getInstance(digestAlgorithm)).use {
       while(it.read() > -1) {}
       it.messageDigest.digest().toHexString()
+    }
+  }
+
+  fun digest(vertx: Vertx) : Future<String> {
+    return vertx.executeBlocking {
+      digest()
     }
   }
 }

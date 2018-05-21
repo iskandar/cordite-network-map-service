@@ -1,14 +1,17 @@
 package io.cordite.services.utils
 
+import com.google.common.collect.Lists
 import io.cordite.services.NetworkMapApp
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Future
+import io.vertx.core.Future.future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.utilities.loggerFor
+import java.util.concurrent.atomic.AtomicInteger
 
 private val logger = loggerFor<NetworkMapApp>()
 
@@ -98,4 +101,30 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
     }
   }
   return result
+}
+
+fun <T> List<Future<T>>.all() : Future<List<T>> {
+  val results = Lists.newLinkedList<T>()
+  val fResult = future<List<T>>()
+  val countdown = AtomicInteger(this.size)
+  this.forEach { future ->
+    future.setHandler { ar ->
+      when {
+        ar.succeeded() && fResult.succeeded() -> {
+          logger.error("received a successful result in List<Future<T>>.all after all futures where apparently completed!")
+        }
+        ar.succeeded() -> {
+          results.addLast(ar.result())
+          if (countdown.decrementAndGet() == 0) {
+            fResult.complete(results)
+          }
+        }
+        else -> {
+          // we've got a failed future - report it
+          fResult.fail(ar.cause())
+        }
+      }
+    }
+  }
+  return fResult
 }

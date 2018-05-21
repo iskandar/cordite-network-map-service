@@ -1,6 +1,7 @@
 package io.cordite.services.storage
 
 import io.cordite.services.utils.DirectoryDigest
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.identity.Party
 import net.corda.core.internal.readObject
@@ -13,21 +14,24 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.File
 
-class NetworkParameterInputsStorage(private val dir: File,
+class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
-                                    private val validatingNotariesDirectoryName: String = "validating-notaries",
-                                    private val nonValidatingNotariesDirectoryName: String = "non-validating-notaries") {
+                                    childDir: String = DEFAULT_DIR_NAME,
+                                    validatingNotariesDirectoryName: String = "validating-notaries",
+                                    nonValidatingNotariesDirectoryName: String = "non-validating-notaries") {
   companion object {
     private val log = loggerFor<NetworkParameterInputsStorage>()
     private const val WHITELIST_NAME = "whitelist.txt"
     private const val TIME_OUT = 2_000L
+    const val DEFAULT_DIR_NAME = "inputs"
   }
 
-  private val whitelistPath = File(dir, WHITELIST_NAME)
-  private val validatingNotariesPath = File(dir, validatingNotariesDirectoryName)
-  private val nonValidatingNotariesPath = File(dir, nonValidatingNotariesDirectoryName)
+  private val directory = File(parentDir, childDir)
+  private val whitelistPath = File(directory, WHITELIST_NAME)
+  private val validatingNotariesPath = File(directory, validatingNotariesDirectoryName)
+  private val nonValidatingNotariesPath = File(directory, nonValidatingNotariesDirectoryName)
 
-  private val digest = DirectoryDigest(dir)
+  private val digest = DirectoryDigest(directory)
   private var lastDigest = digest()
   private val publishSubject = PublishSubject.create<Unit>()
 
@@ -39,8 +43,8 @@ class NetworkParameterInputsStorage(private val dir: File,
     }
   }
 
-  fun digest(): String {
-    return digest.digest()
+  fun digest(): Future<String> {
+    return digest.digest(vertx)
   }
 
   fun registerForChanges(): Observable<Unit> {

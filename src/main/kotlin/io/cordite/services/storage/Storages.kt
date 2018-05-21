@@ -1,64 +1,108 @@
 package io.cordite.services.storage
 
+import io.vertx.core.Future
+import io.vertx.core.Future.future
 import io.vertx.core.Vertx
-import net.corda.core.internal.readObject
-import net.corda.core.serialization.serialize
+import io.vertx.core.buffer.Buffer
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.File
 
-class SignedNodeInfoStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<SignedNodeInfo>(directory, vertx) {
-  override fun deserialize(file: File): SignedNodeInfo {
-    return file.toPath().readObject()
+class SignedNodeInfoStorage(
+  parentDirectory: File,
+  vertx: Vertx,
+  childDirectory: String = DEFAULT_CHILD_DIR
+) :
+  AbstractSimpleNameValueStore<SignedNodeInfo>(File(parentDirectory, childDirectory), vertx) {
+
+  companion object {
+    const val DEFAULT_CHILD_DIR = "nodes"
   }
 
-  override fun serialize(value: SignedNodeInfo, file: File) {
-    file.writeBytes(value.serialize().bytes)
+  override fun deserialize(file: File): Future<SignedNodeInfo> {
+    return AbstractSimpleNameValueStore.deserialize(file, vertx)
+  }
+
+  override fun serialize(value: SignedNodeInfo, file: File) : Future<Unit> {
+    return serialize(value, file, vertx)
   }
 }
 
-class SignedNetworkMapStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<SignedNetworkMap>(directory, vertx) {
-  override fun deserialize(file: File): SignedNetworkMap {
-    return file.toPath().readObject()
+class SignedNetworkMapStorage(
+  parentDirectory: File,
+  vertx: Vertx,
+  childDirectory: String = DEFAULT_CHILD_DIR
+) :
+  AbstractSimpleNameValueStore<SignedNetworkMap>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "network-map"
   }
-  override fun serialize(value: SignedNetworkMap, file: File) {
-    file.writeBytes(value.serialize().bytes)
+
+  override fun deserialize(file: File): Future<SignedNetworkMap> {
+    return AbstractSimpleNameValueStore.deserialize(file, vertx)
+  }
+
+  override fun serialize(value: SignedNetworkMap, file: File) : Future<Unit> {
+    return serialize(value, file, vertx)
   }
 }
 
-class SignedNetworkParametersStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<SignedNetworkParameters>(directory, vertx) {
-  override fun deserialize(file: File): SignedNetworkParameters {
-    return file.toPath().readObject()
+class SignedNetworkParametersStorage(
+  parentDirectory: File,
+  vertx: Vertx,
+  childDirectory: String = DEFAULT_CHILD_DIR
+) :
+  AbstractSimpleNameValueStore<SignedNetworkParameters>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "signed-network-parameters"
   }
 
-  override fun serialize(value: SignedNetworkParameters, file: File) {
-    file.writeBytes(value.serialize().bytes)
-  }
-}
-
-class CertificateAndKeyPairStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<CertificateAndKeyPair>(directory, vertx) {
-  override fun deserialize(file: File): CertificateAndKeyPair {
-    return file.toPath().readObject()
+  override fun deserialize(file: File): Future<SignedNetworkParameters> {
+    return AbstractSimpleNameValueStore.deserialize(file, vertx)
   }
 
-  override fun serialize(value: CertificateAndKeyPair, file: File) {
-    file.writeBytes(value.serialize().bytes)
+  override fun serialize(value: SignedNetworkParameters, file: File) : Future<Unit> {
+    return serialize(value, file, vertx)
   }
 }
 
-class TextStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<String>(directory, vertx) {
-  override fun deserialize(file: File): String {
-    return file.readText()
+class CertificateAndKeyPairStorage(
+  parentDirectory: File,
+  vertx: Vertx,
+  childDirectory: String = DEFAULT_CHILD_DIR
+) :
+  AbstractSimpleNameValueStore<CertificateAndKeyPair>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "certs"
   }
 
-  override fun serialize(value: String, file: File) {
-    file.writeText(value)
+  override fun deserialize(file: File): Future<CertificateAndKeyPair> {
+    return AbstractSimpleNameValueStore.deserialize(file, vertx)
+  }
+
+  override fun serialize(value: CertificateAndKeyPair, file: File) : Future<Unit> {
+    return serialize(value, file, vertx)
+  }
+}
+
+class TextStorage(parentDirectory: File, vertx: Vertx, childDirectory: String = DEFAULT_CHILD_DIR) :
+  AbstractSimpleNameValueStore<String>(File(parentDirectory, childDirectory), vertx) {
+
+  companion object {
+    const val DEFAULT_CHILD_DIR = "etc"
+  }
+
+  override fun deserialize(file: File): Future<String> {
+    val result = future<Buffer>()
+    vertx.fileSystem().readFile(file.absolutePath, result.completer())
+    return result.map { it.toString() }
+  }
+
+  override fun serialize(value: String, file: File) : Future<Unit> {
+    val result = future<Void>()
+    vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value), result.completer())
+    return result.map { Unit }
   }
 }

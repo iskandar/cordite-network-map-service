@@ -2,7 +2,10 @@ package io.cordite.services
 
 import io.cordite.services.serialisation.initialiseSerialisation
 import io.cordite.services.storage.*
-import io.cordite.services.utils.*
+import io.cordite.services.utils.catch
+import io.cordite.services.utils.end
+import io.cordite.services.utils.handleExceptions
+import io.cordite.services.utils.onSuccess
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.AbstractVerticle
@@ -49,7 +52,7 @@ class NetworkMapService(
     private val log = loggerFor<NetworkMapService>()
   }
 
-  private val certs = getDevNetworkMapCa()
+  private lateinit var certs : CertificateAndKeyPair
   private lateinit var inputsStorage: NetworkParameterInputsStorage
   private lateinit var signedNetworkParametersStorage: SignedNetworkParametersStorage
   private lateinit var nodeInfoStorage: SignedNodeInfoStorage
@@ -73,20 +76,20 @@ class NetworkMapService(
 
   override fun start(startFuture: Future<Void>) {
     setupStorage()
+      .compose { getDevNetworkMapCa() }
       .compose { processInputDirectory() }
       .compose { createHttpServer(createRouter()) }
       .setHandler(startFuture.completer())
   }
 
-
   private fun setupStorage(): Future<Unit> {
-    inputsStorage = NetworkParameterInputsStorage(dbDirectory / "inputs", vertx)
+    inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
     inputsStorage.registerForChanges().subscribe { this.processInputDirectory() }
-    signedNetworkParametersStorage = SignedNetworkParametersStorage(dbDirectory / "signed-network-parameters", vertx)
-    signedNetworkMapStorage = SignedNetworkMapStorage(dbDirectory / "network-map", vertx)
-    nodeInfoStorage = SignedNodeInfoStorage(dbDirectory / "nodes", vertx)
-    textStorage = TextStorage(dbDirectory / "etc", vertx)
-    certificateAndKeyPairStorage = CertificateAndKeyPairStorage(dbDirectory / "cert", vertx)
+    signedNetworkParametersStorage = SignedNetworkParametersStorage(dbDirectory, vertx)
+    signedNetworkMapStorage = SignedNetworkMapStorage(dbDirectory, vertx)
+    nodeInfoStorage = SignedNodeInfoStorage(dbDirectory, vertx)
+    textStorage = TextStorage(dbDirectory, vertx)
+    certificateAndKeyPairStorage = CertificateAndKeyPairStorage(dbDirectory, vertx)
     return succeededFuture()
   }
 
@@ -190,14 +193,17 @@ class NetworkMapService(
     }
   }
 
-  private fun getDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
-    return try {
-      certificateAndKeyPairStorage.getBlocking(CERT_NAME)
-    } catch (err: Throwable) {
-      val cert = createDevNetworkMapCa(rootCa)
-      certificateAndKeyPairStorage.put(CERT_NAME, cert)
-      cert
-    }
+  private fun getDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Future<Unit> {
+    return certificateAndKeyPairStorage.get(CERT_NAME)
+      .recover { // we couldn't find the cert - so generate one
+        log.warn("Failed to find the cert for this NMS, therefore generating one ")
+        val cert = createDevNetworkMapCa(rootCa)
+        certificateAndKeyPairStorage.put(CERT_NAME, cert).map { cert }
+      }
+      .onSuccess { it ->
+        certs = it
+      }
+      .mapEmpty()
   }
 
   private fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair): CertificateAndKeyPair {
@@ -248,19 +254,23 @@ class NetworkMapService(
   }
 
   private fun processInputDirectory(): Future<Unit> {
-    val digest = inputsStorage.digest()
-    return textStorage
-      .get(LAST_DIGEST_KEY)
-      .compose { lastDigest ->
-        if (lastDigest != digest) {
-          val networkMapParameters = createNetworkParameters()
-
-          refreshNetworkMap(networkMapParameters)
-          textStorage.put(LAST_DIGEST_KEY, digest)
-            .map { Unit }
-        } else {
-          succeededFuture()
-        }
+    return inputsStorage.digest()
+      .compose { digest ->
+        textStorage
+          .get(LAST_DIGEST_KEY)
+          .compose { lastDigest ->
+            if (lastDigest != digest) {
+              createNetworkParameters()
+                .compose { snp ->
+                  refreshNetworkMap(snp)
+                }
+                .compose {
+                  textStorage.put(LAST_DIGEST_KEY, digest)
+                }
+            } else {
+              succeededFuture()
+            }
+          }
       }
   }
 
@@ -279,15 +289,13 @@ class NetworkMapService(
     }
   }
 
-  private fun createNetworkParameters(): SignedNetworkParameters {
+  private fun createNetworkParameters(): Future<SignedNetworkParameters> {
     val copy = templateNetworkParameters.copy(
       notaries = inputsStorage.readNotaries(),
       whitelistedContractImplementations = inputsStorage.readWhiteList(),
       modifiedTime = Instant.now()
     )
     val signed = copy.signWithCert(certs.keyPair.private, certs.certificate)
-    signedNetworkParametersStorage.putBlocking(signed.raw.hash.toString(), signed)
-    return signed
+    return signedNetworkParametersStorage.put(signed.raw.hash.toString(), signed).map { signed }
   }
-
 }
