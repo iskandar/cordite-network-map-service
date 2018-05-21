@@ -2,10 +2,7 @@ package io.cordite.services
 
 import io.cordite.services.serialisation.initialiseSerialisation
 import io.cordite.services.storage.*
-import io.cordite.services.utils.catch
-import io.cordite.services.utils.end
-import io.cordite.services.utils.handleExceptions
-import io.cordite.services.utils.onSuccess
+import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.AbstractVerticle
@@ -90,7 +87,12 @@ class NetworkMapService(
     nodeInfoStorage = SignedNodeInfoStorage(dbDirectory, vertx)
     textStorage = TextStorage(dbDirectory, vertx)
     certificateAndKeyPairStorage = CertificateAndKeyPairStorage(dbDirectory, vertx)
-    return succeededFuture()
+    return listOf(
+      signedNetworkParametersStorage.makeDirs(),
+      signedNetworkMapStorage.makeDirs(),
+      nodeInfoStorage.makeDirs(),
+      textStorage.makeDirs(),
+      certificateAndKeyPairStorage.makeDirs()).all().map { Unit }
   }
 
   private fun createHttpServer(router: Router): Future<Void> {

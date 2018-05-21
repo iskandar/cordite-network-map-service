@@ -30,8 +30,10 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     }
   }
 
-  init {
-    dir.mkdirs()
+  fun makeDirs() : Future<Unit> {
+    val result = future<Void>()
+    vertx.fileSystem().mkdirs(dir.absolutePath, result.completer())
+    return result.map { Unit }
   }
 
   override fun clear(): Future<Unit> {
