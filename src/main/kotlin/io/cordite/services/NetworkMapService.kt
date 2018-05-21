@@ -45,6 +45,7 @@ class NetworkMapService(
     private const val CERT_NAME = "NMS"
     private const val NETWORK_MAP_KEY = "networkmap"
     private const val LAST_DIGEST_KEY = "last-digest.txt"
+    private const val WEB_ROOT = "/network-map"
     private val log = loggerFor<NetworkMapService>()
   }
 
@@ -100,7 +101,7 @@ class NetworkMapService(
           result.fail(it.cause())
         } else {
           NetworkMapApp.logger.info("network map service started")
-          NetworkMapApp.logger.info("api mounted on http://localhost:$port${NetworkMapApp.WEB_ROOT}")
+          NetworkMapApp.logger.info("api mounted on http://localhost:$port$WEB_ROOT")
           NetworkMapApp.logger.info("website http://localhost:$port")
           result.complete()
         }
@@ -122,13 +123,13 @@ class NetworkMapService(
 
 
   private fun bindCordaNetworkMapAPI(router: Router) {
-    router.post("${NetworkMapApp.WEB_ROOT}/publish")
+    router.post("$WEB_ROOT/publish")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions { postNodeInfo() }
       }
 
-    router.post("${NetworkMapApp.WEB_ROOT}/ack-parameters")
+    router.post("$WEB_ROOT/ack-parameters")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -136,11 +137,11 @@ class NetworkMapService(
         }
       }
 
-    router.get(NetworkMapApp.WEB_ROOT)
+    router.get(WEB_ROOT)
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler { it.handleExceptions { getNetworkMap() } }
 
-    router.get("${NetworkMapApp.WEB_ROOT}/node-info/:hash")
+    router.get("$WEB_ROOT/node-info/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -149,7 +150,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${NetworkMapApp.WEB_ROOT}/network-parameters/:hash")
+    router.get("$WEB_ROOT/network-parameters/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
