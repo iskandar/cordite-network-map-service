@@ -12,30 +12,37 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import java.security.PublicKey
 
-fun initialiseSerialisation() {
-  initialiseJackson()
-  initialiseSerialisationEnvironment()
-}
+class SerializationEnvironment {
+  companion object {
+    init {
+      initialiseJackson()
+      initialiseSerialisationEnvironment()
+    }
 
-private fun initialiseJackson() {
-  val module = SimpleModule()
-      .addDeserializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameDeserializer)
-      .addSerializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameSerializer)
-      .addSerializer(PublicKey::class.java, PublicKeySerializer())
-      .addDeserializer(PublicKey::class.java, PublicKeyDeserializer())
-  Json.mapper.registerModule(module)
-  Json.prettyMapper.registerModule(module)
-}
+    fun init() {
+      // implicit static causes one-time init of this class
+    }
 
-private fun initialiseSerialisationEnvironment() {
-  if (nodeSerializationEnv == null) {
-    nodeSerializationEnv = SerializationEnvironmentImpl(
-        SerializationFactoryImpl().apply {
-          registerScheme(KryoClientSerializationScheme())
-          registerScheme(AMQPClientSerializationScheme())
-        },
-        AMQP_P2P_CONTEXT)
+    private fun initialiseJackson() {
+      val module = SimpleModule()
+        .addDeserializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameDeserializer)
+        .addSerializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameSerializer)
+        .addSerializer(PublicKey::class.java, PublicKeySerializer())
+        .addDeserializer(PublicKey::class.java, PublicKeyDeserializer())
+      Json.mapper.registerModule(module)
+      Json.prettyMapper.registerModule(module)
+    }
+
+    private fun initialiseSerialisationEnvironment() {
+      if (nodeSerializationEnv == null) {
+        nodeSerializationEnv = SerializationEnvironmentImpl(
+          SerializationFactoryImpl().apply {
+            registerScheme(KryoClientSerializationScheme())
+            registerScheme(AMQPClientSerializationScheme())
+          },
+          AMQP_P2P_CONTEXT)
+      }
+    }
   }
 }
-
 

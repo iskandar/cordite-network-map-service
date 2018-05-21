@@ -1,6 +1,6 @@
 package io.cordite.services
 
-import io.cordite.services.serialisation.initialiseSerialisation
+import io.cordite.services.serialisation.SerializationEnvironment
 import io.cordite.services.storage.*
 import io.cordite.services.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -47,6 +47,9 @@ class NetworkMapService(
     private const val LAST_DIGEST_KEY = "last-digest.txt"
     private const val WEB_ROOT = "/network-map"
     private val log = loggerFor<NetworkMapService>()
+    init {
+      SerializationEnvironment.init()
+    }
   }
 
   private lateinit var certs : CertificateAndKeyPair
@@ -66,10 +69,6 @@ class NetworkMapService(
     epoch = 10,
     whitelistedContractImplementations = mapOf()
   )
-
-  init {
-    initialiseSerialisation()
-  }
 
   override fun start(startFuture: Future<Void>) {
     setupStorage()
