@@ -2,13 +2,9 @@ package io.cordite.services.storage
 
 import io.vertx.core.Vertx
 import net.corda.core.internal.readObject
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.sequence
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.File
@@ -44,18 +40,6 @@ class SignedNetworkParametersStorage(directory: File, vertx: Vertx) :
     file.writeBytes(value.serialize().bytes)
   }
 }
-
-class NotaryInfoStorage(directory: File, vertx: Vertx) :
-    AbstractSimpleNameValueStore<NotaryInfo>(directory, vertx) {
-  override fun deserialize(file: File): NotaryInfo {
-    return file.toPath().readObject()
-  }
-
-  override fun serialize(value: NotaryInfo, file: File) {
-    file.writeBytes(value.serialize().bytes)
-  }
-}
-
 
 class CertificateAndKeyPairStorage(directory: File, vertx: Vertx) :
     AbstractSimpleNameValueStore<CertificateAndKeyPair>(directory, vertx) {

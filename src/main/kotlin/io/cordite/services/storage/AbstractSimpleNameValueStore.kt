@@ -70,7 +70,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(private val dir: File, priv
    * Blocking
    */
   protected open fun write(key: String, value: T) {
-    val bytes = serialize(value, File(dir, key))
+    serialize(value, File(dir, key))
   }
 
   /**

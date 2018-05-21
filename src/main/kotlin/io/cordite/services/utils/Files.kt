@@ -13,3 +13,7 @@ fun File.getFiles(re: Regex): Sequence<File> {
         it.isFile && it.name.matches(re)
       }
 }
+
+operator fun File.div(rhs: String) : File {
+  return File(this, rhs)
+}
