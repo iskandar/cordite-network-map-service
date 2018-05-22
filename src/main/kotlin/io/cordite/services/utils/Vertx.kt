@@ -55,12 +55,6 @@ fun RoutingContext.end(err: Throwable) {
   }
 }
 
-fun Vertx.scheduleBlocking(delay: Long, fn: () -> Unit) {
-  this.setTimer(delay) {
-    this.executeBlocking<Unit>({ fn() }, {})
-  }
-}
-
 fun <T> Vertx.executeBlocking(fn: () -> T): Future<T> {
   val result = Future.future<T>()
   this.executeBlocking({ f: Future<T> ->
