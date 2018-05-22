@@ -67,28 +67,7 @@ class NetworkParameterInputsStorage(parentDir: File,
     return vertx.fileSystem().readFile(whitelistPath.absolutePath)
       .map {
         it.toString().lines()
-          .map { it.trim() }
-          .filter { it.isNotEmpty() }
-          .map { row -> row.split(":") } // simple parsing for the whitelist
-          .mapIndexed { index, row ->
-            if (row.size != 2) {
-              log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
-              null
-            } else {
-              row
-            }
-          }
-          .mapNotNull {
-            // if we have an attachment id, try to parse it
-            it?.let {
-              try {
-                it[0] to AttachmentId.parse(it[1])
-              } catch (err: Throwable) {
-                log.error("failed to parse attachment id", err)
-                null
-              }
-            }
-          }
+          .parseToWhitelistPairs()
           .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
           .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
           .toMap() // and generate the final map
@@ -155,6 +134,31 @@ class NetworkParameterInputsStorage(parentDir: File,
       2 -> legalIdentities[1]
       else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
     }
+  }
+
+  private fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {
+    return map { it.trim() }
+      .filter { it.isNotEmpty() }
+      .map { row -> row.split(":") } // simple parsing for the whitelist
+      .mapIndexed { index, row ->
+        if (row.size != 2) {
+          log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
+          null
+        } else {
+          row
+        }
+      }
+      .mapNotNull {
+        // if we have an attachment id, try to parse it
+        it?.let {
+          try {
+            it[0] to AttachmentId.parse(it[1])
+          } catch (err: Throwable) {
+            log.error("failed to parse attachment id", err)
+            null
+          }
+        }
+      }
   }
 }
 
