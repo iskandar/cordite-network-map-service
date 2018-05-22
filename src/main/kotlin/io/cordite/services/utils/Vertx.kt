@@ -137,17 +137,12 @@ fun FileSystem.readDir(path: String) : Future<List<String>> {
   return withFuture { readDir(path, it.completer())}
 }
 
-private fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
+fun FileSystem.copy(from: String, to: String) : Future<Void> {
+  return withFuture { copy(from, to, it.completer()) }
+}
+
+inline fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
   val result = future<T>()
   fn(result)
   return result
 }
-
-fun <T> Future<*>.composeWithFuture(fn: Future<T>.() -> Unit) : Future<T> {
-  return this.compose {
-    val result = future<T>()
-    result.fn()
-    result
-  }
-}
-

@@ -28,10 +28,10 @@ class NetworkParameterInputsStorage(parentDir: File,
     const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
   }
 
-  val directory = File(parentDir, childDir)
-  private val whitelistPath = File(directory, WHITELIST_NAME)
-  private val validatingNotariesPath = File(directory, validatingNotariesDirectoryName)
-  private val nonValidatingNotariesPath = File(directory, nonValidatingNotariesDirectoryName)
+  internal val directory = File(parentDir, childDir)
+  internal val whitelistPath = File(directory, WHITELIST_NAME)
+  internal val validatingNotariesPath = File(directory, validatingNotariesDirectoryName)
+  internal val nonValidatingNotariesPath = File(directory, nonValidatingNotariesDirectoryName)
 
   private val digest = DirectoryDigest(directory)
   private var lastDigest: String = ""
@@ -77,25 +77,29 @@ class NetworkParameterInputsStorage(parentDir: File,
 
   fun readNotaries(): Future<List<NotaryInfo>> {
     val validating = readNodeInfos(validatingNotariesPath)
-      .map { nodeInfos ->
-        nodeInfos.mapNotNull { nodeInfo ->
-          try {
-            NotaryInfo(nodeInfo.verified().notaryIdentity(), true)
-          } catch (err: Throwable) {
-            log.error("failed to process notary", err)
-            null
+      .compose { nodeInfos ->
+        vertx.executeBlocking {
+          nodeInfos.mapNotNull { nodeInfo ->
+            try {
+              NotaryInfo(nodeInfo.verified().notaryIdentity(), true)
+            } catch (err: Throwable) {
+              log.error("failed to process notary", err)
+              null
+            }
           }
         }
       }
 
     val nonValidating = readNodeInfos(nonValidatingNotariesPath)
-      .map { nodeInfos ->
-        nodeInfos.mapNotNull { nodeInfo ->
-          try {
-            NotaryInfo(nodeInfo.verified().notaryIdentity(), false)
-          } catch (err: Throwable) {
-            log.error("failed to process notary", err)
-            null
+      .compose { nodeInfos ->
+        vertx.executeBlocking {
+          nodeInfos.mapNotNull { nodeInfo ->
+            try {
+              NotaryInfo(nodeInfo.verified().notaryIdentity(), false)
+            } catch (err: Throwable) {
+              log.error("failed to process notary", err)
+              null
+            }
           }
         }
       }

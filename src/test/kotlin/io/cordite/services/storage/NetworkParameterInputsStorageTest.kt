@@ -1,14 +1,15 @@
 package io.cordite.services.storage
 
-import com.google.common.io.Files
+import io.cordite.services.serialisation.SerializationEnvironment
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
-import io.cordite.services.utils.composeWithFuture
+import io.cordite.services.utils.catch
+import io.cordite.services.utils.copy
 import io.cordite.services.utils.onSuccess
+import io.cordite.services.utils.toPath
 import io.vertx.core.Vertx
-import io.vertx.core.file.CopyOptions
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.junit.AfterClass
@@ -16,11 +17,20 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
 
 @RunWith(VertxUnitRunner::class)
 class NetworkParameterInputsStorageTest {
   companion object {
     private lateinit var vertx: Vertx
+
+    init {
+      SerializationEnvironment.init()
+    }
 
     @JvmStatic
     @BeforeClass
@@ -39,12 +49,14 @@ class NetworkParameterInputsStorageTest {
   fun `that we create the input folder`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
-    nmis.makeDirs().onSuccess {
-      val rootDir = File(tempDir, DEFAULT_DIR_NAME)
-      context.assertTrue(rootDir.exists())
-      context.assertTrue(File(rootDir, DEFAULT_DIR_VALIDATING_NOTARIES).exists())
-      context.assertTrue(File(rootDir, DEFAULT_DIR_NON_VALIDATING_NOTARIES).exists())
-    }.setHandler(context.asyncAssertSuccess())
+    nmis.makeDirs()
+      .onSuccess {
+        val rootDir = File(tempDir, DEFAULT_DIR_NAME)
+        context.assertTrue(rootDir.exists())
+        context.assertTrue(File(rootDir, DEFAULT_DIR_VALIDATING_NOTARIES).exists())
+        context.assertTrue(File(rootDir, DEFAULT_DIR_NON_VALIDATING_NOTARIES).exists())
+      }
+      .setHandler(context.asyncAssertSuccess())
   }
 
   @Test
@@ -62,15 +74,11 @@ class NetworkParameterInputsStorageTest {
         initialDigest = it
         println("initial digest: $it")
       }
-      .composeWithFuture<Void> {
+      .compose {
         val src = File("src/test/resources/sample-input-set/whitelist.txt").absolutePath
         val dst = File(nmis.directory, WHITELIST_NAME).absolutePath
         println("copy $src to $dst")
-        vertx.fileSystem().copy(
-          src,
-          dst,
-          CopyOptions().setReplaceExisting(true),
-          completer())
+        vertx.fileSystem().copy(src, dst)
       }
       .compose { nmis.digest() }
       .onSuccess {
@@ -92,10 +100,58 @@ class NetworkParameterInputsStorageTest {
 
   @Test
   fun `that we can load whitelist and notaries`(context: TestContext) {
+    val tempDir = createTempDirectory()
+    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
+    val async = context.async()
 
+    nmis.makeDirs()
+      .onSuccess { println("directories created in ${nmis.directory}") }
+      .onSuccess {
+        // copy the whitelist
+        Files.copy("src/test/resources/sample-input-set/whitelist.txt".toPath(), nmis.whitelistPath.toPath())
+        copyFolder("src/test/resources/sample-input-set/validating".toPath(), nmis.validatingNotariesPath.toPath())
+        copyFolder("src/test/resources/sample-input-set/non-validating".toPath(), nmis.nonValidatingNotariesPath.toPath())
+      }
+      .onSuccess {
+        // setup the listener
+        nmis.registerForChanges().subscribe {
+          println("change received: $it")
+          nmis.readWhiteList()
+            .onSuccess {
+              context.assertEquals(14, it.size)
+            }
+            .compose {
+              nmis.readNotaries()
+            }
+            .onSuccess {
+              context.assertEquals(1, it.count { it.validating })
+              context.assertEquals(1, it.count { !it.validating })
+            }
+            .onSuccess { async.complete() }
+            .catch {
+              context.fail(it)
+            }
+        }
+      }
+      .setHandler(context.asyncAssertSuccess())
   }
 
   private fun createTempDirectory(): File {
-    return Files.createTempDir().apply { deleteOnExit() }
+    return Files.createTempDirectory("nms-test").toFile().apply { deleteOnExit() }
+  }
+
+  @Throws(IOException::class)
+  fun copyFolder(src: Path, dest: Path) {
+    Files.walk(src)
+      .forEach { source -> copy(source, dest.resolve(src.relativize(source))) }
+  }
+
+  private fun copy(source: Path, dest: Path) {
+    try {
+      Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING)
+    } catch (e: Exception) {
+      throw RuntimeException(e.message, e)
+    }
+
   }
 }
