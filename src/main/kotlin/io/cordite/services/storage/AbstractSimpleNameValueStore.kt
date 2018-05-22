@@ -64,7 +64,9 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
   override fun getKeys(): Future<List<String>> {
     val result = future<List<String>>()
     vertx.fileSystem().readDir(dir.absolutePath, result.completer())
-    return result
+    return result.map {
+      it.map { File(it).name }
+    }
   }
 
   override fun getAll(): Future<Map<String, T>> {

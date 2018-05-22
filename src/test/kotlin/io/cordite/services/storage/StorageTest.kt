@@ -1,6 +1,7 @@
 package io.cordite.services.storage
 
 import com.google.common.io.Files
+import io.cordite.services.utils.all
 import io.cordite.services.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
@@ -31,9 +32,7 @@ class StorageTest {
 
   @Test
   fun `that storage creates parent directory`(context: TestContext) {
-    val tempDir = Files.createTempDir()
-    tempDir.deleteOnExit()
-    val dbDir = File(tempDir, "db")
+    val dbDir = createStorageParentDir("db")
     val textStorage = TextStorage(vertx, dbDir)
     textStorage.makeDirs()
       .onSuccess {
@@ -41,5 +40,88 @@ class StorageTest {
         context.assertTrue(File(dbDir, TextStorage.DEFAULT_CHILD_DIR).exists())
       }
       .setHandler(context.asyncAssertSuccess())
+  }
+
+  @Test
+  fun `that we can store a text value against a key and recover it`(context: TestContext) {
+    val dbDir = createStorageParentDir("db")
+    val textStorage = TextStorage(vertx, dbDir)
+    val key = "foo"
+    val value = "bar"
+    textStorage.makeDirs()
+      .compose { textStorage.put(key, value) }
+      .compose { textStorage.getKeys() }
+      .onSuccess{
+        context.assertEquals(1, it.size)
+        context.assertEquals(key, it.first())
+      }
+      .compose { textStorage.get(key) }
+      .onSuccess {
+        context.assertEquals(value, it)
+      }
+      .compose { textStorage.getAll() }
+      .onSuccess {
+        context.assertEquals(1, it.size)
+        context.assertEquals(key, it.keys.first())
+        context.assertEquals(value, it[key])
+      }
+      .setHandler(context.asyncAssertSuccess())
+  }
+
+
+  @Test
+  fun `that we can remove a text value`(context: TestContext) {
+    val dbDir = createStorageParentDir("db")
+    val textStorage = TextStorage(vertx, dbDir)
+    val key1 = "foo"
+    val key2 = "bar"
+    textStorage.makeDirs()
+      .compose { textStorage.put(key1, "hello") }
+      .compose { textStorage.put(key2, "world") }
+      .compose { textStorage.getKeys() }
+      .onSuccess{
+        context.assertEquals(2, it.size)
+        context.assertTrue(it.contains(key1))
+        context.assertTrue(it.contains(key2))
+      }
+      .compose { textStorage.delete(key1) }
+      .compose { textStorage.getKeys() }
+      .onSuccess{
+        context.assertEquals(1, it.size)
+        context.assertFalse(it.contains(key1))
+        context.assertTrue(it.contains(key2))
+      }
+      .setHandler(context.asyncAssertSuccess())
+  }
+
+
+  @Test
+  fun `that we can clear all entries`(context: TestContext) {
+    val dbDir = createStorageParentDir("db")
+    val textStorage = TextStorage(vertx, dbDir)
+    val count = 100
+    textStorage.makeDirs()
+      .compose {
+        (1..count).map {
+          textStorage.put("key-$it", "val")
+        }.all()
+      }
+      .compose { textStorage.getKeys() }
+      .onSuccess{
+        context.assertEquals(count, it.size)
+      }
+      .compose { textStorage.clear() }
+      .compose { textStorage.getKeys() }
+      .onSuccess{
+        context.assertEquals(0, it.size)
+      }
+      .setHandler(context.asyncAssertSuccess())
+  }
+
+
+  private fun createStorageParentDir(storageDirectory:String): File {
+    val tempDir = Files.createTempDir()
+    tempDir.deleteOnExit()
+    return File(tempDir, storageDirectory)
   }
 }
