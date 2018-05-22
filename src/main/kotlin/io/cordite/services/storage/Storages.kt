@@ -11,8 +11,8 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.File
 
 class SignedNodeInfoStorage(
-  parentDirectory: File,
   vertx: Vertx,
+  parentDirectory: File,
   childDirectory: String = DEFAULT_CHILD_DIR
 ) :
   AbstractSimpleNameValueStore<SignedNodeInfo>(File(parentDirectory, childDirectory), vertx) {
@@ -31,8 +31,8 @@ class SignedNodeInfoStorage(
 }
 
 class SignedNetworkMapStorage(
-  parentDirectory: File,
   vertx: Vertx,
+  parentDirectory: File,
   childDirectory: String = DEFAULT_CHILD_DIR
 ) :
   AbstractSimpleNameValueStore<SignedNetworkMap>(File(parentDirectory, childDirectory), vertx) {
@@ -50,8 +50,8 @@ class SignedNetworkMapStorage(
 }
 
 class SignedNetworkParametersStorage(
-  parentDirectory: File,
   vertx: Vertx,
+  parentDirectory: File,
   childDirectory: String = DEFAULT_CHILD_DIR
 ) :
   AbstractSimpleNameValueStore<SignedNetworkParameters>(File(parentDirectory, childDirectory), vertx) {
@@ -69,8 +69,8 @@ class SignedNetworkParametersStorage(
 }
 
 class CertificateAndKeyPairStorage(
-  parentDirectory: File,
   vertx: Vertx,
+  parentDirectory: File,
   childDirectory: String = DEFAULT_CHILD_DIR
 ) :
   AbstractSimpleNameValueStore<CertificateAndKeyPair>(File(parentDirectory, childDirectory), vertx) {
@@ -87,7 +87,7 @@ class CertificateAndKeyPairStorage(
   }
 }
 
-class TextStorage(parentDirectory: File, vertx: Vertx, childDirectory: String = DEFAULT_CHILD_DIR) :
+class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = DEFAULT_CHILD_DIR) :
   AbstractSimpleNameValueStore<String>(File(parentDirectory, childDirectory), vertx) {
 
   companion object {

@@ -81,11 +81,11 @@ class NetworkMapService(
   private fun setupStorage(): Future<Unit> {
     inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
     inputsStorage.registerForChanges().subscribe { this.processInputDirectory() }
-    signedNetworkParametersStorage = SignedNetworkParametersStorage(dbDirectory, vertx)
-    signedNetworkMapStorage = SignedNetworkMapStorage(dbDirectory, vertx)
-    nodeInfoStorage = SignedNodeInfoStorage(dbDirectory, vertx)
-    textStorage = TextStorage(dbDirectory, vertx)
-    certificateAndKeyPairStorage = CertificateAndKeyPairStorage(dbDirectory, vertx)
+    signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
+    signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
+    nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
+    textStorage = TextStorage(vertx, dbDirectory)
+    certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
     return listOf(
       signedNetworkParametersStorage.makeDirs(),
       signedNetworkMapStorage.makeDirs(),
