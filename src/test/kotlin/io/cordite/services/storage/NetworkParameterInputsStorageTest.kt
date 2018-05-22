@@ -52,16 +52,15 @@ class NetworkParameterInputsStorageTest {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
 
+    var initialDigest = ""
+    var newDigest = ""
+
     nmis.makeDirs()
       .onSuccess { println("directories created in ${nmis.directory}") }
       .compose { nmis.digest() }
-      .onSuccess { println("initial digest: $it") }
       .onSuccess {
-        val async = context.async(1)
-        nmis.registerForChanges().subscribe {
-          println("change received: $it")
-          async.countDown()
-        }
+        initialDigest = it
+        println("initial digest: $it")
       }
       .composeOnFuture<Void> {
         val src = File("src/test/resources/sample-input-set/whitelist.txt").absolutePath
@@ -74,7 +73,19 @@ class NetworkParameterInputsStorageTest {
           completer())
       }
       .compose { nmis.digest() }
-      .onSuccess { println("new digest: $it") }
+      .onSuccess {
+        newDigest = it
+        println("new digest: $it")
+      }
+      .onSuccess {
+        // setup the listener
+        val async = context.async(1)
+        nmis.registerForChanges().subscribe {
+          println("change received: $it")
+          context.assertEquals(newDigest, it, "new digest from publication should match the actual digest for the change")
+          async.countDown()
+        }
+      }
       .setHandler(context.asyncAssertSuccess())
   }
 
