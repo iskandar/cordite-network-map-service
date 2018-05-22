@@ -7,6 +7,8 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.file.FileSystem
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
@@ -129,16 +131,29 @@ fun <T> List<Future<T>>.all() : Future<List<T>> {
   return fResult
 }
 
-fun <T> composeOnFuture(fn: Future<T>.() -> Unit) : Future<T> {
+fun FileSystem.mkdirs(path: String) : Future<Void> {
+  return withFuture { mkdirs(path, it.completer()) }
+}
+
+fun FileSystem.readFile(path: String) : Future<Buffer> {
+  return withFuture { readFile(path, it.completer()) }
+}
+
+fun FileSystem.readDir(path: String) : Future<List<String>> {
+  return withFuture { readDir(path, it.completer())}
+}
+
+private fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
   val result = future<T>()
-  result.fn()
+  fn(result)
   return result
 }
 
-fun <T> Future<*>.composeOnFuture(fn: Future<T>.() -> Unit) : Future<T> {
+fun <T> Future<*>.composeWithFuture(fn: Future<T>.() -> Unit) : Future<T> {
   return this.compose {
     val result = future<T>()
     result.fn()
     result
   }
 }
+

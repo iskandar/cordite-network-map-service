@@ -1,15 +1,13 @@
 package io.cordite.services.storage
 
-import io.cordite.services.utils.DirectoryDigest
-import io.cordite.services.utils.composeOnFuture
-import io.cordite.services.utils.onSuccess
+import io.cordite.services.utils.*
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.identity.Party
-import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
@@ -36,7 +34,7 @@ class NetworkParameterInputsStorage(parentDir: File,
   private val nonValidatingNotariesPath = File(directory, nonValidatingNotariesDirectoryName)
 
   private val digest = DirectoryDigest(directory)
-  private var lastDigest : String = ""
+  private var lastDigest: String = ""
   private val publishSubject = PublishSubject.create<String>()
 
   init {
@@ -52,11 +50,9 @@ class NetworkParameterInputsStorage(parentDir: File,
   }
 
   fun makeDirs(): Future<Unit> {
-    return composeOnFuture<Void> {
-      vertx.fileSystem().mkdirs(validatingNotariesPath.absolutePath, completer())
-    }.composeOnFuture<Void> {
-      vertx.fileSystem().mkdir(nonValidatingNotariesPath.absolutePath, this.completer())
-    }.map { Unit }
+    return vertx.fileSystem().mkdirs(validatingNotariesPath.absolutePath)
+      .compose { vertx.fileSystem().mkdirs(nonValidatingNotariesPath.absolutePath) }
+      .map { Unit }
   }
 
   fun digest(): Future<String> {
@@ -67,79 +63,87 @@ class NetworkParameterInputsStorage(parentDir: File,
     return publishSubject
   }
 
-  fun readWhiteList(): Map<String, List<AttachmentId>> {
-    return whitelistPath.readLines()
-      .map { it.trim() }
-      .filter { it.isNotEmpty() }
-      .map { row -> row.split(":") }
-      .mapIndexed { index, row ->
-        if (row.size != 2) {
-          log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
-          null
-        } else {
-          row
-        }
-      }
+  fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
+    return vertx.fileSystem().readFile(whitelistPath.absolutePath)
       .map {
-        it?.let {
+        it.toString().lines()
+          .map { it.trim() }
+          .filter { it.isNotEmpty() }
+          .map { row -> row.split(":") } // simple parsing for the whitelist
+          .mapIndexed { index, row ->
+            if (row.size != 2) {
+              log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
+              null
+            } else {
+              row
+            }
+          }
+          .mapNotNull {
+            // if we have an attachment id, try to parse it
+            it?.let {
+              try {
+                it[0] to AttachmentId.parse(it[1])
+              } catch (err: Throwable) {
+                log.error("failed to parse attachment id", err)
+                null
+              }
+            }
+          }
+          .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
+          .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
+          .toMap() // and generate the final map
+      }
+  }
+
+
+  fun readNotaries(): Future<List<NotaryInfo>> {
+    val validating = readNodeInfos(validatingNotariesPath)
+      .map { nodeInfos ->
+        nodeInfos.mapNotNull { nodeInfo ->
           try {
-            it[0] to AttachmentId.parse(it[1])
+            NotaryInfo(nodeInfo.verified().notaryIdentity(), true)
           } catch (err: Throwable) {
-            log.error("failed to parse attachment id", err)
+            log.error("failed to process notary", err)
             null
           }
         }
       }
-      .filter { it != null }
-      .map { it!! }
-      .groupBy { it.first }
-      .mapValues { it.value.map { it.second } }
-      .toMap()
-  }
-
-
-  fun readNotaries(): List<NotaryInfo> {
-    val validating = readNodeInfos(validatingNotariesPath)
-      .map {
-        try {
-          NotaryInfo(it.verified().notaryIdentity(), true)
-        } catch (err: Throwable) {
-          log.error("failed to process notary", err)
-          null
-        }
-      }
-      .filter { it != null }
-      .map { it!! }
 
     val nonValidating = readNodeInfos(nonValidatingNotariesPath)
-      .map {
-        try {
-          NotaryInfo(it.verified().notaryIdentity(), true)
-        } catch (err: Throwable) {
-          log.error("failed to process notary", err)
-          null
+      .map { nodeInfos ->
+        nodeInfos.mapNotNull { nodeInfo ->
+          try {
+            NotaryInfo(nodeInfo.verified().notaryIdentity(), false)
+          } catch (err: Throwable) {
+            log.error("failed to process notary", err)
+            null
+          }
         }
       }
-      .filter { it != null }
-      .map { it!! }
 
-    val ms = validating.toMutableSet()
-    ms.addAll(nonValidating)
-    return ms.toList()
+    return listOf(validating, nonValidating).all()
+      .map { (validating, nonValidating) ->
+        val ms = validating.toMutableSet()
+        ms.addAll(nonValidating)
+        ms.toList()
+      }
   }
 
-  private fun readNodeInfos(dir: File): List<SignedNodeInfo> {
-    return dir.listFiles()
-      .map {
-        try {
-          it.toPath().readObject<SignedNodeInfo>()
-        } catch (err: Throwable) {
-          log.error("failed to deserialize SignedNodeInfo ${it.path}")
-          null
-        }
+  private fun readNodeInfos(dir: File): Future<List<SignedNodeInfo>> {
+    return vertx.fileSystem().readDir(dir.absolutePath)
+      .compose { files ->
+        files.map { file ->
+          vertx.fileSystem().readFile(file)
+            .map { buffer ->
+              try {
+                buffer.bytes.deserialize<SignedNodeInfo>()
+              } catch (err: Throwable) {
+                log.error("failed to deserialize SignedNodeInfo $file")
+                null
+              }
+            }
+        }.all().map { nodeInfos -> nodeInfos.filterNotNull() }
       }
-      .filter { it != null }
-      .map { it!! }
   }
 
   private fun NodeInfo.notaryIdentity(): Party {

@@ -5,7 +5,7 @@ import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAU
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
-import io.cordite.services.utils.composeOnFuture
+import io.cordite.services.utils.composeWithFuture
 import io.cordite.services.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.core.file.CopyOptions
@@ -24,7 +24,7 @@ class NetworkParameterInputsStorageTest {
 
     @JvmStatic
     @BeforeClass
-    fun before(context: TestContext) {
+    fun before() {
       vertx = Vertx.vertx()
     }
 
@@ -47,7 +47,7 @@ class NetworkParameterInputsStorageTest {
     }.setHandler(context.asyncAssertSuccess())
   }
 
-  @Test()
+  @Test
   fun `that digest stream correctly signals a change in the input set`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
@@ -62,7 +62,7 @@ class NetworkParameterInputsStorageTest {
         initialDigest = it
         println("initial digest: $it")
       }
-      .composeOnFuture<Void> {
+      .composeWithFuture<Void> {
         val src = File("src/test/resources/sample-input-set/whitelist.txt").absolutePath
         val dst = File(nmis.directory, WHITELIST_NAME).absolutePath
         println("copy $src to $dst")
@@ -75,6 +75,7 @@ class NetworkParameterInputsStorageTest {
       .compose { nmis.digest() }
       .onSuccess {
         newDigest = it
+        context.assertNotEquals(initialDigest, newDigest)
         println("new digest: $it")
       }
       .onSuccess {
@@ -87,6 +88,11 @@ class NetworkParameterInputsStorageTest {
         }
       }
       .setHandler(context.asyncAssertSuccess())
+  }
+
+  @Test
+  fun `that we can load whitelist and notaries`(context: TestContext) {
+
   }
 
   private fun createTempDirectory(): File {

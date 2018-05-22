@@ -292,12 +292,18 @@ class NetworkMapService(
   }
 
   private fun createNetworkParameters(): Future<SignedNetworkParameters> {
-    val copy = templateNetworkParameters.copy(
-      notaries = inputsStorage.readNotaries(),
-      whitelistedContractImplementations = inputsStorage.readWhiteList(),
-      modifiedTime = Instant.now()
-    )
-    val signed = copy.signWithCert(certs.keyPair.private, certs.certificate)
-    return signedNetworkParametersStorage.put(signed.raw.hash.toString(), signed).map { signed }
+    return inputsStorage.readWhiteList()
+      .compose { whitelist ->
+        inputsStorage.readNotaries()
+          .map { notaries ->
+            val copy = templateNetworkParameters.copy(
+              notaries = notaries,
+              whitelistedContractImplementations = whitelist,
+              modifiedTime = Instant.now()
+            )
+            copy.signWithCert(certs.keyPair.private, certs.certificate)
+          }
+      }
+      .compose { signed -> signedNetworkParametersStorage.put(signed.raw.hash.toString(), signed).map { signed } }
   }
 }
