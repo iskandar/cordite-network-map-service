@@ -1,6 +1,7 @@
 package io.cordite.services.storage
 
 import io.cordite.services.utils.DirectoryDigest
+import io.cordite.services.utils.composeOnFuture
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.identity.Party
@@ -17,13 +18,15 @@ import java.io.File
 class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
                                     childDir: String = DEFAULT_DIR_NAME,
-                                    validatingNotariesDirectoryName: String = "validating-notaries",
-                                    nonValidatingNotariesDirectoryName: String = "non-validating-notaries") {
+                                    validatingNotariesDirectoryName: String = DEFAULT_DIR_VALIDATING_NOTARIES,
+                                    nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES) {
   companion object {
     private val log = loggerFor<NetworkParameterInputsStorage>()
     private const val WHITELIST_NAME = "whitelist.txt"
     private const val TIME_OUT = 2_000L
     const val DEFAULT_DIR_NAME = "inputs"
+    const val DEFAULT_DIR_VALIDATING_NOTARIES = "validating-notaries"
+    const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
   }
 
   private val directory = File(parentDir, childDir)
@@ -41,6 +44,14 @@ class NetworkParameterInputsStorage(parentDir: File,
         publishSubject.onNext(Unit)
       }
     }
+  }
+
+  fun makeDirs(): Future<Unit> {
+    return composeOnFuture<Void> {
+      vertx.fileSystem().mkdirs(validatingNotariesPath.absolutePath, completer())
+    }.composeOnFuture<Void> {
+      vertx.fileSystem().mkdir(nonValidatingNotariesPath.absolutePath, this.completer())
+    }.map { Unit }
   }
 
   fun digest(): Future<String> {

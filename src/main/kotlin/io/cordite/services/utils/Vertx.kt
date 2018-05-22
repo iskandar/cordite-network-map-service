@@ -128,3 +128,17 @@ fun <T> List<Future<T>>.all() : Future<List<T>> {
   }
   return fResult
 }
+
+fun <T> composeOnFuture(fn: Future<T>.() -> Unit) : Future<T> {
+  val result = future<T>()
+  result.fn()
+  return result
+}
+
+fun <T> Future<*>.composeOnFuture(fn: Future<T>.() -> Unit) : Future<T> {
+  return this.compose {
+    val result = future<T>()
+    result.fn()
+    result
+  }
+}

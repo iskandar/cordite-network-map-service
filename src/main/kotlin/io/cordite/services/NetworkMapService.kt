@@ -87,6 +87,7 @@ class NetworkMapService(
     textStorage = TextStorage(vertx, dbDirectory)
     certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
     return listOf(
+      inputsStorage.makeDirs(),
       signedNetworkParametersStorage.makeDirs(),
       signedNetworkMapStorage.makeDirs(),
       nodeInfoStorage.makeDirs(),
