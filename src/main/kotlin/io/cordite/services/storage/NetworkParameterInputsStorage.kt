@@ -117,12 +117,14 @@ class NetworkParameterInputsStorage(parentDir: File,
       .compose { files ->
         files.map { file ->
           vertx.fileSystem().readFile(file)
-            .map { buffer ->
-              try {
-                buffer.bytes.deserialize<SignedNodeInfo>()
-              } catch (err: Throwable) {
-                log.error("failed to deserialize SignedNodeInfo $file")
-                null
+            .compose { buffer ->
+              vertx.executeBlocking {
+                try {
+                  buffer.bytes.deserialize<SignedNodeInfo>()
+                } catch (err: Throwable) {
+                  log.error("failed to deserialize SignedNodeInfo $file")
+                  null
+                }
               }
             }
         }.all().map { nodeInfos -> nodeInfos.filterNotNull() }
