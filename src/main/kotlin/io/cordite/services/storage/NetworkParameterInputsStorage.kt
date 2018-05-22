@@ -2,6 +2,7 @@ package io.cordite.services.storage
 
 import io.cordite.services.utils.DirectoryDigest
 import io.cordite.services.utils.composeOnFuture
+import io.cordite.services.utils.onSuccess
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.identity.Party
@@ -22,27 +23,31 @@ class NetworkParameterInputsStorage(parentDir: File,
                                     nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES) {
   companion object {
     private val log = loggerFor<NetworkParameterInputsStorage>()
-    private const val WHITELIST_NAME = "whitelist.txt"
+    const val WHITELIST_NAME = "whitelist.txt"
     private const val TIME_OUT = 2_000L
     const val DEFAULT_DIR_NAME = "inputs"
     const val DEFAULT_DIR_VALIDATING_NOTARIES = "validating-notaries"
     const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
   }
 
-  private val directory = File(parentDir, childDir)
+  val directory = File(parentDir, childDir)
   private val whitelistPath = File(directory, WHITELIST_NAME)
   private val validatingNotariesPath = File(directory, validatingNotariesDirectoryName)
   private val nonValidatingNotariesPath = File(directory, nonValidatingNotariesDirectoryName)
 
   private val digest = DirectoryDigest(directory)
-  private var lastDigest = digest()
-  private val publishSubject = PublishSubject.create<Unit>()
+  private var lastDigest : String = ""
+  private val publishSubject = PublishSubject.create<String>()
 
   init {
     vertx.periodicStream(TIME_OUT).handler {
-      if (digest() != lastDigest) {
-        publishSubject.onNext(Unit)
-      }
+      digest()
+        .onSuccess {
+          if (lastDigest != it) {
+            lastDigest = it
+            publishSubject.onNext(it)
+          }
+        }
     }
   }
 
@@ -58,7 +63,7 @@ class NetworkParameterInputsStorage(parentDir: File,
     return digest.digest(vertx)
   }
 
-  fun registerForChanges(): Observable<Unit> {
+  fun registerForChanges(): Observable<String> {
     return publishSubject
   }
 
