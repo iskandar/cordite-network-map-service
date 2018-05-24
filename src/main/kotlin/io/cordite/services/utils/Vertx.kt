@@ -1,6 +1,5 @@
 package io.cordite.services.utils
 
-import com.google.common.collect.Lists
 import io.cordite.services.NetworkMapApp
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -100,19 +99,19 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
 }
 
 fun <T> List<Future<T>>.all() : Future<List<T>> {
-  val results = Lists.newLinkedList<T>()
+  val results = mutableMapOf<Int, T>()
   val fResult = future<List<T>>()
   val countdown = AtomicInteger(this.size)
-  this.forEach { future ->
+  this.forEachIndexed { index, future ->
     future.setHandler { ar ->
       when {
         ar.succeeded() && fResult.succeeded() -> {
           logger.error("received a successful result in List<Future<T>>.all after all futures where apparently completed!")
         }
         ar.succeeded() -> {
-          results.addLast(ar.result())
+          results[index] = ar.result()
           if (countdown.decrementAndGet() == 0) {
-            fResult.complete(results)
+            fResult.complete(results.entries.sortedBy { it.key }.map { it.value })
           }
         }
         else -> {
@@ -125,12 +124,26 @@ fun <T> List<Future<T>>.all() : Future<List<T>> {
   return fResult
 }
 
+@JvmName("allTyped")
+fun <T> all(vararg futures: Future<T>) : Future<List<T>> {
+  return futures.toList().all()
+}
+
+@Suppress("UNCHECKED_CAST")
+fun all(vararg futures: Future<*>) : Future<List<*>> {
+  return (futures.toList() as List<Future<Any>>).all() as Future<List<*>>
+}
+
 fun FileSystem.mkdirs(path: String) : Future<Void> {
   return withFuture { mkdirs(path, it.completer()) }
 }
 
 fun FileSystem.readFile(path: String) : Future<Buffer> {
   return withFuture { readFile(path, it.completer()) }
+}
+
+fun FileSystem.writeFile(path: String, byteArray: ByteArray) : Future<Void> {
+  return withFuture { writeFile(path, Buffer.buffer(byteArray), it.completer()) }
 }
 
 fun FileSystem.readDir(path: String) : Future<List<String>> {

@@ -101,6 +101,6 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
   }
 
 
-  protected abstract fun deserialize(file: File) : Future<T>
-  protected abstract fun serialize(value: T, file: File) : Future<Unit>
+  protected abstract fun deserialize(location: File) : Future<T>
+  protected abstract fun serialize(value: T, location: File) : Future<Unit>
 }

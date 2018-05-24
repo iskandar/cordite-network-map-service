@@ -1,8 +1,11 @@
 package io.cordite.services.storage
 
 import io.cordite.services.utils.*
+import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.ext.web.RoutingContext
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -104,7 +107,7 @@ class NetworkParameterInputsStorage(parentDir: File,
         }
       }
 
-    return listOf(validating, nonValidating).all()
+    return all(validating, nonValidating)
       .map { (validating, nonValidating) ->
         val ms = validating.toMutableSet()
         ms.addAll(nonValidating)
@@ -164,6 +167,22 @@ class NetworkParameterInputsStorage(parentDir: File,
             null
           }
         }
+      }
+  }
+
+  fun serveWhitelist(routingContext: RoutingContext) {
+    routingContext.response()
+      .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+      .sendFile(whitelistPath.absolutePath)
+  }
+
+  fun serveNotaries(routingContext: RoutingContext) {
+    this.readNotaries()
+      .onSuccess {
+        routingContext.end(it)
+      }
+      .catch {
+        routingContext.end(it)
       }
   }
 }

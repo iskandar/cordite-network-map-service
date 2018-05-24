@@ -5,10 +5,7 @@ import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAU
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
-import io.cordite.services.utils.catch
-import io.cordite.services.utils.copy
-import io.cordite.services.utils.onSuccess
-import io.cordite.services.utils.toPath
+import io.cordite.services.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -17,10 +14,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 
 
 @RunWith(VertxUnitRunner::class)
@@ -140,18 +134,5 @@ class NetworkParameterInputsStorageTest {
     return Files.createTempDirectory("nms-test").toFile().apply { deleteOnExit() }
   }
 
-  @Throws(IOException::class)
-  fun copyFolder(src: Path, dest: Path) {
-    Files.walk(src)
-      .forEach { source -> copy(source, dest.resolve(src.relativize(source))) }
-  }
 
-  private fun copy(source: Path, dest: Path) {
-    try {
-      Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING)
-    } catch (e: Exception) {
-      throw RuntimeException(e.message, e)
-    }
-
-  }
 }

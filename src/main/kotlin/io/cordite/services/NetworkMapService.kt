@@ -42,11 +42,12 @@ class NetworkMapService(
   private val cacheTimeout: Duration = 10.seconds
 ) : AbstractVerticle() {
   companion object {
-    private const val CERT_NAME = "NMS"
+    private const val CERT_NAME = "nms"
     private const val NETWORK_MAP_KEY = "networkmap"
     private const val LAST_DIGEST_KEY = "last-digest.txt"
     private const val WEB_ROOT = "/network-map"
-    private val log = loggerFor<NetworkMapService>()
+    private const val API_ROOT = "/api"
+    private val logger = loggerFor<NetworkMapService>()
     init {
       SerializationEnvironment.init()
     }
@@ -102,12 +103,12 @@ class NetworkMapService(
       .requestHandler(router::accept)
       .listen(port) {
         if (it.failed()) {
-          NetworkMapApp.logger.error("failed to startup", it.cause())
+          logger.error("failed to startup", it.cause())
           result.fail(it.cause())
         } else {
-          NetworkMapApp.logger.info("network map service started")
-          NetworkMapApp.logger.info("api mounted on http://localhost:$port$WEB_ROOT")
-          NetworkMapApp.logger.info("website http://localhost:$port")
+          logger.info("network map service started")
+          logger.info("api mounted on http://localhost:$port$WEB_ROOT")
+          logger.info("website http://localhost:$port")
           result.complete()
         }
       }
@@ -163,6 +164,22 @@ class NetworkMapService(
           getNetworkParameters(hash)
         }
       }
+
+    router.get("$API_ROOT/whitelist")
+      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveWhitelist(this)
+        }
+      }
+
+    router.get("$API_ROOT/notaries")
+      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveNotaries(this)
+        }
+      }
   }
 
   private fun RoutingContext.getNetworkParameters(hash: SecureHash.SHA256) {
@@ -171,7 +188,7 @@ class NetworkMapService(
 
       }
       .catch {
-        log.error("failed to retrieve node info for hash $hash")
+        logger.error("failed to retrieve node info for hash $hash")
         this.end(it)
       }
   }
@@ -184,10 +201,10 @@ class NetworkMapService(
         val hash = signedParameterHash.verified()
         nodeInfoStorage.get(hash.toString())
           .onSuccess {
-            log.info("received acknowledgement from node ${it.verified().legalIdentities}")
+            logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
           }
           .catch {
-            log.warn("received acknowledgement from unknown node!")
+            logger.warn("received acknowledgement from unknown node!")
           }
 
         response().end()
@@ -198,7 +215,7 @@ class NetworkMapService(
   private fun getDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Future<Unit> {
     return certificateAndKeyPairStorage.get(CERT_NAME)
       .recover { // we couldn't find the cert - so generate one
-        log.warn("Failed to find the cert for this NMS, therefore generating one ")
+        logger.warn("Failed to find the cert for this NMS, therefore generating one ")
         val cert = createDevNetworkMapCa(rootCa)
         certificateAndKeyPairStorage.put(CERT_NAME, cert).map { cert }
       }
@@ -260,6 +277,9 @@ class NetworkMapService(
       .compose { digest ->
         textStorage
           .get(LAST_DIGEST_KEY)
+          .recover {
+            succeededFuture("")
+          }
           .compose { lastDigest ->
             if (lastDigest != digest) {
               createNetworkParameters()
