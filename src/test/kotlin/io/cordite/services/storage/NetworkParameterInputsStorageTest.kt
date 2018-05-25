@@ -69,7 +69,7 @@ class NetworkParameterInputsStorageTest {
         println("initial digest: $it")
       }
       .compose {
-        val src = File("src/test/resources/sample-input-set/whitelist.txt").absolutePath
+        val src = File("${SAMPLE_INPUTS}whitelist.txt").absolutePath
         val dst = File(nmis.directory, WHITELIST_NAME).absolutePath
         println("copy $src to $dst")
         vertx.fileSystem().copy(src, dst)
@@ -102,9 +102,9 @@ class NetworkParameterInputsStorageTest {
       .onSuccess { println("directories created in ${nmis.directory}") }
       .onSuccess {
         // copy the whitelist
-        Files.copy("src/test/resources/sample-input-set/whitelist.txt".toPath(), nmis.whitelistPath.toPath())
-        copyFolder("src/test/resources/sample-input-set/validating".toPath(), nmis.validatingNotariesPath.toPath())
-        copyFolder("src/test/resources/sample-input-set/non-validating".toPath(), nmis.nonValidatingNotariesPath.toPath())
+        Files.copy("${SAMPLE_INPUTS}whitelist.txt".toPath(), nmis.whitelistPath.toPath())
+        copyFolder("${SAMPLE_INPUTS}validating".toPath(), nmis.validatingNotariesPath.toPath())
+        copyFolder("${SAMPLE_INPUTS}non-validating".toPath(), nmis.nonValidatingNotariesPath.toPath())
       }
       .onSuccess {
         // setup the listener

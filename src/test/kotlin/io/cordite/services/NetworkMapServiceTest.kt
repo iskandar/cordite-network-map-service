@@ -2,6 +2,7 @@ package io.cordite.services
 
 import io.cordite.services.serialisation.SerializationEnvironment
 import io.cordite.services.storage.NetworkParameterInputsStorage
+import io.cordite.services.utils.SAMPLE_INPUTS
 import io.cordite.services.utils.copyFolder
 import io.cordite.services.utils.toPath
 import io.vertx.core.Vertx
@@ -47,7 +48,6 @@ class NetworkMapServiceTest {
 
   @Test
   fun startCluster(context: TestContext) {
-    context.async()
   }
 
   private fun createTempDir() : File {
@@ -65,9 +65,9 @@ class NetworkMapServiceTest {
   private fun setupDefaultInputFiles(directory: File) {
     val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
     inputs.mkdirs()
-    Files.copy("src/test/resources/sample-input-set/whitelist.txt".toPath(), File(inputs, NetworkParameterInputsStorage.WHITELIST_NAME).toPath())
-    copyFolder("src/test/resources/sample-input-set/validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES).toPath())
-    copyFolder("src/test/resources/sample-input-set/non-validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).toPath())
+    Files.copy("${SAMPLE_INPUTS}whitelist.txt".toPath(), File(inputs, NetworkParameterInputsStorage.WHITELIST_NAME).toPath())
+    copyFolder("${SAMPLE_INPUTS}validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES).toPath())
+    copyFolder("${SAMPLE_INPUTS}non-validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).toPath())
   }
 
 }
