@@ -42,7 +42,7 @@ class NetworkMapService(
   private val cacheTimeout: Duration = 10.seconds
 ) : AbstractVerticle() {
   companion object {
-    private const val CERT_NAME = "nms"
+    internal const val CERT_NAME = "nms"
     private const val NETWORK_MAP_KEY = "networkmap"
     private const val LAST_DIGEST_KEY = "last-digest.txt"
     private const val WEB_ROOT = "/network-map"
@@ -58,7 +58,7 @@ class NetworkMapService(
   private lateinit var signedNetworkParametersStorage: SignedNetworkParametersStorage
   private lateinit var nodeInfoStorage: SignedNodeInfoStorage
   private lateinit var textStorage: TextStorage
-  private lateinit var certificateAndKeyPairStorage: CertificateAndKeyPairStorage
+  internal lateinit var certificateAndKeyPairStorage: CertificateAndKeyPairStorage
   private lateinit var signedNetworkMapStorage: SignedNetworkMapStorage
 
   private val templateNetworkParameters = NetworkParameters(

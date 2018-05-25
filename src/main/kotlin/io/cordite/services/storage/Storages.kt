@@ -1,9 +1,9 @@
 package io.cordite.services.storage
 
-import io.cordite.services.utils.all
 import io.cordite.services.utils.readFile
 import io.cordite.services.utils.writeFile
 import io.vertx.core.Future
+import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -11,16 +11,13 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder
-import org.bouncycastle.util.io.pem.PemObject
-import org.bouncycastle.util.io.pem.PemReader
-import org.bouncycastle.util.io.pem.PemWriter
-import java.io.*
-import java.security.KeyFactory
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.security.KeyPair
-import java.security.cert.CertificateFactory
+import java.security.KeyStore
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import java.security.spec.PKCS8EncodedKeySpec
 
 
 class SignedNodeInfoStorage(
@@ -84,62 +81,42 @@ class SignedNetworkParametersStorage(
 class CertificateAndKeyPairStorage(
   vertx: Vertx,
   parentDirectory: File,
-  childDirectory: String = DEFAULT_CHILD_DIR,
-  private val certFilename: String = DEFAULT_CERT_FILENAME,
-  private val keyFilename: String = DEFAULT_KEY_FILENAME
+  childDirectory: String = DEFAULT_CHILD_DIR
 ) : AbstractSimpleNameValueStore<CertificateAndKeyPair>(File(parentDirectory, childDirectory), vertx) {
   companion object {
     const val DEFAULT_CHILD_DIR = "certs"
-    const val DEFAULT_CERT_FILENAME = "cert"
-    const val DEFAULT_KEY_FILENAME = "secret"
-    private val certFactory = CertificateFactory.getInstance("X509")
-    private val keyFactory = KeyFactory.getInstance("RSA")
+    const val DEFAULT_JKS_FILE = "keys.jks"
+    const val DEFAULT_KEY_ALIAS = "key"
+    const val DEFAULT_CERT_ALIAS = "cert"
+    private val P = "___".toCharArray()
   }
 
   override fun deserialize(location: File): Future<CertificateAndKeyPair> {
-    val cert = vertx.fileSystem().readFile(File(location, certFilename).absolutePath)
+    val file = File(location, DEFAULT_JKS_FILE)
+    if (!location.exists()) return failedFuture("couldn't find jks file ${file.absolutePath}")
+    return vertx.fileSystem().readFile(file.absolutePath)
       .map {
-        with(PemReader(InputStreamReader(ByteArrayInputStream(it.bytes)))) {
-          certFactory.generateCertificate(ByteArrayInputStream(this.readPemObject().content)) as X509Certificate
-        }
-      }
-
-    val privateKey = vertx.fileSystem().readFile(File(location, keyFilename).absolutePath)
-      .map {
-        with(PemReader(InputStreamReader(ByteArrayInputStream(it.bytes)))) {
-          val spec = PKCS8EncodedKeySpec(this.readPemObject().content)
-          keyFactory.generatePrivate(spec)
-        }
-      }
-
-    return all(cert, privateKey)
-      .map {
-        CertificateAndKeyPair(cert.result(), KeyPair(cert.result().publicKey, privateKey.result()))
+        val ba = it.bytes
+        val ks = KeyStore.getInstance("JKS")
+        ks.load(ByteArrayInputStream(ba), P)
+        val pk = ks.getKey(DEFAULT_KEY_ALIAS, P) as PrivateKey
+        val cert = ks.getCertificate(DEFAULT_CERT_ALIAS) as X509Certificate
+        CertificateAndKeyPair(cert, KeyPair(cert.publicKey, pk))
       }
   }
 
-  override fun serialize(value: CertificateAndKeyPair, location: File): Future<Unit> {
+  override fun serialize(value: CertificateAndKeyPair, location: File) : Future<Unit> {
     location.mkdirs()
-    val holder = JcaX509CertificateHolder(value.certificate)
 
-    val certArray = with(ByteArrayOutputStream()) {
-      with(PemWriter(OutputStreamWriter(this))) {
-        writeObject(PemObject("CERTIFICATE", holder.toASN1Structure().encoded))
-      }
+    val ks = KeyStore.getInstance("JKS")
+    ks.load(null, null)
+    ks.setKeyEntry(DEFAULT_KEY_ALIAS, value.keyPair.private, P, arrayOf(value.certificate))
+    ks.setCertificateEntry(DEFAULT_CERT_ALIAS, value.certificate)
+    val ba = with (ByteArrayOutputStream()) {
+      ks.store(this, P)
       this.toByteArray()
     }
-
-    val keyArray = with(ByteArrayOutputStream()) {
-      with(PemWriter(OutputStreamWriter(this))) {
-        writeObject(PemObject("PRIVATE KEY", value.keyPair.private.encoded))
-      }
-      this.toByteArray()
-    }
-
-    return all(
-      vertx.fileSystem().writeFile(File(location, certFilename).absolutePath, certArray),
-      vertx.fileSystem().writeFile(File(location, keyFilename).absolutePath, keyArray)
-    ).map { Unit }
+    return vertx.fileSystem().writeFile(File(location, DEFAULT_JKS_FILE).absolutePath, ba).map { Unit }
   }
 }
 
