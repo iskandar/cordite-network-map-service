@@ -1,7 +1,32 @@
 # Deployment
 
+# NMS deployment
+```
+kubectl delete -f deployment.yaml
+kubectl create -f deployment.yaml
+```
+
+You can also use the `kube_deploy.sh`. 
+Make sure you have set all the environment variables correctly.
+```
+IMAGE_TAG=${CI_PIPELINE_ID:-latest} # image tag you want deployed
+KUBE_NAMESPACE=${KUBE_NAMESPACE:-default} # Kube namespace you want to deploy to
+CI_ENVIRONMENT_SLUG=${CI_ENVIRONMENT_SLUG:-network-map-dev} # name of your environment
+CI_REGISTRY=registry.gitlab.com
+NMS_REG_USER=<gitlab deploy user> # see gitlab CI secret variables
+NMS_REG_TOKEN=<gitlab deploy token> # see gitlab CI secret variables
+```
+
 ## To do
 - [ ] kube_deploy.sh is not bullet proof and in need of TLC
+
+## How do I get Logs, Kube UI, public IP
+```
+kubectl -n currency-pay-dgl logs deployment/nwm-dgl-dev
+az aks browse --resource-group cordite-edge8 --name cordite-edge8
+kubectl -n currency-pay-dgl get services --watch
+kubectl exec -n currency-pay-dgl -it deployment/nwm-dgl-dev -- /bin/bash
+```
 
 ## Gitlab/Kubernetes integration
 Use your BB gitlab project name for the namespace
