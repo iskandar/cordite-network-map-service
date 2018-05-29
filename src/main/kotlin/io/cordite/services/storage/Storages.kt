@@ -2,13 +2,18 @@ package io.cordite.services.storage
 
 import io.cordite.services.utils.readFile
 import io.cordite.services.utils.writeFile
+import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpHeaders
+import io.vertx.ext.web.RoutingContext
+import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.ByteArrayInputStream
@@ -18,6 +23,7 @@ import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.time.Duration
 
 
 class SignedNodeInfoStorage(
@@ -37,6 +43,36 @@ class SignedNodeInfoStorage(
 
   override fun serialize(value: SignedNodeInfo, location: File): Future<Unit> {
     return serialize(value, location, vertx)
+  }
+}
+
+class ParametersUpdateStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = DEFAULT_CHILD_DIR)
+  : AbstractSimpleNameValueStore<ParametersUpdate>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "parameters-update"
+  }
+
+  override fun serialize(value: ParametersUpdate, location: File): Future<Unit> {
+    return serialize(value, location, vertx)
+  }
+
+  override fun deserialize(location: File): Future<ParametersUpdate> {
+    return deserialize(location, vertx)
+  }
+}
+
+class SecureHashStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = DEFAULT_CHILD_DIR)
+  : AbstractSimpleNameValueStore<SecureHash>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "secure-hashes"
+  }
+
+  override fun serialize(value: SecureHash, location: File): Future<Unit> {
+    return serialize(value, location, vertx)
+  }
+
+  override fun deserialize(location: File): Future<SecureHash> {
+    return deserialize(location, vertx)
   }
 }
 
@@ -137,5 +173,13 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
     val result = future<Void>()
     vertx.fileSystem().writeFile(location.absolutePath, Buffer.buffer(value), result.completer())
     return result.map { Unit }
+  }
+
+  override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
+    routingContext.response().apply {
+      putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
+      putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+        .sendFile(resolveKey(key).absolutePath)
+    }
   }
 }

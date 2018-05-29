@@ -2,13 +2,19 @@ package io.cordite.services.storage
 
 import io.cordite.services.utils.DirectoryDigest
 import io.cordite.services.utils.all
+import io.cordite.services.utils.end
+import io.cordite.services.utils.handleExceptions
+import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpHeaders
+import io.vertx.ext.web.RoutingContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import java.io.File
+import java.time.Duration
 
 abstract class AbstractSimpleNameValueStore<T : Any>(
   private val dir: File,
@@ -46,7 +52,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
   }
 
   override fun delete(key: String) : Future<Unit> {
-    val file = File(dir, key)
+    val file = resolveKey(key)
     val result = future<Void>()
     vertx.fileSystem().deleteRecursive(file.absolutePath, true, result.completer())
     return result.map { Unit }
@@ -55,7 +61,6 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
   override fun put(key: String, value: T): Future<Unit> {
     return write(key, value)
   }
-
 
   override fun get(key: String): Future<T> {
     return read(key)
@@ -79,12 +84,33 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
       .map { it.toMap() }
   }
 
+  override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
+    routingContext.handleExceptions {
+      routingContext.response().apply {
+        putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
+        putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          .sendFile(resolveKey(key).absolutePath) {
+            if (it.failed()) {
+              routingContext.end(it.cause())
+            }
+          }
+      }
+    }
+  }
+
+  override fun exists(key: String): Future<Boolean> {
+    val file = resolveKey(key)
+    val result = future<Boolean>()
+    vertx.fileSystem().exists(file.absolutePath, result.completer())
+    return result
+  }
+
   protected open fun write(key: String, value: T) : Future<Unit> {
-    return serialize(value, File(dir, key))
+    return serialize(value, resolveKey(key))
   }
 
   protected open fun read(key: String): Future<T> {
-    val file = File(dir, key)
+    val file = resolveKey(key)
     val result = future<T>()
     vertx.fileSystem().exists(file.absolutePath) {
       if (it.failed()) {
@@ -98,6 +124,10 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
       }
     }
     return result
+  }
+
+  protected fun resolveKey(key: String) : File {
+    return File(dir, key)
   }
 
 
