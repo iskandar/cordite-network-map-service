@@ -41,14 +41,22 @@ class NetworkParameterInputsStorage(parentDir: File,
   private val publishSubject = PublishSubject.create<String>()
 
   init {
-    vertx.periodicStream(TIME_OUT).handler {
-      digest()
-        .onSuccess {
-          if (lastDigest != it) {
-            lastDigest = it
-            publishSubject.onNext(it)
-          }
+    digest.digest(vertx).setHandler {
+      if (it.failed()) {
+        log.error("failed to get digest for input director", it.cause())
+      } else {
+        lastDigest = it.result()
+        // setup the watch
+        vertx.periodicStream(TIME_OUT).handler {
+          digest()
+            .onSuccess {
+              if (lastDigest != it) {
+                lastDigest = it
+                publishSubject.onNext(it)
+              }
+            }
         }
+      }
     }
   }
 
@@ -76,7 +84,6 @@ class NetworkParameterInputsStorage(parentDir: File,
           .toMap() // and generate the final map
       }
   }
-
 
   fun readNotaries(): Future<List<NotaryInfo>> {
     val validating = readNodeInfos(validatingNotariesPath)

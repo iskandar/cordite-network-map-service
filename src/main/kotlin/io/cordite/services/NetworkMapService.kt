@@ -7,9 +7,11 @@ import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
+import io.vertx.core.Future.future
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
@@ -31,7 +33,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import rx.Subscription
 import java.io.File
+import java.net.InetAddress
 import java.time.Duration
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
@@ -48,18 +52,21 @@ class NetworkMapService(
     private const val WEB_ROOT = "/network-map"
     private const val API_ROOT = "/api"
     private val logger = loggerFor<NetworkMapService>()
+
     init {
       SerializationEnvironment.init()
     }
   }
 
-  private lateinit var certs : CertificateAndKeyPair
+  private lateinit var certs: CertificateAndKeyPair
   private lateinit var inputsStorage: NetworkParameterInputsStorage
   private lateinit var signedNetworkParametersStorage: SignedNetworkParametersStorage
   private lateinit var nodeInfoStorage: SignedNodeInfoStorage
   private lateinit var textStorage: TextStorage
   internal lateinit var certificateAndKeyPairStorage: CertificateAndKeyPairStorage
   private lateinit var signedNetworkMapStorage: SignedNetworkMapStorage
+  private var inputStorageSubscription: Subscription? = null
+  private var httpServer: HttpServer? = null
 
   private val templateNetworkParameters = NetworkParameters(
     minimumPlatformVersion = 1,
@@ -79,9 +86,44 @@ class NetworkMapService(
       .setHandler(startFuture.completer())
   }
 
+  override fun stop(stopFuture: Future<Void>) {
+    logger.info("shutting down")
+    shutdownNotifications()
+      .compose { shutdownHttpServer() }
+      .onSuccess {
+        logger.info("shutdown complete")
+      }
+      .catch {
+        logger.error("shutdown failed", it)
+      }
+      .setHandler(stopFuture.completer())
+  }
+
+  private fun shutdownNotifications(): Future<Void> {
+    inputStorageSubscription?.let {
+      if (!it.isUnsubscribed) {
+        logger.info("shutting down the input storage notification stream")
+        it.unsubscribe()
+      }
+      inputStorageSubscription = null
+    }
+    return succeededFuture()
+  }
+
+  private fun shutdownHttpServer(): Future<Void> {
+    return httpServer?.let {
+      val f = future<Void>()
+      logger.info("shutting down the http server")
+      httpServer?.close(f.completer())
+      httpServer = null
+      f
+    } ?: succeededFuture<Void>()
+  }
+
   private fun setupStorage(): Future<Unit> {
+    logger.info("setting up database storage")
     inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-    inputsStorage.registerForChanges().subscribe { this.processInputDirectory() }
+    inputStorageSubscription = inputsStorage.registerForChanges().subscribe { this.processInputDirectory() }
     signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
     signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
     nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
@@ -97,8 +139,9 @@ class NetworkMapService(
   }
 
   private fun createHttpServer(router: Router): Future<Void> {
+    logger.info("creating http server on port $port")
     val result = Future.future<Void>()
-    vertx
+    this.httpServer = vertx
       .createHttpServer()
       .requestHandler(router::accept)
       .listen(port) {
@@ -180,12 +223,35 @@ class NetworkMapService(
           inputsStorage.serveNotaries(this)
         }
       }
+
+    router.get("$WEB_ROOT/my-hostname")
+      .handler {
+        it.handleExceptions {
+          val remote = it.request().connection().remoteAddress()
+          val ia = InetAddress.getByName(remote.host())
+          if (ia.isAnyLocalAddress || ia.isLoopbackAddress) {
+            end("localhost")
+          } else {
+            vertx.createDnsClient().lookup(remote.host()) {
+              if (it.failed()) {
+                end(it.cause())
+              } else {
+                end(it.result())
+              }
+            }
+          }
+        }
+      }
   }
 
   private fun RoutingContext.getNetworkParameters(hash: SecureHash.SHA256) {
     signedNetworkParametersStorage.get(hash.toString())
-      .onSuccess {
-
+      .onSuccess { snp ->
+        response().apply {
+          putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
+          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(snp.serialize().bytes))
+        }
       }
       .catch {
         logger.error("failed to retrieve node info for hash $hash")
@@ -213,9 +279,11 @@ class NetworkMapService(
   }
 
   private fun getDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Future<Unit> {
+    logger.info("checking for certificate")
     return certificateAndKeyPairStorage.get(CERT_NAME)
-      .recover { // we couldn't find the cert - so generate one
-        logger.warn("Failed to find the cert for this NMS, therefore generating one ")
+      .recover {
+        // we couldn't find the cert - so generate one
+        logger.warn("failed to find the cert for this NMS. generating new cert")
         val cert = createDevNetworkMapCa(rootCa)
         certificateAndKeyPairStorage.put(CERT_NAME, cert).map { cert }
       }
@@ -273,6 +341,7 @@ class NetworkMapService(
   }
 
   private fun processInputDirectory(): Future<Unit> {
+    logger.info("processing input directory")
     return inputsStorage.digest()
       .compose { digest ->
         textStorage

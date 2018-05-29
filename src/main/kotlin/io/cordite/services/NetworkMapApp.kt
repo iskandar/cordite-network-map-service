@@ -27,7 +27,7 @@ open class NetworkMapApp(
       }
       val port = portOption.value.toInt()
       val db = dbDirectory.value.toFile()
-      val ct = Duration.parse(cacheTimeout.value)
+      val ct = Duration.parse("PT${cacheTimeout.value}")
       NetworkMapApp(db, port, ct).start()
     }
   }

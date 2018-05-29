@@ -25,13 +25,12 @@ import java.security.cert.X509Certificate
 class NetworkMapServiceTest {
 
   companion object {
-
     init {
       SerializationEnvironment.init()
     }
-
   }
-  private val vertx = Vertx.vertx()
+
+  private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()
   private val port = getFreePort()
 
@@ -39,13 +38,16 @@ class NetworkMapServiceTest {
 
   @Before
   fun before(context: TestContext) {
+    vertx = Vertx.vertx()
 
     val path = dbDirectory.absolutePath
-    println(path)
+    println("db path: $path")
+    println("port   : $port")
+
     setupDefaultInputFiles(dbDirectory)
 
     this.service = NetworkMapService(dbDirectory, port)
-    vertx.deployVerticle(service, context.asyncAssertSuccess())
+    vertx?.deployVerticle(service, context.asyncAssertSuccess())
   }
 
   @After
@@ -54,7 +56,31 @@ class NetworkMapServiceTest {
   }
 
   @Test
-  fun startCluster(context: TestContext) {
+  fun `that we can retrieve network map and parameters and they are correct`(context: TestContext) {
+    val nmc = createNetworkMapClient(context)
+    val nmp = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash)
+    val notaries = nmp.verified().notaries
+
+    context.assertEquals(2, notaries.size)
+    context.assertEquals(1, notaries.filter { it.validating }.count())
+    context.assertEquals(1, notaries.filter { !it.validating }.count())
+
+    val nis = getNetworkParties(nmc)
+    context.assertEquals(0, nis.size)
+  }
+
+  @Test
+  fun `that "my-host" is localhost`(context: TestContext) {
+    val nmc = createNetworkMapClient(context)
+    val hostname = nmc.myPublicHostname()
+    context.assertEquals("localhost", hostname)
+  }
+
+  private fun getNetworkParties(nmc: NetworkMapClient) =
+    nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
+
+
+  private fun createNetworkMapClient(context: TestContext) : NetworkMapClient {
     val async = context.async()
     service.certificateAndKeyPairStorage.get(NetworkMapService.CERT_NAME)
       .onSuccess {
@@ -63,9 +89,7 @@ class NetworkMapServiceTest {
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    val nmc = NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
-    val nis = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
-//    val np = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash)
+    return NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
   }
 
   private fun createTempDir() : File {
@@ -77,7 +101,7 @@ class NetworkMapServiceTest {
   }
 
   private fun getFreePort(): Int {
-    return with(ServerSocket(0)) { localPort }
+    return ServerSocket(0).use { it.localPort }
   }
 
   private fun setupDefaultInputFiles(directory: File) {
@@ -87,5 +111,4 @@ class NetworkMapServiceTest {
     copyFolder("${SAMPLE_INPUTS}validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES).toPath())
     copyFolder("${SAMPLE_INPUTS}non-validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).toPath())
   }
-
 }
