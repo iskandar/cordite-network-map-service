@@ -1,5 +1,33 @@
 # Deployment
 
+# NMS deployment
+```
+kubectl delete -f deployment.yaml
+kubectl create -f deployment.yaml
+```
+
+You can also use the `kube_deploy.sh`. 
+Make sure you have set all the environment variables correctly.
+```
+IMAGE_TAG=${CI_PIPELINE_ID:-latest} # image tag you want deployed
+KUBE_NAMESPACE=${KUBE_NAMESPACE:-default} # Kube namespace you want to deploy to
+CI_ENVIRONMENT_SLUG=${CI_ENVIRONMENT_SLUG:-network-map-dev} # name of your environment
+CI_REGISTRY=registry.gitlab.com
+NMS_REG_USER=<gitlab deploy user> # see gitlab CI secret variables
+NMS_REG_TOKEN=<gitlab deploy token> # see gitlab CI secret variables
+```
+
+## To do
+- [ ] kube_deploy.sh is not bullet proof and in need of TLC
+
+## How do I get Logs, Kube UI, public IP
+```
+kubectl -n currency-pay-dgl logs deployment/nwm-dgl-dev
+az aks browse --resource-group cordite-edge8 --name cordite-edge8
+kubectl -n currency-pay-dgl get services --watch
+kubectl exec -n currency-pay-dgl -it deployment/nwm-dgl-dev -- /bin/bash
+```
+
 ## Gitlab/Kubernetes integration
 Use your BB gitlab project name for the namespace
 ```
@@ -25,33 +53,22 @@ Go to CI/CD -> Kubernetes -> Add custom cluster. Complete the following fields a
 
 Click to install Helm Tiller, Ingress (not required), Prometheus (metrics), Gitlab Runner (for CI) on your cluster
 
-## External DNS
-We are using CloudFlare and Kube ExternalDNS - https://github.com/kubernetes-incubator/external-dns
-To find out more see - https://github.com/kubernetes-incubator/external-dns/blob/master/docs/tutorials/cloudflare.md  
-You need to set `$CF_API_KEY` to the cloudflare api key. `CF_API_EMAIL` may need to change.
-Only need one of these per domain in the cluster kube-system namespace 
-```
-kubectl delete -n kube-system -f ./deployment/external-dns.yaml
-cat ./deployment/external-dns.yaml \
- | sed s/REPLACE_WITH_YOUR_CF_API_KEY/${CF_API_KEY}/ \
- | kubectl create -n kube-system -f -
-```
-Follow the logs with `kubectl -n kube-system logs deployment/external-dns`
-
 ## Things they don't tell you
   + $KUBE_CONFIG is a CI variable which deals with all security context on Kube runner
   + Adding label app=<environment> will make environments and metrics work in gitlab
 
-### Creating a new cluster on Azure (not advisable)
-```
-az login
-az group create --name cordite-edge6 --location uksouth
-az aks create --resource-group cordite-edge6 --name cordite-edge --node-count 3 --node-vm-size Standard_B2s --generate-ssh-keys --dns-name-prefix cordite-edge
-az storage account create --resource-group MC_cordite-edge8_cordite-edge8_eastus --name cordite-edge8 --location eastus --sku Standard_LRS
-```
+### External DNS (cluster wide resource)
+We are using CloudFlare and Kube ExternalDNS - https://github.com/kubernetes-incubator/external-dns
+To find out more see - https://github.com/kubernetes-incubator/external-dns/blob/master/docs/tutorials/cloudflare.md  
+Only need one of these per domain in the cluster kube-system namespace 
+Follow the logs with `kubectl -n kube-system logs deployment/external-dns`
 
-### Logs, Kube UI
+
+### TLS certificates (cluster wide resource)
+We are using CloudFlare and Kube cert-manager - https://cert-manager.readthedocs.io/
+Only need one of these per domain in the cluster kube-system namespace 
+Follow the logs on the cert-manager pod in namespace=kube-system
 ```
-kubectl -n network-map-service logs deployment/network-map-edge
-az aks browse --resource-group cordite --name cordite-edge
+kubectl get certificates -n currency-pay-dgl
+kubectl describe certificate nwm-dgl-edge-cordite-biz -n currency-pay-dgl
 ```

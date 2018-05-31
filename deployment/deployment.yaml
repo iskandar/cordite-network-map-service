@@ -1,7 +1,38 @@
+# TLS certificate request
+# cert-manager will request signed certificate from CA (let's encrypt)
+# stored as secretName
+# domain will be commonName, dnsNames and domains
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: cordite-biz
+  namespace: network-map-service
+  labels:
+    app: network-map-dev
+spec:
+  secretName: network-map-dev-cordite-biz
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  commonName: network-map-dev.cordite.biz
+  dnsNames:
+  - network-map-dev.cordite.biz
+  acme:
+    config:
+    - dns01:
+        provider: cloudflare-cordite-biz
+      domains:
+      - network-map-dev.cordite.biz
+---
+# Service
+# external-dns annotation will update DNS (cloudflare)
+# with correct A NAME mapping to public IP address
+# selector: defines which deployment the service points at
 apiVersion: v1
 kind: Service
 metadata:
   name: network-map-dev
+  namespace: network-map-service
   labels:
     app: network-map-dev
   annotations:
@@ -15,25 +46,15 @@ spec:
       port: 80
       targetPort: 80
 ---
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: azurefile-nms
-  labels:
-    app: network-map-dev
-provisioner: kubernetes.io/azure-file
-mountOptions:
-  - dir_mode=0777
-  - file_mode=0777
-  - uid=1000
-  - gid=1000
-parameters:
-  storageAccount: corditeedge8
----
+## Persistent Volume
+# will create a new azure share each time it is created
+# can be mounted to many containers
+# uses Storage Class above
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: network-map-dev
+  namespace: network-map-service
   labels:
     app: network-map-dev
 spec:
@@ -44,10 +65,16 @@ spec:
     requests:
       storage: 5Gi
 ---
+# Deployment
+# Creates the replicated container and manages lifecycle
+# TLS certs mounted
+# Persistent Volume mounted
+# Service points to this deployment (uses labels!)
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: network-map-dev
+  namespace: network-map-service
   labels:
     app: network-map-dev
 spec:
@@ -65,14 +92,22 @@ spec:
               value: "80"
             - name: NMS_NOTARY_DIR
               value: "/mnt/cordite/alpha/nms/validating-notaries"
+            - name: NMS_TLS_CERTS_DIR
+              value: "/mnt/cordite/alpha/nms/tls-certs"
           ports:
             - containerPort: 80
           volumeMounts:
             - mountPath: "/mnt/cordite/alpha/nms/validating-notaries"
               name: volume
+            - name: tls-cert-volume
+              readOnly: true
+              mountPath: "/mnt/cordite/alpha/nms/tls-certs"
       imagePullSecrets:
         - name: nms-registry
       volumes:
         - name: volume
           persistentVolumeClaim:
             claimName: network-map-dev
+        - name: tls-cert-volume
+          secret:
+            secretName: network-map-dev-cordite-biz
