@@ -62,7 +62,6 @@ class NetworkMapServiceProcessor(
 
   // we use a single thread to queue changes to the map, to ensure consistency
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
-  private var lastDigest = ""
   private var subscription: Subscription? = null
   private var networkMapRebuildTimerId: Long? = null
 
@@ -73,13 +72,9 @@ class NetworkMapServiceProcessor(
     }
 
     return execute {
-      getLastDigestProcessed()
-        .compose {
-          lastDigest = it
-          inputs.digest()
-        }
-        .compose {
-          processNewDigest(it, "first setup", true)
+        inputs.digest()
+        .compose { currentDigest ->
+          processNewDigest(currentDigest, "first setup", true)
         }
     }
   }
@@ -123,35 +118,43 @@ class NetworkMapServiceProcessor(
 
   private fun processNewDigest(digest: String, description: String, forceRebuild: Boolean = false): Future<Unit> {
     log.info("processing new digest $digest from input directory")
-    return if (digest != lastDigest) {
-      val activationTime = Instant.now().plusMillis(if (forceRebuild) {
-        0
-      } else {
-        networkParameterUpdateDelay.toMillis()
-      })
-      onInputsChanged(description, activationTime)
-        .onSuccess {
-          lastDigest = digest
+    return getLastDigestProcessed()
+      .compose { lastDigest ->
+        if (digest != lastDigest) {
+          log.info("digest $digest not processed. last digest is $lastDigest")
+          val activationTime = Instant.now().plusMillis(if (forceRebuild) {
+            0
+          } else {
+            networkParameterUpdateDelay.toMillis()
+          })
+          onInputsChanged(description, activationTime)
+            .compose { saveLastDigest(digest) }
+        } else {
+          log.info("digest $digest has already been processed")
+          succeededFuture(Unit)
         }
-    } else {
-      succeededFuture(Unit)
-    }.onSuccess {
-      // we always rebuild the network map
-      // this can happen for the following cases:
-      // 1. we've restarted the node and, whilst the network parameters are up to date, the NetworkMap isn't
-      // 2. or we've got a genuine input parameter change
-      if (forceRebuild) {
-        createNetworkMap()
-      } else {
-        scheduleNetworkMapRebuild()
       }
-    }.catch {
-      log.error("failed to process new digest $digest", it)
-    }
+      .onSuccess {
+        // we always rebuild the network map
+        // this can happen for the following cases:
+        // 1. we've restarted the node and, whilst the network parameters are up to date, the NetworkMap isn't
+        // 2. or we've got a genuine input parameter change
+        if (forceRebuild) {
+          createNetworkMap()
+        } else {
+          scheduleNetworkMapRebuild()
+        }
+      }.catch {
+        log.error("failed to process new digest $digest", it)
+      }
   }
 
   private fun getLastDigestProcessed(): Future<String> {
     return textStorage.getOrDefault(LAST_DIGEST_KEY, "")
+  }
+
+  private fun saveLastDigest(digest: String): Future<Unit> {
+    return textStorage.put(LAST_DIGEST_KEY, digest)
   }
 
   private inline fun <reified T : Any> T.sign(): SignedDataWithCert<T> {

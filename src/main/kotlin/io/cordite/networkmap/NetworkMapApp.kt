@@ -4,7 +4,6 @@ import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
 import io.vertx.core.Vertx
-import net.corda.core.utilities.loggerFor
 import java.io.File
 import java.time.Duration
 
@@ -12,11 +11,10 @@ open class NetworkMapApp(
   private val dbDirectory: File,
   private val port: Int,
   private val cacheTimeout: Duration,
-  val networkParamUpdateDelay: Duration,
-  val networkMapQueuedUpdateDelay: Duration
+  private val networkParamUpdateDelay: Duration,
+  private val networkMapQueuedUpdateDelay: Duration
 )  {
   companion object {
-    val logger = loggerFor<NetworkMapApp>()
 
     @JvmStatic
     fun main(args: Array<String>) {

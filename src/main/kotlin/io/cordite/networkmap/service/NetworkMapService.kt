@@ -47,7 +47,7 @@ class NetworkMapService(
     internal const val CERT_NAME = "nms"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_ROOT = "/admin"
-    private const val API_ROOT = "${ADMIN_ROOT}/api"
+    private const val ADMIN_API_ROOT = "${ADMIN_ROOT}/api"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -151,8 +151,11 @@ class NetworkMapService(
           result.fail(it.cause())
         } else {
           logger.info("network map service started")
-          logger.info("api mounted on http://localhost:$port${NETWORK_MAP_ROOT}")
-          logger.info("website http://localhost:$port")
+          logger.info("""mounts:
+            |network map:   http://localhost:$port$NETWORK_MAP_ROOT
+            |admin website: http://localhost:$port$ADMIN_ROOT
+            |admin API:     http://localhost:$port$ADMIN_API_ROOT
+          """.trimMargin())
           result.complete()
         }
       }
@@ -228,7 +231,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${API_ROOT}/whitelist")
+    router.get("${ADMIN_API_ROOT}/whitelist")
       .produces(HttpHeaderValues.TEXT_PLAIN.toString())
       .handler {
         it.handleExceptions {
@@ -236,7 +239,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${API_ROOT}/notaries")
+    router.get("${ADMIN_API_ROOT}/notaries")
       .produces(HttpHeaderValues.APPLICATION_JSON.toString())
       .handler {
         it.handleExceptions {
@@ -244,7 +247,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${API_ROOT}/nodes")
+    router.get("${ADMIN_API_ROOT}/nodes")
       .produces(HttpHeaderValues.APPLICATION_JSON.toString())
       .handler {
         it.handleExceptions {
