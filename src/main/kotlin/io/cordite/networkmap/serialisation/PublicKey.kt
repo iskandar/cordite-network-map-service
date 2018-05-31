@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.cordite.services.serialisation
+package io.cordite.networkmap.serialisation
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser

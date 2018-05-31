@@ -1,4 +1,4 @@
-package io.cordite.services.keystore
+package io.cordite.networkmap.keystore
 
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import java.io.File

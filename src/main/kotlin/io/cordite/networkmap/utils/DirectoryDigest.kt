@@ -1,6 +1,5 @@
 package io.cordite.networkmap.utils
 
-import io.cordite.services.utils.toEnumeration
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.utilities.toHexString

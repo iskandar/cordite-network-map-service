@@ -1,8 +1,6 @@
 package io.cordite.networkmap.serialisation
 
 import com.fasterxml.jackson.databind.module.SimpleModule
-import io.cordite.services.serialisation.PublicKeyDeserializer
-import io.cordite.services.serialisation.PublicKeySerializer
 import io.vertx.core.json.Json
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.internal.KryoClientSerializationScheme

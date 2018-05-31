@@ -1,6 +1,6 @@
 package io.cordite.networkmap
 
-import io.cordite.services.keystore.toX509KeyStore
+import io.cordite.networkmap.keystore.toX509KeyStore
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
