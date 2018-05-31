@@ -20,6 +20,10 @@
       font-size: 8pt;
       font-family: monospace;
     }
+    .node-key {
+      font-size: 8pt;
+      font-family: monospace;
+    }
     .whitelist {
       font-size: 10pt;
       font-family: monospace;
@@ -35,32 +39,41 @@
         <a href="https://docs.corda.net/network-map.html">Corda v3 documentation</a></p>
     </div>
   </div>
+  <br>
   <div class="row">
     <div class="col">
       <h2>Registered Notaries</h2>
       <ul id="notaries" class="list-group"></ul>
     </div>
   </div>
+  <br>
   <div class="row">
     <div class="col">
       <h2>Contract Attachments Whitelist</h2>
-      <textarea class="form-control whitelist" id="whitelist" rows="3" readonly></textarea>
+      <textarea class="form-control whitelist" id="whitelist" rows="3" readonly title=""></textarea>
+    </div>
+  </div>
+  <br>
+  <div class="row">
+    <div class="col">
+      <h2>Nodes</h2>
+      <ul id="nodes" class="list-group"></ul>
     </div>
   </div>
 </div>
 <script>
   $(document).ready(function () {
-    $.get("/api/notaries", setupNotaries);
-    $.get("/api/whitelist", setupWhitelist)
+    $.get("/admin/api/notaries", setupNotaries);
+    $.get("/admin/api/whitelist", setupWhitelist);
+    $.get("/admin/api/nodes", setupNodes);
   });
 
   function setupNotaries(data) {
     const notaryList = $('#notaries');
     for (let notary of data) {
-      console.log(notary);
       const notaryItem = $('<li class="notary list-group-item">');
-      const title = $('<div class="notary-name">')
-      const key = $('<div class="notary-key">')
+      const title = $('<div class="notary-name">');
+      const key = $('<div class="notary-key">');
       title.text(notary.identity.name);
       key.text(notary.identity.owningKey);
       notaryItem.append(title);
@@ -74,6 +87,26 @@
     const wl = $('#whitelist');
     wl.text(data);
   }
+
+  function setupNodes(data) {
+    const nodeList = $('#nodes');
+    for (let node of data) {
+      console.log(node);
+      const nodeItem = $('<li class="node list-group-item">');
+      const party = $('<div class="node-name">');
+      const host = $('<div class="node-key">');
+      const key = $('<div class="node-key">');
+      party.text(node.parties[0].name);
+      host.text(`${node.addresses[0].host}:${node.addresses[0].port}`);
+      key.text(node.parties[0].key);
+      nodeItem.append(party);
+      nodeItem.append(host);
+      nodeItem.append(key);
+      nodeItem.data('node', node);
+      nodeList.append(nodeItem);
+    }
+  }
+
 </script>
 </body>
 </html>

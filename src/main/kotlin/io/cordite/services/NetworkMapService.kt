@@ -31,6 +31,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.io.File
 import java.net.InetAddress
+import java.security.PublicKey
 import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
@@ -44,8 +45,9 @@ class NetworkMapService(
 
   companion object {
     internal const val CERT_NAME = "nms"
-    private const val WEB_ROOT = "/network-map"
-    private const val API_ROOT = "/api"
+    private const val NETWORK_MAP_ROOT = "/network-map"
+    private const val ADMIN_ROOT = "/admin"
+    private const val API_ROOT = "$ADMIN_ROOT/api"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -149,7 +151,7 @@ class NetworkMapService(
           result.fail(it.cause())
         } else {
           logger.info("network map service started")
-          logger.info("api mounted on http://localhost:$port$WEB_ROOT")
+          logger.info("api mounted on http://localhost:$port$NETWORK_MAP_ROOT")
           logger.info("website http://localhost:$port")
           result.complete()
         }
@@ -166,18 +168,18 @@ class NetworkMapService(
 
   private fun bindStatic(router: Router) {
     val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
-    router.get("/*").handler(staticHandler::handle)
+    router.get(ADMIN_ROOT).handler(staticHandler::handle)
   }
 
 
   private fun bindCordaNetworkMapAPI(router: Router) {
-    router.post("$WEB_ROOT/publish")
+    router.post("$NETWORK_MAP_ROOT/publish")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions { postNodeInfo() }
       }
 
-    router.post("$WEB_ROOT/ack-parameters")
+    router.post("$NETWORK_MAP_ROOT/ack-parameters")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -185,11 +187,11 @@ class NetworkMapService(
         }
       }
 
-    router.get(WEB_ROOT)
+    router.get(NETWORK_MAP_ROOT)
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler { it.handleExceptions { getNetworkMap() } }
 
-    router.get("$WEB_ROOT/node-info/:hash")
+    router.get("$NETWORK_MAP_ROOT/node-info/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -198,7 +200,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$WEB_ROOT/network-parameters/:hash")
+    router.get("$NETWORK_MAP_ROOT/network-parameters/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -207,7 +209,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$WEB_ROOT/my-hostname")
+    router.get("$NETWORK_MAP_ROOT/my-hostname")
       .handler {
         it.handleExceptions {
           val remote = it.request().connection().remoteAddress()
@@ -346,11 +348,12 @@ class NetworkMapService(
       .onSuccess {
         end(it.map {
           val node = it.value.verified()
-          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { it.name }, node.platformVersion)
+          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
         })
       }
       .catch { end(it) }
   }
 
-  data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<CordaX500Name>, val platformVersion: Int)
+  data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
+  data class NameAndKey(val name: CordaX500Name, val key: PublicKey)
 }
