@@ -17,8 +17,10 @@ import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -205,22 +207,6 @@ class NetworkMapService(
         }
       }
 
-    router.get("$API_ROOT/whitelist")
-      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveWhitelist(this)
-        }
-      }
-
-    router.get("$API_ROOT/notaries")
-      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveNotaries(this)
-        }
-      }
-
     router.get("$WEB_ROOT/my-hostname")
       .handler {
         it.handleExceptions {
@@ -237,6 +223,30 @@ class NetworkMapService(
               }
             }
           }
+        }
+      }
+
+    router.get("$API_ROOT/whitelist")
+      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveWhitelist(this)
+        }
+      }
+
+    router.get("$API_ROOT/notaries")
+      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveNotaries(this)
+        }
+      }
+
+    router.get("$API_ROOT/nodes")
+      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
+      .handler {
+        it.handleExceptions {
+          getAllNodeInfos()
         }
       }
   }
@@ -315,17 +325,7 @@ class NetworkMapService(
   }
 
   private fun RoutingContext.getNetworkMap() {
-    signedNetworkMapStorage.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
-      .onSuccess { snm ->
-        response().apply {
-          putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-          end(Buffer.buffer(snm.serialize().bytes))
-        }
-      }
-      .catch {
-        this.end(it)
-      }
+    signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, this, cacheTimeout)
   }
 
   private fun RoutingContext.getNodeInfo(hash: SecureHash) {
@@ -340,4 +340,17 @@ class NetworkMapService(
         this.end(it)
       }
   }
+
+  private fun RoutingContext.getAllNodeInfos() {
+    nodeInfoStorage.getAll()
+      .onSuccess {
+        end(it.map {
+          val node = it.value.verified()
+          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { it.name }, node.platformVersion)
+        })
+      }
+      .catch { end(it) }
+  }
+
+  data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<CordaX500Name>, val platformVersion: Int)
 }
