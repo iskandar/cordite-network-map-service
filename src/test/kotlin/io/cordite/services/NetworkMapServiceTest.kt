@@ -2,15 +2,17 @@ package io.cordite.services
 
 import io.cordite.services.serialisation.SerializationEnvironment
 import io.cordite.services.storage.NetworkParameterInputsStorage
-import io.cordite.services.utils.SAMPLE_INPUTS
-import io.cordite.services.utils.copyFolder
-import io.cordite.services.utils.onSuccess
-import io.cordite.services.utils.toPath
+import io.cordite.services.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
+import net.corda.core.utilities.millis
+import net.corda.core.utilities.seconds
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.internal.TestNodeInfoBuilder
+import org.apache.commons.io.FileUtils
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -20,6 +22,12 @@ import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapServiceTest {
@@ -28,6 +36,10 @@ class NetworkMapServiceTest {
     init {
       SerializationEnvironment.init()
     }
+
+    val CACHE_TIMEOUT = 1.millis
+    val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
+    val NETWORK_MAP_QUEUE_DELAY = 1.seconds
   }
 
   private var vertx = Vertx.vertx()
@@ -40,13 +52,25 @@ class NetworkMapServiceTest {
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
 
+    val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
+    val async = context.async()
+    fRead.setHandler { async.complete() }
+    async.await()
+
+
     val path = dbDirectory.absolutePath
     println("db path: $path")
     println("port   : $port")
 
     setupDefaultInputFiles(dbDirectory)
 
-    this.service = NetworkMapService(dbDirectory, port)
+    this.service = NetworkMapService(
+      dbDirectory = dbDirectory,
+      port = port,
+      cacheTimeout = CACHE_TIMEOUT,
+      networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
+      networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY
+    )
     vertx?.deployVerticle(service, context.asyncAssertSuccess())
   }
 
@@ -74,6 +98,40 @@ class NetworkMapServiceTest {
     val nmc = createNetworkMapClient(context)
     val hostname = nmc.myPublicHostname()
     context.assertEquals("localhost", hostname)
+  }
+
+  @Test
+  fun `that we can add a new node`(context: TestContext) {
+    val nmc = createNetworkMapClient(context)
+    val tnib = TestNodeInfoBuilder()
+    tnib.addIdentity(ALICE_NAME)
+    val sni = tnib.buildWithSigned()
+    nmc.publish(sni.signed)
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    val nm = nmc.getNetworkMap().payload
+    val nhs = nm.nodeInfoHashes
+    context.assertEquals(1, nhs.size)
+    assertEquals(sni.signed.raw.hash, nhs[0])
+  }
+
+
+  @Test
+  fun `that we can modify the network parameters`(context: TestContext) {
+    val nmc = createNetworkMapClient(context)
+    deleteValidatingNotaries(dbDirectory)
+    Thread.sleep(NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    val nm = nmc.getNetworkMap().payload
+    assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
+    val deadLine = nm.parametersUpdate!!.updateDeadline
+    val delay = Duration.between(Instant.now(), deadLine)
+    assert(delay > Duration.ZERO && delay <= NETWORK_PARAM_UPDATE_DELAY)
+    Thread.sleep(delay.toMillis() * 2)
+    val nm2 = nmc.getNetworkMap().payload
+    assertNull(nm2.parametersUpdate)
+    val nmp = nmc.getNetworkParameters(nm2.networkParameterHash).verified()
+    assertEquals(1, nmp.notaries.size)
+    assertTrue(nmp.notaries.all { !it.validating })
   }
 
   private fun getNetworkParties(nmc: NetworkMapClient) =
@@ -110,5 +168,10 @@ class NetworkMapServiceTest {
     Files.copy("${SAMPLE_INPUTS}whitelist.txt".toPath(), File(inputs, NetworkParameterInputsStorage.WHITELIST_NAME).toPath())
     copyFolder("${SAMPLE_INPUTS}validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES).toPath())
     copyFolder("${SAMPLE_INPUTS}non-validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).toPath())
+  }
+
+  private fun deleteValidatingNotaries(directory: File) {
+    val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
+    FileUtils.cleanDirectory(File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES))
   }
 }

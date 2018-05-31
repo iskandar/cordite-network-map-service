@@ -7,6 +7,7 @@ import io.cordite.services.utils.handleExceptions
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.Future.future
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
@@ -66,12 +67,20 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     return read(key)
   }
 
+  override fun getOrNull(key: String): Future<T?> {
+    return read(key).recover { succeededFuture() }
+  }
+
   override fun getKeys(): Future<List<String>> {
     val result = future<List<String>>()
     vertx.fileSystem().readDir(dir.absolutePath, result.completer())
     return result.map {
       it.map { File(it).name }
     }
+  }
+
+  override fun getOrDefault(key: String, default: T) : Future<T> {
+    return read(key).recover { succeededFuture(default) }
   }
 
   override fun getAll(): Future<Map<String, T>> {

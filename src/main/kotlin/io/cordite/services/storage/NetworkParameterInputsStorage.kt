@@ -21,11 +21,12 @@ class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
                                     childDir: String = DEFAULT_DIR_NAME,
                                     validatingNotariesDirectoryName: String = DEFAULT_DIR_VALIDATING_NOTARIES,
-                                    nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES) {
+                                    nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES,
+                                    pollRate: Long = DEFAULT_WATCH_DELAY) {
   companion object {
     private val log = loggerFor<NetworkParameterInputsStorage>()
     const val WHITELIST_NAME = "whitelist.txt"
-    private const val TIME_OUT = 2_000L
+    const val DEFAULT_WATCH_DELAY = 2_000L
     const val DEFAULT_DIR_NAME = "inputs"
     const val DEFAULT_DIR_VALIDATING_NOTARIES = "validating-notaries"
     const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
@@ -47,7 +48,7 @@ class NetworkParameterInputsStorage(parentDir: File,
       } else {
         lastDigest = it.result()
         // setup the watch
-        vertx.periodicStream(TIME_OUT).handler {
+        vertx.periodicStream(pollRate).handler {
           digest()
             .onSuccess {
               if (lastDigest != it) {
@@ -82,6 +83,12 @@ class NetworkParameterInputsStorage(parentDir: File,
           .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
           .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
           .toMap() // and generate the final map
+      }
+      .onSuccess {
+        log.info("retrieved whitelist")
+      }
+      .catch {
+        log.error("failed to retrieve whitelist", it)
       }
   }
 
@@ -120,24 +127,27 @@ class NetworkParameterInputsStorage(parentDir: File,
         ms.addAll(nonValidating)
         ms.toList()
       }
+      .onSuccess {
+        log.info("retrieved notaries")
+      }
+      .catch {
+        log.error("failed to retrieve notaries", it)
+      }
   }
 
   private fun readNodeInfos(dir: File): Future<List<SignedNodeInfo>> {
-    return vertx.fileSystem().readDir(dir.absolutePath)
-      .compose { files ->
-        files.map { file ->
-          vertx.fileSystem().readFile(file)
-            .compose { buffer ->
-              vertx.executeBlocking {
-                try {
-                  buffer.bytes.deserialize<SignedNodeInfo>()
-                } catch (err: Throwable) {
-                  log.error("failed to deserialize SignedNodeInfo $file")
-                  null
-                }
-              }
+    return vertx.fileSystem().readFiles(dir.absolutePath)
+      .compose { buffers ->
+        vertx.executeBlocking {
+          buffers.mapNotNull { (file, buffer) ->
+            try {
+              buffer.bytes.deserialize<SignedNodeInfo>()
+            } catch (err: Throwable) {
+              log.error("failed to deserialize SignedNodeInfo $file")
+              null
             }
-        }.all().map { nodeInfos -> nodeInfos.filterNotNull() }
+          }
+        }
       }
   }
 

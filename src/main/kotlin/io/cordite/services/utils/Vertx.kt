@@ -1,10 +1,15 @@
+/**
+ * Utility functions for use of vertx
+ */
+
 package io.cordite.services.utils
 
-import io.cordite.services.NetworkMapApp
+import io.cordite.services.NetworkMapService
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Future
 import io.vertx.core.Future.future
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.FileSystem
@@ -14,7 +19,7 @@ import io.vertx.ext.web.RoutingContext
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.atomic.AtomicInteger
 
-private val logger = loggerFor<NetworkMapApp>()
+private val logger = loggerFor<NetworkMapService>()
 
 fun RoutingContext.end(text: String) {
   val length = text.length
@@ -99,6 +104,7 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
 }
 
 fun <T> List<Future<T>>.all() : Future<List<T>> {
+  if (this.isEmpty()) return succeededFuture(emptyList())
   val results = mutableMapOf<Int, T>()
   val fResult = future<List<T>>()
   val countdown = AtomicInteger(this.size)
@@ -107,6 +113,9 @@ fun <T> List<Future<T>>.all() : Future<List<T>> {
       when {
         ar.succeeded() && fResult.succeeded() -> {
           logger.error("received a successful result in List<Future<T>>.all after all futures where apparently completed!")
+        }
+        fResult.failed() -> {
+          // we received a result after the future was deemed failed. carry on.
         }
         ar.succeeded() -> {
           results[index] = ar.result()
@@ -154,8 +163,19 @@ fun FileSystem.copy(from: String, to: String) : Future<Void> {
   return withFuture { copy(from, to, it.completer()) }
 }
 
+fun FileSystem.readFiles(dirPath: String) : Future<List<Pair<String, Buffer>>> {
+  return readDir(dirPath)
+    .compose { files ->
+      files.map { file ->
+        readFile(file).map { buffer -> file to buffer }
+      }.all()
+    }
+}
+
 inline fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
   val result = future<T>()
   fn(result)
   return result
 }
+
+
