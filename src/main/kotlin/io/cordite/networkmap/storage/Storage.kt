@@ -1,4 +1,4 @@
-package io.cordite.services.storage
+package io.cordite.networkmap.storage
 
 import io.vertx.core.Future
 import io.vertx.ext.web.RoutingContext

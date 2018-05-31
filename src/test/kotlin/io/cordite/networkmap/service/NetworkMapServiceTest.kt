@@ -1,8 +1,8 @@
-package io.cordite.services
+package io.cordite.networkmap.service
 
-import io.cordite.services.serialisation.SerializationEnvironment
-import io.cordite.services.storage.NetworkParameterInputsStorage
-import io.cordite.services.utils.*
+import io.cordite.networkmap.serialisation.SerializationEnvironment
+import io.cordite.networkmap.storage.NetworkParameterInputsStorage
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner

@@ -1,7 +1,8 @@
-package io.cordite.services
+package io.cordite.networkmap
 
-import io.cordite.services.utils.Options
-import io.cordite.services.utils.toFile
+import io.cordite.networkmap.service.NetworkMapService
+import io.cordite.networkmap.utils.Options
+import io.cordite.networkmap.utils.toFile
 import io.vertx.core.Vertx
 import net.corda.core.utilities.loggerFor
 import java.io.File

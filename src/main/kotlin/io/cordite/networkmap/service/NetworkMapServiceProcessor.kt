@@ -1,10 +1,10 @@
-package io.cordite.services
+package io.cordite.networkmap.service
 
-import io.cordite.services.storage.*
-import io.cordite.services.utils.all
-import io.cordite.services.utils.catch
-import io.cordite.services.utils.onSuccess
-import io.cordite.services.utils.withFuture
+import io.cordite.networkmap.storage.*
+import io.cordite.networkmap.utils.all
+import io.cordite.networkmap.utils.catch
+import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.withFuture
 import io.vertx.core.Future
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx

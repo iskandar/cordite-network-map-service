@@ -1,7 +1,7 @@
-package io.cordite.services.storage
+package io.cordite.networkmap.storage
 
-import io.cordite.services.utils.readFile
-import io.cordite.services.utils.writeFile
+import io.cordite.networkmap.utils.readFile
+import io.cordite.networkmap.utils.writeFile
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture

@@ -1,4 +1,4 @@
-package io.cordite.services.utils
+package io.cordite.networkmap.utils
 
 import java.io.File
 import java.io.IOException

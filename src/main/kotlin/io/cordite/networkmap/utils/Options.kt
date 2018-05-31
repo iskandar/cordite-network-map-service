@@ -1,4 +1,4 @@
-package io.cordite.services.utils
+package io.cordite.networkmap.utils
 
 
 class Options {
@@ -22,7 +22,7 @@ class Options {
   fun printOptions() {
     val propertyWidth = (options.map { it.width() }.max() ?: 0) + 2
     val envWidth = propertyWidth + 4
-    val defaultWidth = (options.map { it.default.length }.max() ?: 0) + 2
+    val defaultWidth = (options.map { it.default.length }.max() ?: 0) + 3
 
     println("\njava properties (pass with -D<propertyname>=<property-value>) and env variables\n")
     println("Property".padEnd(propertyWidth) + "Env Variable".padEnd(envWidth) + "Default".padEnd(defaultWidth) + "Description")

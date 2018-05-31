@@ -1,8 +1,8 @@
-package io.cordite.services.storage
+package io.cordite.networkmap.storage
 
 import com.google.common.io.Files
-import io.cordite.services.utils.all
-import io.cordite.services.utils.onSuccess
+import io.cordite.networkmap.utils.all
+import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner

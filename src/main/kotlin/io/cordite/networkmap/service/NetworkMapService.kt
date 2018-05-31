@@ -1,8 +1,8 @@
-package io.cordite.services
+package io.cordite.networkmap.service
 
-import io.cordite.services.serialisation.SerializationEnvironment
-import io.cordite.services.storage.*
-import io.cordite.services.utils.*
+import io.cordite.networkmap.serialisation.SerializationEnvironment
+import io.cordite.networkmap.storage.*
+import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
@@ -47,7 +47,7 @@ class NetworkMapService(
     internal const val CERT_NAME = "nms"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_ROOT = "/admin"
-    private const val API_ROOT = "$ADMIN_ROOT/api"
+    private const val API_ROOT = "${ADMIN_ROOT}/api"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -151,7 +151,7 @@ class NetworkMapService(
           result.fail(it.cause())
         } else {
           logger.info("network map service started")
-          logger.info("api mounted on http://localhost:$port$NETWORK_MAP_ROOT")
+          logger.info("api mounted on http://localhost:$port${NETWORK_MAP_ROOT}")
           logger.info("website http://localhost:$port")
           result.complete()
         }
@@ -173,13 +173,13 @@ class NetworkMapService(
 
 
   private fun bindCordaNetworkMapAPI(router: Router) {
-    router.post("$NETWORK_MAP_ROOT/publish")
+    router.post("${NETWORK_MAP_ROOT}/publish")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions { postNodeInfo() }
       }
 
-    router.post("$NETWORK_MAP_ROOT/ack-parameters")
+    router.post("${NETWORK_MAP_ROOT}/ack-parameters")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -191,7 +191,7 @@ class NetworkMapService(
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler { it.handleExceptions { getNetworkMap() } }
 
-    router.get("$NETWORK_MAP_ROOT/node-info/:hash")
+    router.get("${NETWORK_MAP_ROOT}/node-info/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -200,7 +200,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$NETWORK_MAP_ROOT/network-parameters/:hash")
+    router.get("${NETWORK_MAP_ROOT}/network-parameters/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -209,7 +209,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$NETWORK_MAP_ROOT/my-hostname")
+    router.get("${NETWORK_MAP_ROOT}/my-hostname")
       .handler {
         it.handleExceptions {
           val remote = it.request().connection().remoteAddress()
@@ -228,7 +228,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$API_ROOT/whitelist")
+    router.get("${API_ROOT}/whitelist")
       .produces(HttpHeaderValues.TEXT_PLAIN.toString())
       .handler {
         it.handleExceptions {
@@ -236,7 +236,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$API_ROOT/notaries")
+    router.get("${API_ROOT}/notaries")
       .produces(HttpHeaderValues.APPLICATION_JSON.toString())
       .handler {
         it.handleExceptions {
@@ -244,7 +244,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("$API_ROOT/nodes")
+    router.get("${API_ROOT}/nodes")
       .produces(HttpHeaderValues.APPLICATION_JSON.toString())
       .handler {
         it.handleExceptions {

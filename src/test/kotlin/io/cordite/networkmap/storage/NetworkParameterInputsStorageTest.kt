@@ -1,11 +1,11 @@
-package io.cordite.services.storage
+package io.cordite.networkmap.storage
 
-import io.cordite.services.serialisation.SerializationEnvironment
-import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
-import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
-import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
-import io.cordite.services.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
-import io.cordite.services.utils.*
+import io.cordite.networkmap.serialisation.SerializationEnvironment
+import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
+import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner

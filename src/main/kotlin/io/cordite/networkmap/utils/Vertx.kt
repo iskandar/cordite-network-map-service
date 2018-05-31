@@ -2,9 +2,9 @@
  * Utility functions for use of vertx
  */
 
-package io.cordite.services.utils
+package io.cordite.networkmap.utils
 
-import io.cordite.services.NetworkMapService
+import io.cordite.networkmap.service.NetworkMapService
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Future

@@ -1,6 +1,6 @@
-package io.cordite.services.storage
+package io.cordite.networkmap.storage
 
-import io.cordite.services.utils.*
+import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
