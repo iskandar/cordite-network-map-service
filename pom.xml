@@ -16,7 +16,7 @@
     <kotlin.version>1.1.60</kotlin.version>
     <junit.version>4.12</junit.version>
     <vertx.version>3.5.1</vertx.version>
-    <corda.version>corda-3.0</corda.version>
+    <corda.version>3.1-corda</corda.version>
     <logback.version>1.2.3</logback.version>
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
@@ -31,6 +31,7 @@
       <url>http://bluebank-nexus.uksouth.cloudapp.azure.com/repository/maven-public/</url>
     </repository>
   </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -134,7 +135,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>io.cordite.services.NetworkMapApp</mainClass>
+              <mainClass>io.cordite.networkmap.NetworkMapApp</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -152,7 +153,7 @@
             <configuration>
               <archive>
                 <manifest>
-                  <mainClass>io.cordite.services.NetworkMapApp</mainClass>
+                  <mainClass>io.cordite.networkmap.NetworkMapApp</mainClass>
                 </manifest>
               </archive>
               <descriptorRefs>

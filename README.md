@@ -1,6 +1,11 @@
 [![pipeline status](https://gitlab.com/cordite/network-map-service/badges/master/pipeline.svg)](https://gitlab.com/cordite/network-map-service/commits/master)
 
+# Design Criteria
 
+0. Meet the requirements of the Corda Network Map Service protocol, both documented and otherwise.
+1. Completely stateless - capable of running in load-balanced clusters.
+2. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
+3. Transparent filesystem design to simplify maintenance, backup, and testing.
 
 # CI/CD
   + This repo is integrated to Azure AKS. See CI/CD->Kubernetes for details of which cluster.
