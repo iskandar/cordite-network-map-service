@@ -20,15 +20,16 @@ class Options {
   }
 
   fun printOptions() {
-    val propertyWidth = (options.map { it.width() }.max() ?: 0) + 2
-    val envWidth = propertyWidth + 4
-    val defaultWidth = (options.map { it.default.length }.max() ?: 0) + 3
+    val propertyWidth = (options.map { it.width() }.max() ?: 0)
+    val envWidth = propertyWidth + 8
+    val defaultWidth = (options.map { it.default.length }.max() ?: 0) + 4
+    val descriptionWidth = (options.map { it.description.length}.max() ?: 0) + 4
 
     println("\njava properties (pass with -D<propertyname>=<property-value>) and env variables\n")
-    println("Property".padEnd(propertyWidth) + "Env Variable".padEnd(envWidth) + "Default".padEnd(defaultWidth) + "Description")
-    println("========".padEnd(propertyWidth) + "============".padEnd(envWidth) + "=======".padEnd(defaultWidth) + "===========")
+    println("| Property".padEnd(propertyWidth + 2) + " | Env Variable".padEnd(envWidth + 3) + " | Default".padEnd(defaultWidth + 3) + " | Description".padEnd(descriptionWidth + 3) + " |")
+    println("| --------".padEnd(propertyWidth + 2, '-') + " | ------------".padEnd(envWidth + 3, '-') + " | -------".padEnd(defaultWidth + 3, '-') + " | -----------".padEnd(descriptionWidth + 3, '-') + " |")
     options.forEach {
-      println("${it.name.padEnd(propertyWidth)}${it.environmentVariable.padEnd(envWidth)}${it.default.padEnd(defaultWidth)}${it.description}")
+      println("| ${it.name.padEnd(propertyWidth)} | ${it.environmentVariable.padEnd(envWidth)} | ${it.default.padEnd(defaultWidth)} | ${it.description.padEnd(descriptionWidth)} |")
     }
     println()
   }

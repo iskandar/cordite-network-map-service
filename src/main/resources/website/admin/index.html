@@ -15,27 +15,35 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
           integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
           crossorigin="anonymous"></script>
-  <style>
-    .notary-key {
-      font-size: 8pt;
-      font-family: monospace;
-    }
-    .node-key {
-      font-size: 8pt;
-      font-family: monospace;
-    }
-    .whitelist {
-      font-size: 10pt;
-      font-family: monospace;
-    }
-  </style>
+  <link rel="stylesheet" href="../style.css">
+
 </head>
 <body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container">
+    <a class="navbar-brand" href="#"><h1>Cordite NetworkMap Service</h1></a>
+    <ul class="navbar-nav mr-auto">
+
+    </ul>
+    <ul class="navbar-nav">
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink"
+           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span id="user">User</span>
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+          <a class="dropdown-item" href="/logout">Logout</a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</nav>
+
 <div class="container">
   <div class="row">
     <div class="col">
-      <h1>Network Map</h1>
-      <p>This complies with the Network Map REST API standard as described by the
+      <p>Complies with the Network Map REST API standard as described by the
         <a href="https://docs.corda.net/network-map.html">Corda v3 documentation</a></p>
     </div>
   </div>
@@ -66,6 +74,7 @@
     $.get("/admin/api/notaries", setupNotaries);
     $.get("/admin/api/whitelist", setupWhitelist);
     $.get("/admin/api/nodes", setupNodes);
+    $.get("/user", setupUser);
   });
 
   function setupNotaries(data) {
@@ -107,6 +116,10 @@
     }
   }
 
+  function setupUser(user) {
+    console.log(user);
+    $('#user').text(user.name);
+  }
 </script>
 </body>
 </html>

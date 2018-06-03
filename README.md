@@ -20,11 +20,15 @@
 
 # Command line parameters
 
-| Property   | Env Variable   | Default             | Description           |
-| ---------- | -------------- | ------------------- | --------------------- |
-| port       | NMS_PORT       | 8080                | web port              |
-| notary.dir | NMS_NOTARY_DIR | notary-certificates | notary cert directory |
-| db.dir | NMS_DB_DIR | .db | directory for storing state. at present only the whitelist.txt file |
+| Property          | Env Variable              | Default   | Description                                                         |
+| ----------------- | ------------------------- | --------- | ------------------------------------------------------------------- |
+| port              | NMS_PORT                  | 8080      | web port                                                            |
+| db                | NMS_DB                    | .db       | database directory for this service                                 |
+| cache.timeout     | NMS_CACHE_TIMEOUT         | 2S        | http cache timeout for this service in ISO 8601 duration format     |
+| paramUpdate.delay | NMS_PARAMUPDATE_DELAY     | 10S       | schedule duration for a parameter update                            |
+| networkMap.delay  | NMS_NETWORKMAP_DELAY      | 1S        | queue time for the network map to update for addition of nodes      |
+| username          | NMS_USERNAME              | sa        | system admin username                                               |
+| password          | NMS_PASSWORD              | admin     | system admin password                                               |
 
 
 # Certs

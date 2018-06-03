@@ -13,7 +13,8 @@ import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.StaticHandler
+import io.vertx.ext.web.handler.*
+import io.vertx.ext.web.sstore.LocalSessionStore
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
@@ -37,6 +38,7 @@ import javax.security.auth.x500.X500Principal
 
 class NetworkMapService(
   private val dbDirectory: File,
+  private val user: InMemoryUser,
   private val port: Int = 9000,
   private val cacheTimeout: Duration = 10.seconds,
   private val networkParamUpdateDelay: Duration = 1.hours,
@@ -45,7 +47,7 @@ class NetworkMapService(
 
   companion object {
     internal const val CERT_NAME = "nms"
-    private const val NETWORK_MAP_ROOT = "/network-map"
+    private const val NETWORK_MAP_ROOT = "/"
     private const val ADMIN_ROOT = "/admin"
     private const val ADMIN_API_ROOT = "${ADMIN_ROOT}/api"
     private val logger = loggerFor<NetworkMapService>()
@@ -164,14 +166,60 @@ class NetworkMapService(
 
   private fun createRouter(): Router {
     val router = Router.router(vertx)
+    router.route().handler(BodyHandler.create())
     bindCordaNetworkMapAPI(router)
-    bindStatic(router)
+    bindAdmin(router)
     return router
   }
 
-  private fun bindStatic(router: Router) {
-    val staticHandler = StaticHandler.create("website").setCachingEnabled(false).setCacheEntryTimeout(1).setMaxCacheSize(1)
-    router.get(ADMIN_ROOT).handler(staticHandler::handle)
+  private fun bindAdmin(router: Router) {
+    val authProvider = InMemoryAuthProvider(user)
+
+    router.route().handler(CookieHandler.create())
+    router.route().handler(SessionHandler.create(LocalSessionStore.create(vertx)))
+
+    router.route().handler(UserSessionHandler.create(authProvider))
+    val redirectAuthHandler = RedirectAuthHandler.create(authProvider, "login.html")
+    router.route("$ADMIN_ROOT*").handler(redirectAuthHandler)
+    router.get("$ADMIN_API_ROOT/whitelist")
+      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveWhitelist(this)
+        }
+      }
+
+    router.get("$ADMIN_API_ROOT/notaries")
+      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
+      .handler {
+        it.handleExceptions {
+          inputsStorage.serveNotaries(this)
+        }
+      }
+
+    router.get("$ADMIN_API_ROOT/nodes")
+      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
+      .handler {
+        it.handleExceptions {
+          getAllNodeInfos()
+        }
+      }
+
+    router.get(ADMIN_ROOT).handler(StaticHandler.create("website")
+      .setCachingEnabled(false).setWebRoot("admin"))
+
+    router.get("/user").handler { context ->
+      context.end(context.user().principal())
+    }
+    router.post("/login").handler(FormLoginHandler.create(authProvider))
+    router.route("/logout").handler { context ->
+      context.clearUser()
+      // Redirect back to the index page
+      context.response().putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
+    }
+
+    router.route().handler(StaticHandler.create("website")
+      .setCachingEnabled(false))
   }
 
 
@@ -231,29 +279,6 @@ class NetworkMapService(
         }
       }
 
-    router.get("${ADMIN_API_ROOT}/whitelist")
-      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveWhitelist(this)
-        }
-      }
-
-    router.get("${ADMIN_API_ROOT}/notaries")
-      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveNotaries(this)
-        }
-      }
-
-    router.get("${ADMIN_API_ROOT}/nodes")
-      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
-      .handler {
-        it.handleExceptions {
-          getAllNodeInfos()
-        }
-      }
   }
 
   private fun RoutingContext.getNetworkParameters(hash: SecureHash.SHA256) {

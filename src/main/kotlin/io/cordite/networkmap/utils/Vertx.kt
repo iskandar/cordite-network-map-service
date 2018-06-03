@@ -15,6 +15,8 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.FileSystem
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.atomic.AtomicInteger
@@ -44,6 +46,24 @@ fun RoutingContext.handleExceptions(fn: RoutingContext.() -> Unit) {
 
 fun <T : Any> RoutingContext.end(obj: T) {
   val result = Json.encode(obj)
+  response().apply {
+    putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+    putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
+    end(result)
+  }
+}
+
+fun RoutingContext.end(json: JsonObject) {
+  val result = json.encode()
+  response().apply {
+    putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+    putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
+    end(result)
+  }
+}
+
+fun RoutingContext.end(json: JsonArray) {
+  val result = json.encode()
   response().apply {
     putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
     putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
