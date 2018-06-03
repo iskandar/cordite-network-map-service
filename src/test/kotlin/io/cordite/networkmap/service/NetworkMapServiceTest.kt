@@ -66,6 +66,7 @@ class NetworkMapServiceTest {
 
     this.service = NetworkMapService(
       dbDirectory = dbDirectory,
+      user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
