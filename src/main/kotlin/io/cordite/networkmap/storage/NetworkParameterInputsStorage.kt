@@ -87,8 +87,9 @@ class NetworkParameterInputsStorage(parentDir: File,
       .onSuccess {
         log.info("retrieved whitelist")
       }
-      .catch {
-        log.error("failed to retrieve whitelist", it)
+      .recover {
+        log.warn("whitelist file not found at ${whitelistPath.absolutePath}")
+        Future.succeededFuture<Map<String, List<AttachmentId>>>(emptyMap())
       }
   }
 
@@ -188,9 +189,17 @@ class NetworkParameterInputsStorage(parentDir: File,
   }
 
   fun serveWhitelist(routingContext: RoutingContext) {
-    routingContext.response()
-      .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
-      .sendFile(whitelistPath.absolutePath)
+    vertx.fileSystem().exists(whitelistPath.absolutePath) {
+      if (it.result()) {
+        routingContext.response()
+          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+          .sendFile(whitelistPath.absolutePath)
+      } else {
+        routingContext.response()
+          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+          .end("")
+      }
+    }
   }
 
   fun serveNotaries(routingContext: RoutingContext) {
