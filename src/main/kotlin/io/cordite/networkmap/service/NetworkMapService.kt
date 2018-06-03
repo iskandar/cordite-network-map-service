@@ -180,6 +180,12 @@ class NetworkMapService(
     router.route().handler(UserSessionHandler.create(authProvider))
     val redirectAuthHandler = RedirectAuthHandler.create(authProvider, "login.html")
     router.route("$ADMIN_ROOT*").handler(BodyHandler.create())
+    router.post("$ADMIN_API_ROOT/login").handler(FormLoginHandler.create(authProvider))
+    router.route("$ADMIN_API_ROOT/logout").handler { context ->
+      context.clearUser()
+      // Redirect back to the index page
+      context.response().putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
+    }
 
     router.route("$ADMIN_ROOT*").handler(redirectAuthHandler)
     router.get("$ADMIN_API_ROOT/whitelist")
@@ -211,12 +217,6 @@ class NetworkMapService(
 
     router.get("/user").handler { context ->
       context.end(context.user().principal())
-    }
-    router.post("/login").handler(FormLoginHandler.create(authProvider))
-    router.route("/logout").handler { context ->
-      context.clearUser()
-      // Redirect back to the index page
-      context.response().putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
     }
 
     router.route().handler(StaticHandler.create("website")
