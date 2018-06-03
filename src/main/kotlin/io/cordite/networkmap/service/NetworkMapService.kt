@@ -47,7 +47,7 @@ class NetworkMapService(
 
   companion object {
     internal const val CERT_NAME = "nms"
-    private const val NETWORK_MAP_ROOT = "/"
+    private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_ROOT = "/admin"
     private const val ADMIN_API_ROOT = "${ADMIN_ROOT}/api"
     private val logger = loggerFor<NetworkMapService>()
@@ -166,7 +166,6 @@ class NetworkMapService(
 
   private fun createRouter(): Router {
     val router = Router.router(vertx)
-    router.route().handler(BodyHandler.create())
     bindCordaNetworkMapAPI(router)
     bindAdmin(router)
     return router
@@ -180,6 +179,8 @@ class NetworkMapService(
 
     router.route().handler(UserSessionHandler.create(authProvider))
     val redirectAuthHandler = RedirectAuthHandler.create(authProvider, "login.html")
+    router.route("$ADMIN_ROOT*").handler(BodyHandler.create())
+
     router.route("$ADMIN_ROOT*").handler(redirectAuthHandler)
     router.get("$ADMIN_API_ROOT/whitelist")
       .produces(HttpHeaderValues.TEXT_PLAIN.toString())
