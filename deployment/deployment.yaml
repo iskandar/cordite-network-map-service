@@ -1,29 +1,3 @@
-# TLS certificate request
-# cert-manager will request signed certificate from CA (let's encrypt)
-# stored as secretName
-# domain will be commonName, dnsNames and domains
-apiVersion: certmanager.k8s.io/v1alpha1
-kind: Certificate
-metadata:
-  name: cordite-biz
-  namespace: network-map-service
-  labels:
-    app: network-map-dev
-spec:
-  secretName: network-map-dev-cordite-biz
-  issuerRef:
-    name: letsencrypt-staging
-    kind: ClusterIssuer
-  commonName: network-map-dev.cordite.biz
-  dnsNames:
-  - network-map-dev.cordite.biz
-  acme:
-    config:
-    - dns01:
-        provider: cloudflare-cordite-biz
-      domains:
-      - network-map-dev.cordite.biz
----
 # Service
 # external-dns annotation will update DNS (cloudflare)
 # with correct A NAME mapping to public IP address
@@ -90,24 +64,46 @@ spec:
           env:
             - name: NMS_PORT
               value: "80"
-            - name: NMS_NOTARY_DIR
-              value: "/mnt/cordite/alpha/nms/validating-notaries"
-            - name: NMS_TLS_CERTS_DIR
-              value: "/mnt/cordite/alpha/nms/tls-certs"
+            - name: NMS_DB
+              value: "/mnt/cordite/network-map/db"
+            - name: NMS_USERNAME
+              value: "sa"
+            - name: NMS_PASSWORD
+              value: "admin"
           ports:
             - containerPort: 80
           volumeMounts:
-            - mountPath: "/mnt/cordite/alpha/nms/validating-notaries"
-              name: volume
-            - name: tls-cert-volume
-              readOnly: true
-              mountPath: "/mnt/cordite/alpha/nms/tls-certs"
+            - name: volume
+              mountPath: "/mnt/cordite/network-map/db"
       imagePullSecrets:
         - name: nms-registry
       volumes:
         - name: volume
           persistentVolumeClaim:
             claimName: network-map-dev
-        - name: tls-cert-volume
-          secret:
-            secretName: network-map-dev-cordite-biz
+# ---
+# TLS certificate request
+# cert-manager will request signed certificate from CA (let's encrypt)
+# stored as secretName
+# domain will be commonName, dnsNames and domains
+#apiVersion: certmanager.k8s.io/v1alpha1
+#kind: Certificate
+#metadata:
+#  name: cordite-biz
+#  namespace: network-map-service
+#  labels:
+#    app: network-map-dev
+#spec:
+#  secretName: network-map-dev-cordite-biz
+#  issuerRef:
+#    name: letsencrypt-staging
+#    kind: ClusterIssuer
+#  commonName: network-map-dev.cordite.biz
+#  dnsNames:
+#  - network-map-dev.cordite.biz
+#  acme:
+#    config:
+#    - dns01:
+#        provider: cloudflare-cordite-biz
+#      domains:
+#      - network-map-dev.cordite.biz

@@ -90,7 +90,7 @@ deploy:live:
     - kubernetes
   environment:
     name: network-map
-    url: https://network-map-edge.cordite.biz
+    url: https://network-map.cordite.biz
   only:
     - master
   when:
