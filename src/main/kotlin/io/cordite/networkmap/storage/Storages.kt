@@ -117,25 +117,29 @@ class SignedNetworkParametersStorage(
 class CertificateAndKeyPairStorage(
   vertx: Vertx,
   parentDirectory: File,
-  childDirectory: String = DEFAULT_CHILD_DIR
+  childDirectory: String = DEFAULT_CHILD_DIR,
+  val password: String = DEFAULT_PASSWORD,
+  private val jksFilename: String = DEFAULT_JKS_FILE
 ) : AbstractSimpleNameValueStore<CertificateAndKeyPair>(File(parentDirectory, childDirectory), vertx) {
   companion object {
     const val DEFAULT_CHILD_DIR = "certs"
     const val DEFAULT_JKS_FILE = "keys.jks"
     const val DEFAULT_KEY_ALIAS = "key"
     const val DEFAULT_CERT_ALIAS = "cert"
-    private val P = "___".toCharArray()
+    const val DEFAULT_PASSWORD = "changeme"
   }
 
+  private val parray = password.toCharArray()
+
   override fun deserialize(location: File): Future<CertificateAndKeyPair> {
-    val file = File(location, DEFAULT_JKS_FILE)
+    val file = resolveJksFile(location)
     if (!location.exists()) return failedFuture("couldn't find jks file ${file.absolutePath}")
     return vertx.fileSystem().readFile(file.absolutePath)
       .map {
         val ba = it.bytes
         val ks = KeyStore.getInstance("JKS")
-        ks.load(ByteArrayInputStream(ba), P)
-        val pk = ks.getKey(DEFAULT_KEY_ALIAS, P) as PrivateKey
+        ks.load(ByteArrayInputStream(ba), parray)
+        val pk = ks.getKey(DEFAULT_KEY_ALIAS, parray) as PrivateKey
         val cert = ks.getCertificate(DEFAULT_CERT_ALIAS) as X509Certificate
         CertificateAndKeyPair(cert, KeyPair(cert.publicKey, pk))
       }
@@ -146,14 +150,17 @@ class CertificateAndKeyPairStorage(
 
     val ks = KeyStore.getInstance("JKS")
     ks.load(null, null)
-    ks.setKeyEntry(DEFAULT_KEY_ALIAS, value.keyPair.private, P, arrayOf(value.certificate))
+    ks.setKeyEntry(DEFAULT_KEY_ALIAS, value.keyPair.private, parray, arrayOf(value.certificate))
     ks.setCertificateEntry(DEFAULT_CERT_ALIAS, value.certificate)
     val ba = with (ByteArrayOutputStream()) {
-      ks.store(this, P)
+      ks.store(this, parray)
       this.toByteArray()
     }
-    return vertx.fileSystem().writeFile(File(location, DEFAULT_JKS_FILE).absolutePath, ba).map { Unit }
+    return vertx.fileSystem().writeFile(resolveJksFile(location).absolutePath, ba).map { Unit }
   }
+
+  fun resolveJksFile(key: String) = resolveJksFile(resolveKey(key))
+  private fun resolveJksFile(directory: File) = File(directory, jksFilename)
 }
 
 class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = DEFAULT_CHILD_DIR) :

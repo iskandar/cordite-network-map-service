@@ -29,6 +29,8 @@
 | networkMap.delay  | NMS_NETWORKMAP_DELAY      | 1S        | queue time for the network map to update for addition of nodes      |
 | username          | NMS_USERNAME              | sa        | system admin username                                               |
 | password          | NMS_PASSWORD              | admin     | system admin password                                               |
+| tls               | NMS_TLS                   | true      | whether TLS is enabled or not                                       |
+
 
 
 # Certs

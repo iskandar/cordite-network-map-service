@@ -14,7 +14,8 @@ open class NetworkMapApp(
   private val port: Int,
   private val cacheTimeout: Duration,
   private val networkParamUpdateDelay: Duration,
-  private val networkMapQueuedUpdateDelay: Duration
+  private val networkMapQueuedUpdateDelay: Duration,
+  private val tls: Boolean
 )  {
   companion object {
 
@@ -28,6 +29,7 @@ open class NetworkMapApp(
       val networkMapUpdateDelay  = options.addOption("networkMap.delay", "1S", "queue time for the network map to update for addition of nodes")
       val username = options.addOption("username", "sa", "system admin username")
       val password = options.addOption("password", "admin", "system admin password")
+      val tls = options.addOption("tls", "true", "whether TLS is enabled or not")
 
       if (args.contains("--help")) {
         options.printOptions()
@@ -39,15 +41,15 @@ open class NetworkMapApp(
       val ct = Duration.parse("PT${cacheTimeout.value}")
       val puDelay = Duration.parse("PT${paramUpdateDelay.value}")
       val nmDelay = Duration.parse("PT${networkMapUpdateDelay.value}")
-
+      val isTls = tls.value.toBoolean()
       val user = InMemoryUser.createUser("System Admin", username.value, password.value)
-      NetworkMapApp(db, user, port, ct, puDelay, nmDelay).start()
+      NetworkMapApp(db, user, port, ct, puDelay, nmDelay, isTls).start()
     }
   }
 
   private fun start() {
     val vertx = Vertx.vertx()
-    val service = NetworkMapService(dbDirectory = dbDirectory, user = user, port = port, cacheTimeout = cacheTimeout, networkParamUpdateDelay = networkParamUpdateDelay, networkMapQueuedUpdateDelay = networkMapQueuedUpdateDelay)
+    val service = NetworkMapService(dbDirectory = dbDirectory, user = user, port = port, cacheTimeout = cacheTimeout, networkParamUpdateDelay = networkParamUpdateDelay, networkMapQueuedUpdateDelay = networkMapQueuedUpdateDelay, tls = tls)
     vertx.deployVerticle(service)
   }
 }

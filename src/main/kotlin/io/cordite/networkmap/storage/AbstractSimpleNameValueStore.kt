@@ -135,7 +135,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     return result
   }
 
-  protected fun resolveKey(key: String) : File {
+  fun resolveKey(key: String) : File {
     return File(dir, key)
   }
 
