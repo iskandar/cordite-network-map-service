@@ -9,7 +9,7 @@ operator fun Path.div(other: String): Path = resolve(other)
 operator fun File.div(other: String) : File = File(this, other)
 class CertTests {
   companion object {
-    val certificateDirectory = File("./test-certificates")
+    val certificateDirectory = File("src/test/resources/certificates")
     val nodeKeyStorePath = certificateDirectory / "nodekeystore.jks"
     val password = "cordacadevpass"
   }
