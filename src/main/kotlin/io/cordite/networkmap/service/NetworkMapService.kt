@@ -11,12 +11,15 @@ import io.vertx.core.Future.succeededFuture
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServer
+import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.net.JksOptions
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.*
 import io.vertx.ext.web.sstore.LocalSessionStore
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.deserialize
@@ -42,14 +45,16 @@ class NetworkMapService(
   private val port: Int = 9000,
   private val cacheTimeout: Duration = 10.seconds,
   private val networkParamUpdateDelay: Duration = 1.hours,
-  private val networkMapQueuedUpdateDelay: Duration = 1.seconds
+  private val networkMapQueuedUpdateDelay: Duration = 1.seconds,
+  private val tls: Boolean = true
 ) : AbstractVerticle() {
 
   companion object {
-    internal const val CERT_NAME = "nms"
+    internal const val SIGNING_CERT_NAME = "nms"
+    internal const val TLS_CERT_NAME = "nms-tls"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_ROOT = "/admin"
-    private const val ADMIN_API_ROOT = "${ADMIN_ROOT}/api"
+    private const val ADMIN_API_ROOT = "$ADMIN_ROOT/api"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -57,7 +62,7 @@ class NetworkMapService(
     }
   }
 
-  private lateinit var certs: CertificateAndKeyPair
+  private lateinit var signingCertAndKey: CertificateAndKeyPair
   private lateinit var inputsStorage: NetworkParameterInputsStorage
   private lateinit var signedNetworkParametersStorage: SignedNetworkParametersStorage
   private lateinit var nodeInfoStorage: SignedNodeInfoStorage
@@ -68,9 +73,11 @@ class NetworkMapService(
   private lateinit var processor: NetworkMapServiceProcessor
   private var httpServer: HttpServer? = null
 
+
   override fun start(startFuture: Future<Void>) {
     setupStorage()
-      .compose { getDevNetworkMapCa() }
+      .compose { ensureCertExists("signing", SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP) }.map { signingCertAndKey = it }
+      .compose { ensureCertExists("tls", TLS_CERT_NAME, "localhost", CertificateType.TLS, Crypto.RSA_SHA256)}
       .compose { setupProcessor() }
       .compose { createHttpServer(createRouter()) }
       .setHandler(startFuture.completer())
@@ -134,7 +141,7 @@ class NetworkMapService(
       signedNetworkParametersStorage,
       paramUpdateStorage,
       textStorage,
-      certs,
+      signingCertAndKey,
       networkParamUpdateDelay,
       networkMapQueuedUpdateDelay
     )
@@ -144,23 +151,33 @@ class NetworkMapService(
   private fun createHttpServer(router: Router): Future<Void> {
     logger.info("creating http server on port $port")
     val result = Future.future<Void>()
-    this.httpServer = vertx
-      .createHttpServer()
-      .requestHandler(router::accept)
-      .listen(port) {
-        if (it.failed()) {
-          logger.error("failed to startup", it.cause())
-          result.fail(it.cause())
-        } else {
-          logger.info("network map service started")
-          logger.info("""mounts:
-            |network map:   http://localhost:$port$NETWORK_MAP_ROOT
-            |admin website: http://localhost:$port$ADMIN_ROOT
-            |admin API:     http://localhost:$port$ADMIN_API_ROOT
+
+    try {
+      val protocol = if (tls) "https" else "http"
+      val certPath = certificateAndKeyPairStorage.resolveJksFile(TLS_CERT_NAME).absolutePath
+      this.httpServer = vertx
+        .createHttpServer(HttpServerOptions()
+          .setSsl(tls)
+          .setKeyStoreOptions(JksOptions().setPath(certPath).setPassword(certificateAndKeyPairStorage.password))
+        )
+        .requestHandler(router::accept)
+        .listen(port) {
+          if (it.failed()) {
+            logger.error("failed to startup", it.cause())
+            result.fail(it.cause())
+          } else {
+            logger.info("network map service started")
+            logger.info("""mounts:
+            |network map:   $protocol://localhost:$port$NETWORK_MAP_ROOT
+            |admin website: $protocol://localhost:$port$ADMIN_ROOT
+            |admin API:     $protocol://localhost:$port$ADMIN_API_ROOT
           """.trimMargin())
-          result.complete()
+            result.complete()
+          }
         }
-      }
+    } catch (err: Throwable) {
+      result.fail(err)
+    }
     return result
   }
 
@@ -316,28 +333,32 @@ class NetworkMapService(
     }
   }
 
-  private fun getDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Future<Unit> {
-    logger.info("checking for certificate")
-    return certificateAndKeyPairStorage.get(CERT_NAME)
+  private fun ensureCertExists(
+    description: String,
+    certName: String,
+    commonName: String,
+    certificateType: CertificateType,
+    signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME,
+    rootCa: CertificateAndKeyPair = DEV_ROOT_CA
+  ): Future<CertificateAndKeyPair> {
+    logger.info("checking for $description certificate")
+    return certificateAndKeyPairStorage.get(certName)
       .recover {
         // we couldn't find the cert - so generate one
-        logger.warn("failed to find the cert for this NMS. generating new cert")
-        val cert = createDevNetworkMapCa(rootCa)
-        certificateAndKeyPairStorage.put(CERT_NAME, cert).map { cert }
+        logger.warn("failed to find $description cert for this NMS. generating new cert")
+        val cert = createSigningCert(rootCa, commonName, certificateType, signatureScheme)
+        certificateAndKeyPairStorage.put(certName, cert).map { cert }
       }
-      .onSuccess { it ->
-        certs = it
-      }
-      .mapEmpty()
   }
 
-  private fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair()
+
+  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
+    val keyPair = Crypto.generateKeyPair(signatureScheme)
     val cert = X509Utilities.createCertificate(
-      CertificateType.NETWORK_MAP,
+      certificateType,
       rootCa.certificate,
       rootCa.keyPair,
-      X500Principal("CN=Network Map,O=Cordite,L=London,C=GB"),
+      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
       keyPair.public)
     return CertificateAndKeyPair(cert, keyPair)
   }

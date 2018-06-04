@@ -70,7 +70,8 @@ class NetworkMapServiceTest {
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
-      networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY
+      networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
+      tls = false
     )
     vertx?.deployVerticle(service, context.asyncAssertSuccess())
   }
@@ -139,9 +140,9 @@ class NetworkMapServiceTest {
     nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
 
 
-  private fun createNetworkMapClient(context: TestContext) : NetworkMapClient {
+  private fun createNetworkMapClient(context: TestContext): NetworkMapClient {
     val async = context.async()
-    service.certificateAndKeyPairStorage.get(NetworkMapService.CERT_NAME)
+    service.certificateAndKeyPairStorage.get(NetworkMapService.SIGNING_CERT_NAME)
       .onSuccess {
         context.put<X509Certificate>("cert", it.certificate)
         async.complete()
@@ -151,7 +152,7 @@ class NetworkMapServiceTest {
     return NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
   }
 
-  private fun createTempDir() : File {
+  private fun createTempDir(): File {
     return Files.createTempDirectory("nms-test-").toFile()
       .apply {
         mkdirs()
