@@ -55,19 +55,23 @@ kubectl create secret -n "$KUBE_NAMESPACE" \
 echo -e "\xE2\x9C\x94\033[1m recreated secret: nmsregistrykey\033[0m"
 
 # delete deployment if it exists
-kubectl delete -n "$KUBE_NAMESPACE" -f deployment.yaml --ignore-not-found=true
+cat ./deployment.yaml \
+ | sed s/network-map-dev/${CI_ENVIRONMENT_SLUG}/ \
+ | kubectl delete -n "$KUBE_NAMESPACE" --ignore-not-found=true -f -
 echo -e "\xE2\x9C\x94\033[1m deleted deployment in $KUBE_NAMESPACE\033[0m"
 
 # create deployment
-kubectl create -n "$KUBE_NAMESPACE" -f deployment.yaml
-echo -e "\xE2\x9C\x94\033[1m created deployment in $KUBE_NAMESPACE\033[0m"
+# kubectl create -n "$KUBE_NAMESPACE" -f deployment.yaml
+cat ./deployment.yaml \
+ | sed s/network-map-dev/${CI_ENVIRONMENT_SLUG}/ \
+ | kubectl create -n "$KUBE_NAMESPACE" -f -
+echo -e "\xE2\x9C\x94\033[1m created deployment in $KUBE_NAMESPACE with app=$CI_ENVIRONMENT_SLUG \033[0m"
 
 # use create --dry run -f - | replace pattern
 # cat ./deployment.yaml \
 # | sed s/:latest/:${IMAGE_TAG}/ \
 # | sed s/network-map-dev/${CI_ENVIRONMENT_SLUG}/ \
 # | kubectl create -n "$KUBE_NAMESPACE" -f -
-
 
 echo -e "to see the logs run \033[1m kubectl -n $KUBE_NAMESPACE logs deployment/${CI_ENVIRONMENT_SLUG}\033[0m"
 echo -e " to wait for the public IP to be available use \033[1m kubectl -n $KUBE_NAMESPACE -l app=${CI_ENVIRONMENT_SLUG} get services --watch\033[0m"
