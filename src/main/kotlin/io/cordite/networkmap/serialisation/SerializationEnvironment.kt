@@ -5,27 +5,22 @@ import io.vertx.core.json.Json
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.nodeapi.internal.serialization.QuasarWhitelist
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
+import net.corda.core.serialization.serialize
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import java.security.PublicKey
 
 class SerializationEnvironment {
   companion object {
-
-    private val NMS_SERIALIZATION_CONTEXT = SerializationContextImpl(AmqpHeaderV1_0,
-      SerializationDefaults.javaClass.classLoader,
-      QuasarWhitelist,
-      emptyMap(),
-      true,
-      SerializationContext.UseCase.P2P)
+    private val log = loggerFor<SerializationEnvironment>()
 
     init {
       initialiseJackson()
@@ -48,20 +43,39 @@ class SerializationEnvironment {
 
     private fun initialiseSerialisationEnvironment() {
       if (nodeSerializationEnv == null) {
-        val classloader = ClassLoader.getSystemClassLoader()
-
+        val factory =  NMSSerializationFactoryImpl("nms-factory").apply {
+          registerScheme(KryoClientSerializationScheme())
+          registerScheme(AMQPServerSerializationScheme(emptyList()))
+        }
         nodeSerializationEnv = SerializationEnvironmentImpl(
-          SerializationFactoryImpl().apply {
-            registerScheme(KryoClientSerializationScheme())
-            registerScheme(AMQPClientSerializationScheme())
-            registerScheme(AMQPServerSerializationScheme())
-          },
-          p2pContext = NMS_SERIALIZATION_CONTEXT.withClassLoader(classloader),
-          rpcServerContext = NMS_SERIALIZATION_CONTEXT.withClassLoader(classloader),
-          storageContext = NMS_SERIALIZATION_CONTEXT.withClassLoader(classloader),
-          checkpointContext = NMS_SERIALIZATION_CONTEXT.withClassLoader(classloader))
+          factory,
+          AMQP_P2P_CONTEXT
+        )
+      } else {
+        log.error("***** SERIALIZATION ENVIRONMENT ALREADY SET! ******")
       }
     }
+  }
+
+  private class NMSSerializationFactoryImpl(val name: String) : SerializationFactoryImpl()
+}
+
+
+fun <T: Any> T.serializeOnContext() : ByteSequence {
+  return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
+    this.serialize()
+  }
+}
+
+inline  fun <reified T : Any> ByteSequence.deserializeOnContext(): T {
+  return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
+    this.deserialize()
+  }
+}
+
+inline fun <reified T : Any> ByteArray.deserializeOnContext(): T {
+  return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
+    this.deserialize()
   }
 }
 
