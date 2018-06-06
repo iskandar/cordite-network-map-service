@@ -1,5 +1,6 @@
 package io.cordite.networkmap.storage
 
+import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -10,7 +11,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
@@ -142,7 +142,7 @@ class NetworkParameterInputsStorage(parentDir: File,
         vertx.executeBlocking {
           buffers.mapNotNull { (file, buffer) ->
             try {
-              buffer.bytes.deserialize<SignedNodeInfo>()
+              buffer.bytes.deserializeOnContext<SignedNodeInfo>()
             } catch (err: Throwable) {
               log.error("failed to deserialize SignedNodeInfo $file")
               null
@@ -192,10 +192,12 @@ class NetworkParameterInputsStorage(parentDir: File,
     vertx.fileSystem().exists(whitelistPath.absolutePath) {
       if (it.result()) {
         routingContext.response()
+          .setNoCache()
           .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
           .sendFile(whitelistPath.absolutePath)
       } else {
         routingContext.response()
+          .setNoCache()
           .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
           .end("")
       }
@@ -205,10 +207,10 @@ class NetworkParameterInputsStorage(parentDir: File,
   fun serveNotaries(routingContext: RoutingContext) {
     this.readNotaries()
       .onSuccess {
-        routingContext.end(it)
+        routingContext.setNoCache().end(it)
       }
       .catch {
-        routingContext.end(it)
+        routingContext.setNoCache().end(it)
       }
   }
 }
