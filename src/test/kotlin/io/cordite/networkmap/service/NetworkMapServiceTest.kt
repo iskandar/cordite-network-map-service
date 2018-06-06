@@ -2,7 +2,10 @@ package io.cordite.networkmap.service
 
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage
-import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.getFreePort
+import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.readFiles
+import io.cordite.networkmap.utils.setupDefaultInputFiles
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -18,7 +21,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.X509Certificate
@@ -158,18 +160,6 @@ class NetworkMapServiceTest {
         mkdirs()
         deleteOnExit()
       }
-  }
-
-  private fun getFreePort(): Int {
-    return ServerSocket(0).use { it.localPort }
-  }
-
-  private fun setupDefaultInputFiles(directory: File) {
-    val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
-    inputs.mkdirs()
-    Files.copy("${SAMPLE_INPUTS}whitelist.txt".toPath(), File(inputs, NetworkParameterInputsStorage.WHITELIST_NAME).toPath())
-    copyFolder("${SAMPLE_INPUTS}validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES).toPath())
-    copyFolder("${SAMPLE_INPUTS}non-validating".toPath(), File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).toPath())
   }
 
   private fun deleteValidatingNotaries(directory: File) {
