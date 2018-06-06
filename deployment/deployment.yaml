@@ -17,8 +17,8 @@ spec:
   type: LoadBalancer
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 443
+      targetPort: 443
 ---
 ## Persistent Volume
 # will create a new azure share each time it is created
@@ -63,15 +63,15 @@ spec:
           image: registry.gitlab.com/cordite/network-map-service/network-map-service:latest
           env:
             - name: NMS_PORT
-              value: "80"
+              value: "443"
             - name: NMS_DB
               value: "/mnt/cordite/network-map/db"
             - name: NMS_USERNAME
-              value: "sa"
-            - name: NMS_PASSWORD
               value: "admin"
+            - name: NMS_PASSWORD
+              value: "7twe3nqgdx5rjyfz"
           ports:
-            - containerPort: 80
+            - containerPort: 443
           volumeMounts:
             - name: volume
               mountPath: "/mnt/cordite/network-map/db"

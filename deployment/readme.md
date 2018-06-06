@@ -33,6 +33,7 @@ Use your BB gitlab project name for the namespace
 ```
 $ kubectl create namespace network-map-service
 $ kubectl -n network-map-service create serviceaccount network-map-service
+$ kubectl -n network-map-service create rolebinding network-map-service --clusterrole=admin --serviceaccount=network-map-service:network-map-service
 $ kubectl -n network-map-service get sa/network-map-service -o yaml
 $ kubectl -n network-map-service get secret network-map-service-token-<postfix> -o yaml
 $ kubectl cluster-info
