@@ -1,5 +1,7 @@
 package io.cordite.networkmap.storage
 
+import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.utils.DirectoryDigest
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.end
@@ -12,8 +14,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import java.io.File
 import java.time.Duration
 
@@ -27,12 +27,12 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     inline fun <reified T : Any> deserialize(file: File, vertx: Vertx): Future<T> {
       val result = Future.future<Buffer>()
       vertx.fileSystem().readFile(file.absolutePath, result.completer())
-      return result.map { it.bytes.deserialize<T>() }
+      return result.map { it.bytes.deserializeOnContext<T>() }
     }
 
     inline fun <reified T : Any> serialize(value: T, file: File, vertx: Vertx) : Future<Unit> {
       val result = Future.future<Void>()
-      vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value.serialize().bytes), result.completer())
+      vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value.serializeOnContext().bytes), result.completer())
       return result.map { Unit }
     }
   }

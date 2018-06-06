@@ -14,10 +14,12 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.FileSystem
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -41,6 +43,20 @@ fun RoutingContext.handleExceptions(fn: RoutingContext.() -> Unit) {
         .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
         .setStatusMessage(err.message)
         .end()
+  }
+}
+
+fun RoutingContext.setNoCache() : RoutingContext {
+  response().setNoCache()
+  return this
+}
+
+
+fun RoutingContext.end(byteSequence: ByteSequence) {
+  response().apply {
+    putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+    putHeader(HttpHeaders.CONTENT_LENGTH, byteSequence.size.toString())
+    end(Buffer.buffer(byteSequence.bytes))
   }
 }
 
@@ -77,6 +93,12 @@ fun RoutingContext.end(err: Throwable) {
     statusMessage = err.message
     end()
   }
+}
+
+fun HttpServerResponse.setNoCache() : HttpServerResponse {
+  return putHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+    .putHeader("pragma", "no-cache")
+    .putHeader("expires", "0")
 }
 
 fun <T> Vertx.executeBlocking(fn: () -> T): Future<T> {

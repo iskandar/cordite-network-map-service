@@ -1,6 +1,8 @@
 package io.cordite.networkmap.service
 
 import io.cordite.networkmap.serialisation.SerializationEnvironment
+import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -22,8 +24,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.loggerFor
@@ -201,7 +201,9 @@ class NetworkMapService(
     router.route("$ADMIN_API_ROOT/logout").handler { context ->
       context.clearUser()
       // Redirect back to the index page
-      context.response().putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
+      context.response()
+        .setNoCache()
+        .putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
     }
 
     router.route("$ADMIN_ROOT*").handler(redirectAuthHandler)
@@ -233,22 +235,24 @@ class NetworkMapService(
       .setCachingEnabled(false).setWebRoot("admin"))
 
     router.get("/user").handler { context ->
-      context.end(context.user().principal())
+      context.setNoCache().end(context.user().principal())
     }
 
     router.route().handler(StaticHandler.create("website")
-      .setCachingEnabled(false))
+      .setCachingEnabled(false)
+      .setMaxCacheSize(1)
+      .setCacheEntryTimeout(1))
   }
 
 
   private fun bindCordaNetworkMapAPI(router: Router) {
-    router.post("${NETWORK_MAP_ROOT}/publish")
+    router.post("$NETWORK_MAP_ROOT/publish")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions { postNodeInfo() }
       }
 
-    router.post("${NETWORK_MAP_ROOT}/ack-parameters")
+    router.post("$NETWORK_MAP_ROOT/ack-parameters")
       .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -260,7 +264,7 @@ class NetworkMapService(
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler { it.handleExceptions { getNetworkMap() } }
 
-    router.get("${NETWORK_MAP_ROOT}/node-info/:hash")
+    router.get("$NETWORK_MAP_ROOT/node-info/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -269,7 +273,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${NETWORK_MAP_ROOT}/network-parameters/:hash")
+    router.get("$NETWORK_MAP_ROOT/network-parameters/:hash")
       .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
       .handler {
         it.handleExceptions {
@@ -278,7 +282,7 @@ class NetworkMapService(
         }
       }
 
-    router.get("${NETWORK_MAP_ROOT}/my-hostname")
+    router.get("$NETWORK_MAP_ROOT/my-hostname")
       .handler {
         it.handleExceptions {
           val remote = it.request().connection().remoteAddress()
@@ -305,7 +309,7 @@ class NetworkMapService(
         response().apply {
           putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
           putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-          end(Buffer.buffer(snp.serialize().bytes))
+          end(Buffer.buffer(snp.serializeOnContext().bytes))
         }
       }
       .catch {
@@ -318,7 +322,7 @@ class NetworkMapService(
   private fun RoutingContext.postAckNetworkParameters() {
     request().bodyHandler { buffer ->
       this.handleExceptions {
-        val signedParameterHash = buffer.bytes.deserialize<SignedData<SecureHash>>()
+        val signedParameterHash = buffer.bytes.deserializeOnContext<SignedData<SecureHash>>()
         val hash = signedParameterHash.verified()
         nodeInfoStorage.get(hash.toString())
           .onSuccess {
@@ -365,7 +369,7 @@ class NetworkMapService(
 
   private fun RoutingContext.postNodeInfo() {
     request().bodyHandler { buffer ->
-      val signedNodeInfo = buffer.bytes.deserialize<SignedNodeInfo>()
+      val signedNodeInfo = buffer.bytes.deserializeOnContext<SignedNodeInfo>()
       processor.addNode(signedNodeInfo)
         .onSuccess {
           end("OK")
@@ -385,7 +389,7 @@ class NetworkMapService(
       .onSuccess { sni ->
         response().apply {
           putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
-          end(Buffer.buffer(sni.serialize().bytes))
+          end(Buffer.buffer(sni.serializeOnContext().bytes))
         }
       }
       .catch {
@@ -394,6 +398,7 @@ class NetworkMapService(
   }
 
   private fun RoutingContext.getAllNodeInfos() {
+    setNoCache()
     nodeInfoStorage.getAll()
       .onSuccess {
         end(it.map {
