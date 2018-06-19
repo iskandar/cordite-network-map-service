@@ -6,6 +6,11 @@ kubectl delete -f deployment.yaml
 kubectl create -f deployment.yaml
 ```
 
+## TLS cert create
+```
+kubectl create secret generic cordite-tls-cert --from-file=cordite-tls.crt=cordite-biz.crt --from-file=cordite-tls.key=cordite-biz.key
+```
+
 You can also use the `kube_deploy.sh`. 
 Make sure you have set all the environment variables correctly.
 ```
