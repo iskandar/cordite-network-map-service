@@ -30,8 +30,8 @@
 | username          | NMS_USERNAME              | sa        | system admin username                                               |
 | password          | NMS_PASSWORD              | admin     | system admin password                                               |
 | tls               | NMS_TLS                   | true      | whether TLS is enabled or not                                       |
-| tls cert path     | NMS_TLS_CERT_PATH         | null      | path to TLS cert                                                    |
-| tls key path      | NMS_TLS_KEY_PATH          | null      | path to TLS cert                                                    |
+| tls.cert.path     | NMS_TLS_CERT_PATH         |           | path to cert if TLS is turned on                                    |
+| tls.key.path      | NMS_TLS_KEY_PATH          |           | path to key if TLS turned on                                        |
 
 
 

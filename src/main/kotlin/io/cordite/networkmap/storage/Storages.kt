@@ -1,5 +1,6 @@
 package io.cordite.networkmap.storage
 
+import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.utils.readFile
 import io.cordite.networkmap.utils.writeFile
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -147,11 +148,7 @@ class CertificateAndKeyPairStorage(
 
   override fun serialize(value: CertificateAndKeyPair, location: File) : Future<Unit> {
     location.mkdirs()
-
-    val ks = KeyStore.getInstance("JKS")
-    ks.load(null, null)
-    ks.setKeyEntry(DEFAULT_KEY_ALIAS, value.keyPair.private, parray, arrayOf(value.certificate))
-    ks.setCertificateEntry(DEFAULT_CERT_ALIAS, value.certificate)
+    val ks = value.toKeyStore(password)
     val ba = with (ByteArrayOutputStream()) {
       ks.store(this, parray)
       this.toByteArray()

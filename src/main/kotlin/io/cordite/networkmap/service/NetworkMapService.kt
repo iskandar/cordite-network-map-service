@@ -1,5 +1,7 @@
 package io.cordite.networkmap.service
 
+import io.cordite.networkmap.keystore.toJksOptions
+import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
@@ -46,12 +48,13 @@ class NetworkMapService(
   private val cacheTimeout: Duration = 10.seconds,
   private val networkParamUpdateDelay: Duration = 1.hours,
   private val networkMapQueuedUpdateDelay: Duration = 1.seconds,
-  private val tls: Boolean = true
+  private val tls: Boolean = true,
+  private val certPath: String = "",
+  private val keyPath: String = ""
 ) : AbstractVerticle() {
 
   companion object {
     internal const val SIGNING_CERT_NAME = "nms"
-    internal const val TLS_CERT_NAME = "nms-tls"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_ROOT = "/admin"
     private const val ADMIN_API_ROOT = "$ADMIN_ROOT/api"
@@ -77,7 +80,6 @@ class NetworkMapService(
   override fun start(startFuture: Future<Void>) {
     setupStorage()
       .compose { ensureCertExists("signing", SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP) }.map { signingCertAndKey = it }
-      .compose { ensureCertExists("tls", TLS_CERT_NAME, "localhost", CertificateType.TLS, Crypto.RSA_SHA256)}
       .compose { setupProcessor() }
       .compose { createHttpServer(createRouter()) }
       .setHandler(startFuture.completer())
@@ -154,11 +156,10 @@ class NetworkMapService(
 
     try {
       val protocol = if (tls) "https" else "http"
-      val certPath = certificateAndKeyPairStorage.resolveJksFile(TLS_CERT_NAME).absolutePath
       this.httpServer = vertx
         .createHttpServer(HttpServerOptions()
           .setSsl(tls)
-          .setKeyStoreOptions(JksOptions().setPath(certPath).setPassword(certificateAndKeyPairStorage.password))
+          .setKeyStoreOptions(createJksOptions())
         )
         .requestHandler(router::accept)
         .listen(port) {
@@ -407,6 +408,34 @@ class NetworkMapService(
         })
       }
       .catch { end(it) }
+  }
+
+  private fun createJksOptions() : JksOptions {
+    return when {
+      !tls -> JksOptions() // just return a blank option as it won't be used
+      certPath.isNotBlank() && keyPath.isNotBlank() -> {
+        logger.info("using cert file $certPath")
+        logger.info("using key file $keyPath")
+        if (!File(certPath).exists()) {
+          val msg = "cert path does not exist: $certPath"
+          logger.error(msg)
+          throw RuntimeException(msg)
+        }
+
+        if (!File(keyPath).exists()) {
+          val msg = "key path does not exist: $keyPath"
+          logger.error(msg)
+          throw RuntimeException(msg)
+        }
+
+        CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
+      }
+      else -> {
+        logger.info("generating temporary TLS certificates")
+        val inMemoryOnlyPassword = "inmemory"
+        createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
+      }
+    }
   }
 
   data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
