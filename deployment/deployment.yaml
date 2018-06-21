@@ -99,14 +99,14 @@ spec:
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
-  name: cordite-biz
+  name: network-map-dev-cordite-biz
   namespace: network-map-service
   labels:
     app: network-map-dev
 spec:
   secretName: network-map-dev-cordite-biz-tls-cert
   issuerRef:
-    name: letsencrypt-staging
+    name: letsencrypt-prod
     kind: ClusterIssuer
   commonName: network-map-dev.cordite.biz
   dnsNames:
