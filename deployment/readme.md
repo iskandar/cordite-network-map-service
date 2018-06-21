@@ -11,6 +11,17 @@ kubectl create -f deployment.yaml
 kubectl create secret generic cordite-tls-cert --from-file=cordite-tls.crt=cordite-biz.crt --from-file=cordite-tls.key=cordite-biz.key
 ```
 
+### Add Kube Runner to cluster
+https://docs.gitlab.com/ee/install/kubernetes/gitlab_runner_chart.html  
+```
+helm repo add gitlab https://charts.gitlab.io                                                                   
+helm init
+helm install --namespace network-map-service --name gitlab-runner-nms -f gitlab-runner-config.yaml gitlab/gitlab-runner
+```
+to remove runner `helm del --purge gitlab-runner-nms`
+
+
+
 You can also use the `kube_deploy.sh`. 
 Make sure you have set all the environment variables correctly.
 ```

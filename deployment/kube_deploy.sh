@@ -8,7 +8,7 @@ GITLAB_USER_EMAIL=${GITLAB_USER_EMAIL:-nobody@example.com}
 CI_ENVIRONMENT_SLUG=${CI_ENVIRONMENT_SLUG:-network-map-dev}
 NMS_REG_URL=${NMS_REG_URL:-registry.gitlab.com}
 
-echo \xE2\x9C\x94\033[1m Context set\033[0m
+echo -e "\xE2\x9C\x94\033[1m Context set\033[0m"
 echo IMAGE_TAG=$IMAGE_TAG
 echo KUBE_NAMESPACE=$KUBE_NAMESPACE
 echo GITLAB_USER_EMAIL=$GITLAB_USER_EMAIL

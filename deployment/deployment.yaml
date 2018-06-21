@@ -71,15 +71,15 @@ spec:
             - name: NMS_PASSWORD
               value: "7twe3nqgdx5rjyfz"
             - name: NMS_TLS_CERT_PATH
-              value: "/mnt/cordite/network-map/certificates/cordite-tls.crt"
+              value: "/mnt/cordite/network-map/certificates/tls.crt"
             - name: NMS_TLS_KEY_PATH
-              value: "/mnt/cordite/network-map/certificates/cordite-tls.key"
+              value: "/mnt/cordite/network-map/certificates/tls.key"
           ports:
             - containerPort: 443
           volumeMounts:
             - name: volume
               mountPath: "/mnt/cordite/network-map/db"
-            - name: cordite-tls-cert
+            - name: nms-tls-cert
               readOnly: true
               mountPath: "/mnt/cordite/network-map/certificates"
       imagePullSecrets:
@@ -88,32 +88,32 @@ spec:
         - name: volume
           persistentVolumeClaim:
             claimName: network-map-dev
-        - name: cordite-tls-cert
+        - name: nms-tls-cert
           secret:
-            secretName: cordite-tls-cert
-# ---
+            secretName: network-map-dev-cordite-biz-tls-cert
+---
 # TLS certificate request
 # cert-manager will request signed certificate from CA (let's encrypt)
 # stored as secretName
 # domain will be commonName, dnsNames and domains
-#apiVersion: certmanager.k8s.io/v1alpha1
-#kind: Certificate
-#metadata:
-#  name: cordite-biz
-#  namespace: network-map-service
-#  labels:
-#    app: network-map-dev
-#spec:
-#  secretName: network-map-dev-cordite-biz
-#  issuerRef:
-#    name: letsencrypt-staging
-#    kind: ClusterIssuer
-#  commonName: network-map-dev.cordite.biz
-#  dnsNames:
-#  - network-map-dev.cordite.biz
-#  acme:
-#    config:
-#    - dns01:
-#        provider: cloudflare-cordite-biz
-#      domains:
-#      - network-map-dev.cordite.biz
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: cordite-biz
+  namespace: network-map-service
+  labels:
+    app: network-map-dev
+spec:
+  secretName: network-map-dev-cordite-biz-tls-cert
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  commonName: network-map-dev.cordite.biz
+  dnsNames:
+  - network-map-dev.cordite.biz
+  acme:
+    config:
+    - dns01:
+        provider: cloudflare-cordite-biz
+      domains:
+      - network-map-dev.cordite.biz
