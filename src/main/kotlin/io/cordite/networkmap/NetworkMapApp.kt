@@ -21,8 +21,8 @@ open class NetworkMapApp  {
       val usernameOpt = options.addOption("username", "sa", "system admin username")
       val passwordOpt = options.addOption("password", "admin", "system admin password")
       val tlsOpt = options.addOption("tls", "true", "whether TLS is enabled or not")
-      val certPathOpt = options.addOption("cert", "", "path to cert if TLS is turned on")
-      val keyPathOpt = options.addOption("key", "", "path to key if TLS turned on")
+      val certPathOpt = options.addOption("tls.cert.path", "", "path to cert if TLS is turned on")
+      val keyPathOpt = options.addOption("tls.key.path", "", "path to key if TLS turned on")
       if (args.contains("--help")) {
         options.printOptions()
         return

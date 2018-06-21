@@ -414,6 +414,8 @@ class NetworkMapService(
     return when {
       !tls -> JksOptions() // just return a blank option as it won't be used
       certPath.isNotBlank() && keyPath.isNotBlank() -> {
+        logger.info("using cert file $certPath")
+        logger.info("using key file $keyPath")
         if (!File(certPath).exists()) {
           val msg = "cert path does not exist: $certPath"
           logger.error(msg)
@@ -429,7 +431,7 @@ class NetworkMapService(
         CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
       }
       else -> {
-        // we need a self signed cert
+        logger.info("generating temporary TLS certificates")
         val inMemoryOnlyPassword = "inmemory"
         createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
       }
