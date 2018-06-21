@@ -84,13 +84,13 @@ class CordaNodeTest {
   @Test
   fun `that we can start up a node that connects to networkmap and registers`(context: TestContext) {
     val nmc = createNetworkMapClient(context)
-    val nm = nmc.getNetworkMap().payload
-    val nodes = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
+    nmc.getNetworkMap().payload
+    nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
 
     driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {}), DriverParameters(isDebug = true, waitForAllNodesToFinish = true)) {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow()
-      val nodeInfo = node.nodeInfo
+//      val nodeInfo = node.nodeInfo
       val nodes = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
       println(nodes)
       node.stop()
