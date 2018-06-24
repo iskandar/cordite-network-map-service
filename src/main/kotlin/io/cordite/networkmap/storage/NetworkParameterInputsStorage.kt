@@ -4,6 +4,7 @@ import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
+import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.RoutingContext
@@ -24,7 +25,7 @@ class NetworkParameterInputsStorage(parentDir: File,
                                     nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES,
                                     pollRate: Long = DEFAULT_WATCH_DELAY) {
   companion object {
-    private val log = loggerFor<NetworkParameterInputsStorage>()
+    internal val log = loggerFor<NetworkParameterInputsStorage>()
     const val WHITELIST_NAME = "whitelist.txt"
     const val DEFAULT_WATCH_DELAY = 2_000L
     const val DEFAULT_DIR_NAME = "inputs"
@@ -75,22 +76,94 @@ class NetworkParameterInputsStorage(parentDir: File,
     return publishSubject
   }
 
-  fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
-    return vertx.fileSystem().readFile(whitelistPath.absolutePath)
-      .map {
-        it.toString().lines()
-          .parseToWhitelistPairs()
-          .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
-          .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
-          .toMap() // and generate the final map
+  @ApiOperation(value = "serve whitelist", response = String::class)
+  fun serveWhitelist(routingContext: RoutingContext) {
+    vertx.fileSystem().exists(whitelistPath.absolutePath) {
+      if (it.result()) {
+        routingContext.response()
+          .setNoCache()
+          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+          .sendFile(whitelistPath.absolutePath)
+      } else {
+        routingContext.response()
+          .setNoCache()
+          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
+          .end("")
       }
+    }
+  }
+
+  @ApiOperation(value = "server set of notaries", response = NotaryInfo::class, responseContainer = "List")
+  fun serveNotaries(routingContext: RoutingContext) {
+    this.readNotaries()
       .onSuccess {
-        log.info("retrieved whitelist")
+        routingContext.setNoCache().end(it)
       }
-      .recover {
-        log.warn("whitelist file not found at ${whitelistPath.absolutePath}")
-        Future.succeededFuture<Map<String, List<AttachmentId>>>(emptyMap())
+      .catch {
+        routingContext.setNoCache().end(it)
       }
+  }
+
+  fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
+    try {
+      return vertx.fileSystem().readFile(whitelistPath.absolutePath)
+        .map {
+          it.toString().lines()
+            .parseToWhitelistPairs()
+            .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
+            .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
+            .toMap() // and generate the final map
+        }
+        .onSuccess {
+          log.info("retrieved whitelist")
+        }
+        .recover {
+          log.warn("whitelist file not found at ${whitelistPath.absolutePath}")
+          Future.succeededFuture<Map<String, List<AttachmentId>>>(emptyMap())
+        }
+    } catch (err: Throwable) {
+      return Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "append to the whitelist")
+  fun appendWhitelist(append: String): Future<Unit> {
+    return try {
+      val parsed = append.lines().parseToWhitelistPairs()
+      readWhiteList()
+        .map { wl ->
+          val flattened = wl.flatMap { item ->
+            item.value.map { item.key to it }
+          }
+          (flattened + parsed).distinct().joinToString("\n") { "${it.first}:${it.second}" }
+        }
+        .compose { newValue ->
+          vertx.fileSystem().writeFile(whitelistPath.absolutePath, newValue.toByteArray())
+        }
+        .mapEmpty()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "replace the whitelist")
+  fun replaceWhitelist(replacement: String): Future<Unit> {
+    return try {
+      val cleaned = replacement.lines().parseToWhitelistPairs().distinct().joinToString("\n") { "${it.first}:${it.second}" }
+      vertx.fileSystem().writeFile(whitelistPath.absolutePath, cleaned.toByteArray())
+        .mapEmpty()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "clears the whitelist")
+  fun clearWhitelist(): Future<Unit> {
+    return try {
+      vertx.fileSystem().writeFile(whitelistPath.absolutePath, "".toByteArray()).mapEmpty()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
   }
 
   fun readNotaries(): Future<List<NotaryInfo>> {
@@ -163,55 +236,31 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  private fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {
-    return map { it.trim() }
-      .filter { it.isNotEmpty() }
-      .map { row -> row.split(":") } // simple parsing for the whitelist
-      .mapIndexed { index, row ->
-        if (row.size != 2) {
-          log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
-          null
-        } else {
-          row
-        }
-      }
-      .mapNotNull {
-        // if we have an attachment id, try to parse it
-        it?.let {
-          try {
-            it[0] to AttachmentId.parse(it[1])
-          } catch (err: Throwable) {
-            log.error("failed to parse attachment id", err)
-            null
-          }
-        }
-      }
-  }
 
-  fun serveWhitelist(routingContext: RoutingContext) {
-    vertx.fileSystem().exists(whitelistPath.absolutePath) {
-      if (it.result()) {
-        routingContext.response()
-          .setNoCache()
-          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
-          .sendFile(whitelistPath.absolutePath)
-      } else {
-        routingContext.response()
-          .setNoCache()
-          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
-          .end("")
-      }
-    }
-  }
 
-  fun serveNotaries(routingContext: RoutingContext) {
-    this.readNotaries()
-      .onSuccess {
-        routingContext.setNoCache().end(it)
-      }
-      .catch {
-        routingContext.setNoCache().end(it)
-      }
-  }
 }
 
+fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {
+  return map { it.trim() }
+    .filter { it.isNotEmpty() }
+    .map { row -> row.split(":") } // simple parsing for the whitelist
+    .mapIndexed { index, row ->
+      if (row.size != 2) {
+        NetworkParameterInputsStorage.log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
+        null
+      } else {
+        row
+      }
+    }
+    .mapNotNull {
+      // if we have an attachment id, try to parse it
+      it?.let {
+        try {
+          it[0] to AttachmentId.parse(it[1])
+        } catch (err: Throwable) {
+          NetworkParameterInputsStorage.log.error("failed to parse attachment id", err)
+          null
+        }
+      }
+    }
+}

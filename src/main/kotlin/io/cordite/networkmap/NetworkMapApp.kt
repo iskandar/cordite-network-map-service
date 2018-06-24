@@ -1,14 +1,15 @@
 package io.cordite.networkmap
 
 import io.cordite.networkmap.service.InMemoryUser
-import io.cordite.networkmap.service.NetworkMapService
+import io.cordite.networkmap.service.NetworkMapServiceV2
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
-import io.vertx.core.Vertx
+import net.corda.core.utilities.loggerFor
 import java.time.Duration
 
 open class NetworkMapApp  {
   companion object {
+    private val logger = loggerFor<NetworkMapApp>()
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -38,8 +39,7 @@ open class NetworkMapApp  {
       val keyPath = keyPathOpt.value
       val user = InMemoryUser.createUser("System Admin", usernameOpt.value, passwordOpt.value)
 
-      val vertx = Vertx.vertx()
-      val service = NetworkMapService(
+      NetworkMapServiceV2(
         dbDirectory = dbDirectory,
         user = user,
         port = port,
@@ -49,8 +49,13 @@ open class NetworkMapApp  {
         tls = tls,
         certPath = certPath,
         keyPath = keyPath
-      )
-      vertx.deployVerticle(service)
+      ).start().setHandler {
+        if (it.failed()) {
+          logger.error("failed to complete setup", it.cause())
+        } else {
+          logger.info("started")
+        }
+      }
     }
   }
 }
