@@ -8,18 +8,23 @@ import io.cordite.networkmap.keystore.toJksOptions
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
+import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.swagger.models.Contact
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpHeaders
 import io.vertx.core.net.JksOptions
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.SignedData
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -28,6 +33,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.io.File
+import java.net.InetAddress
 import java.time.Duration
 import javax.security.auth.x500.X500Principal
 import javax.ws.rs.core.MediaType
@@ -49,10 +55,12 @@ class NetworkMapServiceV2(
     private const val ADMIN_BRAID_ROOT = "/braid/api"
     private const val SWAGGER_ROOT = "/swagger"
     private val logger = loggerFor<NetworkMapServiceV2>()
+
     init {
       SerializationEnvironment.init()
     }
   }
+
   private val vertx = Vertx.vertx()
 
   private val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
@@ -64,18 +72,18 @@ class NetworkMapServiceV2(
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private val paramUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
   private val textStorage = TextStorage(vertx, dbDirectory)
-  private lateinit var signingCertAndKey : CertificateAndKeyPair
+  private lateinit var signingCertAndKey: CertificateAndKeyPair
 
-  private lateinit var processor : NetworkMapServiceProcessor
+  private lateinit var processor: NetworkMapServiceProcessor
 
-  fun start() : Future<Unit> {
+  fun start(): Future<Unit> {
     return setupStorage()
       .compose { ensureCertExists("signing", NetworkMapService.SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP) }.map { signingCertAndKey = it }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
 
-  private fun startupBraid() : Future<Unit> {
+  private fun startupBraid(): Future<Unit> {
     try {
       val thisService = this
       val staticHandler = StaticHandler.create("website")
@@ -101,23 +109,16 @@ class NetworkMapServiceV2(
               unprotected {
                 get(NETWORK_MAP_ROOT, thisService::getNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
+                get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
+                get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
+                get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
               }
             }
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
-                router {
-                  route("/*").handler { context ->
-                    context.request().path().let { path ->
-                      val match = listOf(ADMIN_REST_ROOT, ADMIN_BRAID_ROOT, SWAGGER_ROOT).any { path.startsWith(it) }
-                      if (!match) {
-                        staticHandler.handle(context)
-                      } else {
-                        context.next()
-                      }
-                    }
-                  }
-                }
+                router { route("/*").handler(staticHandler) }
               }
               protected {
                 get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
@@ -131,7 +132,7 @@ class NetworkMapServiceV2(
           }
         ).bootstrapBraid(StubAppServiceHub())
       return Future.succeededFuture()
-    } catch(err: Throwable) {
+    } catch (err: Throwable) {
       return Future.failedFuture(err)
     }
   }
@@ -152,7 +153,7 @@ class NetworkMapServiceV2(
     return processor.start()
   }
 
-  private fun setupStorage() : Future<Unit> {
+  private fun setupStorage(): Future<Unit> {
     return all(
       inputsStorage.makeDirs(),
       signedNetworkParametersStorage.makeDirs(),
@@ -193,7 +194,7 @@ class NetworkMapServiceV2(
     return CertificateAndKeyPair(cert, keyPair)
   }
 
-  private fun createJksOptions() : JksOptions {
+  private fun createJksOptions(): JksOptions {
     return when {
       !tls -> JksOptions() // just return a blank option as it won't be used
       certPath.isNotBlank() && keyPath.isNotBlank() -> {
@@ -221,7 +222,8 @@ class NetworkMapServiceV2(
     }
   }
 
-  @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.", produces = MediaType.APPLICATION_OCTET_STREAM)
+  @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
+    produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   private fun getNetworkMap(context: RoutingContext) {
     signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
   }
@@ -243,6 +245,79 @@ class NetworkMapServiceV2(
         })
       }
       .catch { context.end(it) }
+  }
+
+  @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
+  private fun postAckNetworkParameters(signedSecureHash: Buffer): Future<Unit> {
+    val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
+    val hash = signedParameterHash.verified()
+    return nodeInfoStorage.get(hash.toString())
+      .onSuccess {
+        logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
+      }
+      .catch {
+        logger.warn("received acknowledgement from unknown node!")
+      }
+      .mapEmpty<Unit>()
+  }
+
+  @ApiOperation(value = "Retrieve a signed NodeInfo as specified in the network map object.",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM
+  )
+  private fun getNodeInfo(context: RoutingContext) {
+    val hash = SecureHash.parse(context.request().getParam("hash"))
+    nodeInfoStorage.get(hash.toString())
+      .onSuccess { sni ->
+        context.response().apply {
+          setCacheControl(cacheTimeout)
+          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(sni.serializeOnContext().bytes))
+        }
+      }
+      .catch {
+        logger.error("failed to retrieve node info for hash $hash")
+        context.end(it)
+      }
+  }
+
+  @ApiOperation(value = "Retrieve the signed network parameters. The entire object is signed with the network map certificate which is also attached.",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  private fun getNetworkParameter(context: RoutingContext) {
+    val hash = SecureHash.parse(context.request().getParam("hash"))
+    signedNetworkParametersStorage.get(hash.toString())
+      .onSuccess { snp ->
+        context.response().apply {
+          setCacheControl(cacheTimeout)
+          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(snp.serializeOnContext().bytes))
+        }
+      }
+      .catch {
+        logger.error("failed to retrieve node info for hash $hash")
+        context.end(it)
+      }
+  }
+
+  @ApiOperation(value = "undocumented Corda Networkmap API for retrieving the callers IP",
+    response = String::class,
+    produces = MediaType.TEXT_PLAIN)
+  private fun getMyHostname(context: RoutingContext) {
+    val remote = context.request().connection().remoteAddress()
+    val ia = InetAddress.getByName(remote.host())
+    if (ia.isAnyLocalAddress || ia.isLoopbackAddress) {
+      context.end("localhost")
+    } else {
+      // try to do a reverse DNS
+      vertx.createDnsClient().lookup(remote.host()) {
+        if (it.failed()) {
+          context.end(remote.host())
+        } else {
+          context.end(it.result())
+        }
+      }
+    }
   }
 }
 
