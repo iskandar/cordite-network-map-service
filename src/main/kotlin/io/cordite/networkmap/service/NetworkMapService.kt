@@ -103,7 +103,7 @@ class NetworkMapService(
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(SWAGGER_ROOT)
           .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
-          .withContact(Contact().url("https:cordite.foundation").name("Cordite Foundation"))
+          .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
           .withDescription("""|<b>Please note:</b> The protected parts of this API require JWT authentication.
             |To activate, execute the <code>login</code> method.
             |Then copy the returned JWT token and insert it into the <i>Authorize</i> swagger dialog box as
@@ -320,7 +320,7 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "undocumented Corda Networkmap API for retrieving the callers IP",
+  @ApiOperation(value = "undocumented Corda Networkmap API for retrieving the caller's IP",
     response = String::class,
     produces = MediaType.TEXT_PLAIN)
   fun getMyHostname(context: RoutingContext) {
