@@ -105,9 +105,19 @@ class NetworkMapServiceProcessor(
 
   fun addNode(signedNodeInfo: SignedNodeInfo): Future<Unit> {
     logger.info("adding signed nodeinfo ${signedNodeInfo.raw.hash}")
+
     return execute {
+      nodeInfoStorage.getAll()
+    }.map { nodes ->
       val ni = signedNodeInfo.verified()
-      logger.info("verification passed for ${ni.legalIdentities.firstOrNull()?.name}")
+      val names = ni.legalIdentities.map { it.name }
+      val registeredNames = nodes.flatMap { it.value.verified().legalIdentities }.map { it.name }
+      val intersect = registeredNames.intersect(names)
+      if (intersect.isNotEmpty()) {
+        throw RuntimeException("node's names already registered: ${intersect.map { it.toString() }.joinToString(", ")}")
+      }
+      ni
+    }.compose { ni ->
       val hash = signedNodeInfo.raw.sha256()
       nodeInfoStorage.put(hash.toString(), signedNodeInfo)
         .onSuccess { scheduleNetworkMapRebuild() }
