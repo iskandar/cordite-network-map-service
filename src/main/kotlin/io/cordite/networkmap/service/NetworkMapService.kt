@@ -43,7 +43,7 @@ import javax.security.auth.x500.X500Principal
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
-  dbDirectory: File,
+  private val dbDirectory: File,
   user: InMemoryUser,
   private val port: Int,
   private val cacheTimeout: Duration,
@@ -74,15 +74,10 @@ class NetworkMapService(
   private val signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
-  private val paramUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
-  private val textStorage = TextStorage(vertx, dbDirectory)
-  private lateinit var signingCertAndKey: CertificateAndKeyPair
-
   private lateinit var processor: NetworkMapServiceProcessor
 
   fun start(): Future<Unit> {
     return setupStorage()
-      .compose { ensureCertExists("signing", SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP) }.map { signingCertAndKey = it }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
@@ -148,90 +143,6 @@ class NetworkMapService(
     }
   }
 
-  private fun startProcessor(): Future<Unit> {
-    processor = NetworkMapServiceProcessor(
-      vertx,
-      inputsStorage,
-      nodeInfoStorage,
-      signedNetworkMapStorage,
-      signedNetworkParametersStorage,
-      paramUpdateStorage,
-      textStorage,
-      signingCertAndKey,
-      networkParamUpdateDelay,
-      networkMapQueuedUpdateDelay
-    )
-    return processor.start()
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    return all(
-      inputsStorage.makeDirs(),
-      signedNetworkParametersStorage.makeDirs(),
-      signedNetworkMapStorage.makeDirs(),
-      nodeInfoStorage.makeDirs(),
-      textStorage.makeDirs(),
-      paramUpdateStorage.makeDirs(),
-      certificateAndKeyPairStorage.makeDirs()
-    ).mapEmpty()
-  }
-
-  private fun ensureCertExists(
-    description: String,
-    certName: String,
-    commonName: String,
-    certificateType: CertificateType,
-    signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME,
-    rootCa: CertificateAndKeyPair = DEV_ROOT_CA
-  ): Future<CertificateAndKeyPair> {
-    logger.info("checking for $description certificate")
-    return certificateAndKeyPairStorage.get(certName)
-      .recover {
-        // we couldn't find the cert - so generate one
-        logger.warn("failed to find $description cert for this NMS. generating new cert")
-        val cert = createSigningCert(rootCa, commonName, certificateType, signatureScheme)
-        certificateAndKeyPairStorage.put(certName, cert).map { cert }
-      }
-  }
-
-  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val cert = X509Utilities.createCertificate(
-      certificateType,
-      rootCa.certificate,
-      rootCa.keyPair,
-      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
-      keyPair.public)
-    return CertificateAndKeyPair(cert, keyPair)
-  }
-
-  private fun createJksOptions(): JksOptions {
-    return when {
-      !tls -> JksOptions() // just return a blank option as it won't be used
-      certPath.isNotBlank() && keyPath.isNotBlank() -> {
-        logger.info("using cert file $certPath")
-        logger.info("using key file $keyPath")
-        if (!File(certPath).exists()) {
-          val msg = "cert path does not exist: $certPath"
-          logger.error(msg)
-          throw RuntimeException(msg)
-        }
-
-        if (!File(keyPath).exists()) {
-          val msg = "key path does not exist: $keyPath"
-          logger.error(msg)
-          throw RuntimeException(msg)
-        }
-
-        CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
-      }
-      else -> {
-        logger.info("generating temporary TLS certificates")
-        val inMemoryOnlyPassword = "inmemory"
-        createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
-      }
-    }
-  }
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
@@ -244,7 +155,7 @@ class NetworkMapService(
   @ApiOperation(value = "For the node to upload its signed NodeInfo object to the network map",
     consumes = MediaType.APPLICATION_OCTET_STREAM
   )
-  fun postNodeInfo(nodeInfo: Buffer) : Future<Unit> {
+  fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
     return processor.addNode(signedNodeInfo)
   }
@@ -336,6 +247,70 @@ class NetworkMapService(
         } else {
           context.end(it.result())
         }
+      }
+    }
+  }
+
+  private fun startProcessor(): Future<Unit> {
+    processor = NetworkMapServiceProcessor(
+      vertx,
+      dbDirectory,
+      inputsStorage,
+      nodeInfoStorage,
+      signedNetworkMapStorage,
+      signedNetworkParametersStorage,
+      certificateAndKeyPairStorage,
+      networkParamUpdateDelay,
+      networkMapQueuedUpdateDelay
+    )
+    return processor.start()
+  }
+
+  private fun setupStorage(): Future<Unit> {
+    return all(
+      inputsStorage.makeDirs(),
+      signedNetworkParametersStorage.makeDirs(),
+      signedNetworkMapStorage.makeDirs(),
+      nodeInfoStorage.makeDirs(),
+      certificateAndKeyPairStorage.makeDirs()
+    ).mapEmpty()
+  }
+
+  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
+    val keyPair = Crypto.generateKeyPair(signatureScheme)
+    val cert = X509Utilities.createCertificate(
+      certificateType,
+      rootCa.certificate,
+      rootCa.keyPair,
+      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
+      keyPair.public)
+    return CertificateAndKeyPair(cert, keyPair)
+  }
+
+  private fun createJksOptions(): JksOptions {
+    return when {
+      !tls -> JksOptions() // just return a blank option as it won't be used
+      certPath.isNotBlank() && keyPath.isNotBlank() -> {
+        logger.info("using cert file $certPath")
+        logger.info("using key file $keyPath")
+        if (!File(certPath).exists()) {
+          val msg = "cert path does not exist: $certPath"
+          logger.error(msg)
+          throw RuntimeException(msg)
+        }
+
+        if (!File(keyPath).exists()) {
+          val msg = "key path does not exist: $keyPath"
+          logger.error(msg)
+          throw RuntimeException(msg)
+        }
+
+        CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
+      }
+      else -> {
+        logger.info("generating temporary TLS certificates")
+        val inMemoryOnlyPassword = "inmemory"
+        createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
       }
     }
   }
