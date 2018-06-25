@@ -68,22 +68,34 @@
       <ul id="nodes" class="list-group"></ul>
     </div>
   </div>
+  <div class="row">
+    <div class="col">
+      <h2>APIs</h2>
+      <ul>
+      <li><a href="/swagger/">Swagger</a></li>
+      <li><a href="/braid/api">Braid</a></li>
+      </ul>
+    </div>
+  </div>
 </div>
+
 <div class="modal" tabindex="-1" role="dialog" id="authDialog">
   <div class="modal-dialog" role="document">
     <div class="modal-content card card-container">
-        <img id="profile-img" class="profile-img-card" src="/img/avatar_2x.png"/>
-        <p id="profile-name" class="profile-name-card"></p>
-        <form class="form-signin" action="" onsubmit="return authenticate(this);">
-          <span id="reauth-email" class="reauth-email"></span>
-          <input type="text" class="form-control" placeholder="Username" name="username" id="inputUsername" required autofocus>
-          <input type="password" class="form-control" placeholder="Password" name="password" id="inputPassword">
-          <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
-          <div class="error" id="authError"></div>
-        </form><!-- /form -->
-      </div><!-- /card-container -->
+      <img id="profile-img" class="profile-img-card" src="/img/avatar_2x.png"/>
+      <p id="profile-name" class="profile-name-card"></p>
+      <form class="form-signin" action="" onsubmit="return authenticate(this);">
+        <span id="reauth-email" class="reauth-email"></span>
+        <input type="text" class="form-control" placeholder="Username" name="username" id="inputUsername" required
+               autofocus>
+        <input type="password" class="form-control" placeholder="Password" name="password" id="inputPassword">
+        <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
+        <div class="error" id="authError"></div>
+      </form><!-- /form -->
+    </div><!-- /card-container -->
   </div>
 </div>
+
 
 <script>
   let token = "";
@@ -155,7 +167,7 @@
           $('#authError').text(errorThrown);
         }
       });
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     }
     return false;
