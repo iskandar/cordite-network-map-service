@@ -23,6 +23,7 @@
     <jar.name>network-map-service</jar.name>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
+    <braid.version>3.1.5</braid.version>
   </properties>
 
   <repositories>
@@ -105,7 +106,7 @@
     <dependency>
       <groupId>io.bluebank.braid</groupId>
       <artifactId>braid-corda</artifactId>
-      <version>3.1.5-SNAPSHOT</version>
+      <version>${braid.version}</version>
     </dependency>
   </dependencies>
 
