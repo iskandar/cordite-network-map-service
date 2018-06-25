@@ -239,7 +239,7 @@ class NetworkMapServiceProcessor(
       .map {
         logger.info("creating new network parameter from notaries, whitelist, present time and updating epoch")
         fCurrentNetworkParamsHash.result().copy(
-          notaries = fNotaries.result(),
+          notaries = fNotaries.result().map { it.second },
           whitelistedContractImplementations = fWhiteList.result(),
           modifiedTime = Instant.now(),
           epoch = fCurrentNetworkParamsHash.result().epoch + 1

@@ -118,8 +118,8 @@ class NetworkParameterInputsStorageTest {
               nmis.readNotaries()
             }
             .onSuccess {
-              context.assertEquals(1, it.count { it.validating })
-              context.assertEquals(1, it.count { !it.validating })
+              context.assertEquals(1, it.count { it.second.validating })
+              context.assertEquals(1, it.count { !it.second.validating })
             }
             .onSuccess { async.complete() }
             .catch {

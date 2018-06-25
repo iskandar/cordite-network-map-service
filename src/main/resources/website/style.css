@@ -13,6 +13,11 @@ body, html {
     padding: 40px 40px;
 }
 
+.wide-card-container.card {
+    max-width: 800px;
+    padding: 40px 40px;
+}
+
 .btn {
     font-weight: 700;
     height: 36px;
@@ -136,4 +141,32 @@ body, html {
 .forgot-password:active,
 .forgot-password:focus{
     color: rgb(12, 97, 33);
+}
+
+.hidden {
+    display:none;
+}
+
+.parent-hover:hover .hidden {
+    display:inline;
+}
+
+.notary {
+    display: flex;
+    flex-direction: row;
+}
+
+.notary-item {
+
+}
+
+.notary-controls {
+    margin-left: auto;
+ align-items: flex-end;
+    padding-right: 40px;
+}
+
+.whitelist {
+    font-family: monospace;
+    font-size: 9pt;
 }
