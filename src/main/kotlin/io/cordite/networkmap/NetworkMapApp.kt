@@ -1,7 +1,7 @@
 package io.cordite.networkmap
 
 import io.cordite.networkmap.service.InMemoryUser
-import io.cordite.networkmap.service.NetworkMapServiceV2
+import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
 import net.corda.core.utilities.loggerFor
@@ -39,7 +39,7 @@ open class NetworkMapApp  {
       val keyPath = keyPathOpt.value
       val user = InMemoryUser.createUser("System Admin", usernameOpt.value, passwordOpt.value)
 
-      NetworkMapServiceV2(
+      NetworkMapService(
         dbDirectory = dbDirectory,
         user = user,
         port = port,

@@ -59,16 +59,18 @@ class CordaNodeTest {
 
 //    setupDefaultInputFiles(dbDirectory)
 
-    this.service = NetworkMapService(
-      dbDirectory = dbDirectory,
+
+    this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
-      tls = false
+      tls = false,
+      vertx = vertx
     )
-    vertx?.deployVerticle(service, context.asyncAssertSuccess())
+
+    service.start().setHandler(context.asyncAssertSuccess())
   }
 
   @After

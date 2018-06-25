@@ -47,6 +47,7 @@ class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
 
   private fun ensureJWTKeyStoreExists() {
     val ks = JWTUtils.createSimpleJWTKeyStore(jwtSecret)
+    jksFile.parentFile.mkdirs()
     FileOutputStream(this.jksFile.absoluteFile).use {
       ks.store(it, jwtSecret.toCharArray())
       it.flush()

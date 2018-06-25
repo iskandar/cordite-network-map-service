@@ -1,5 +1,9 @@
 package io.cordite.networkmap.service
 
+import io.bluebank.braid.corda.BraidConfig
+import io.bluebank.braid.corda.rest.AuthSchema
+import io.bluebank.braid.corda.rest.RestConfig
+import io.bluebank.braid.core.http.HttpServerConfig
 import io.cordite.networkmap.keystore.toJksOptions
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.serialisation.SerializationEnvironment
@@ -8,28 +12,24 @@ import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
-import io.vertx.core.AbstractVerticle
+import io.swagger.annotations.ApiOperation
+import io.swagger.models.Contact
 import io.vertx.core.Future
-import io.vertx.core.Future.future
-import io.vertx.core.Future.succeededFuture
+import io.vertx.core.Handler
+import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
-import io.vertx.core.http.HttpServer
-import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.net.JksOptions
-import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.*
-import io.vertx.ext.web.sstore.LocalSessionStore
+import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.hours
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -40,24 +40,26 @@ import java.net.InetAddress
 import java.security.PublicKey
 import java.time.Duration
 import javax.security.auth.x500.X500Principal
+import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
-  private val dbDirectory: File,
-  private val user: InMemoryUser,
-  private val port: Int = 9000,
-  private val cacheTimeout: Duration = 10.seconds,
-  private val networkParamUpdateDelay: Duration = 1.hours,
-  private val networkMapQueuedUpdateDelay: Duration = 1.seconds,
-  private val tls: Boolean = true,
+  dbDirectory: File,
+  user: InMemoryUser,
+  private val port: Int,
+  private val cacheTimeout: Duration,
+  private val networkParamUpdateDelay: Duration,
+  private val networkMapQueuedUpdateDelay: Duration,
+  private val tls: Boolean,
   private val certPath: String = "",
-  private val keyPath: String = ""
-) : AbstractVerticle() {
-
+  private val keyPath: String = "",
+  private val vertx: Vertx = Vertx.vertx()
+) {
   companion object {
     internal const val SIGNING_CERT_NAME = "nms"
     private const val NETWORK_MAP_ROOT = "/network-map"
-    private const val ADMIN_ROOT = "/admin"
-    private const val ADMIN_API_ROOT = "$ADMIN_ROOT/api"
+    private const val ADMIN_REST_ROOT = "/admin/api"
+    private const val ADMIN_BRAID_ROOT = "/braid/api"
+    private const val SWAGGER_ROOT = "/swagger"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -65,76 +67,88 @@ class NetworkMapService(
     }
   }
 
+  internal val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
+  private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
+  private val adminService = AdminServiceImpl()
+  private val inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
+  private val signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
+  private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
+  private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
+  private val paramUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
+  private val textStorage = TextStorage(vertx, dbDirectory)
   private lateinit var signingCertAndKey: CertificateAndKeyPair
-  private lateinit var inputsStorage: NetworkParameterInputsStorage
-  private lateinit var signedNetworkParametersStorage: SignedNetworkParametersStorage
-  private lateinit var nodeInfoStorage: SignedNodeInfoStorage
-  private lateinit var textStorage: TextStorage
-  internal lateinit var certificateAndKeyPairStorage: CertificateAndKeyPairStorage
-  private lateinit var signedNetworkMapStorage: SignedNetworkMapStorage
-  private lateinit var paramUpdateStorage: ParametersUpdateStorage
+
   private lateinit var processor: NetworkMapServiceProcessor
-  private var httpServer: HttpServer? = null
 
-
-  override fun start(startFuture: Future<Void>) {
-    setupStorage()
+  fun start(): Future<Unit> {
+    return setupStorage()
       .compose { ensureCertExists("signing", SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP) }.map { signingCertAndKey = it }
-      .compose { setupProcessor() }
-      .compose { createHttpServer(createRouter()) }
-      .setHandler(startFuture.completer())
+      .compose { startProcessor() }
+      .compose { startupBraid() }
   }
 
-  override fun stop(stopFuture: Future<Void>) {
-    logger.info("shutting down")
-    shutdownProcessor()
-      .compose { shutdownHttpServer() }
-      .onSuccess {
-        logger.info("shutdown complete")
-      }
-      .catch {
-        logger.error("shutdown failed", it)
-      }
-      .setHandler(stopFuture.completer())
+  private fun startupBraid(): Future<Unit> {
+    try {
+      val thisService = this
+      val staticHandler = StaticHandler.create("website")
+      val result = Future.future<Unit>()
+      BraidConfig()
+        .withVertx(vertx)
+        .withPort(port)
+        .withAuthConstructor(authService::createAuthProvider)
+        .withService("admin", adminService)
+        .withRootPath(ADMIN_BRAID_ROOT)
+        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setSsl(tls).setKeyStoreOptions(createJksOptions()))
+        .withRestConfig(RestConfig("Cordite Network Map Service")
+          .withAuthSchema(AuthSchema.Token)
+          .withSwaggerPath(SWAGGER_ROOT)
+          .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
+          .withContact(Contact().url("https:cordite.foundation").name("Cordite Foundation"))
+          .withDescription("""|<b>Please note:</b> The protected parts of this API require JWT authentication.
+            |To activate, execute the <code>login</code> method.
+            |Then copy the returned JWT token and insert it into the <i>Authorize</i> swagger dialog box as
+            |<code>Bearer &lt;token&gt;</code>
+          """.trimMargin().replace("\n", ""))
+          .withPaths {
+            group("network map") {
+              unprotected {
+                get(NETWORK_MAP_ROOT, thisService::getNetworkMap)
+                post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
+                get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
+                get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
+                get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
+              }
+            }
+            group("admin") {
+              unprotected {
+                post("$ADMIN_REST_ROOT/login", authService::login)
+                router { route("/*").handler(staticHandler) }
+              }
+              protected {
+                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
+                put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
+                post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
+                delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", inputsStorage::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", thisService::getAllNodeInfos)
+              }
+            }
+          }
+        ).bootstrapBraid(serviceHub = StubAppServiceHub(), fn = Handler {
+          if (it.succeeded()) {
+            result.complete()
+          } else {
+            result.fail(it.cause())
+          }
+        })
+      return result
+    } catch (err: Throwable) {
+      return Future.failedFuture(err)
+    }
   }
 
-  private fun shutdownProcessor(): Future<Void> {
-    processor.close()
-    return succeededFuture()
-  }
-
-  private fun shutdownHttpServer(): Future<Void> {
-    return httpServer?.let {
-      val f = future<Void>()
-      logger.info("shutting down the http server")
-      httpServer?.close(f.completer())
-      httpServer = null
-      f
-    } ?: succeededFuture()
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    logger.info("setting up database storage")
-    inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-    signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
-    signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
-    nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
-    textStorage = TextStorage(vertx, dbDirectory)
-    certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
-    paramUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
-
-    return all(
-      inputsStorage.makeDirs(),
-      signedNetworkParametersStorage.makeDirs(),
-      signedNetworkMapStorage.makeDirs(),
-      nodeInfoStorage.makeDirs(),
-      textStorage.makeDirs(),
-      paramUpdateStorage.makeDirs(),
-      certificateAndKeyPairStorage.makeDirs()
-    ).mapEmpty()
-  }
-
-  private fun setupProcessor() : Future<Unit> {
+  private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
       vertx,
       inputsStorage,
@@ -150,192 +164,16 @@ class NetworkMapService(
     return processor.start()
   }
 
-  private fun createHttpServer(router: Router): Future<Void> {
-    logger.info("creating http server on port $port")
-    val result = Future.future<Void>()
-
-    try {
-      val protocol = if (tls) "https" else "http"
-      this.httpServer = vertx
-        .createHttpServer(HttpServerOptions()
-          .setSsl(tls)
-          .setKeyStoreOptions(createJksOptions())
-        )
-        .requestHandler(router::accept)
-        .listen(port) {
-          if (it.failed()) {
-            logger.error("failed to startup", it.cause())
-            result.fail(it.cause())
-          } else {
-            logger.info("network map service started")
-            logger.info("""mounts:
-            |network map:   $protocol://localhost:$port$NETWORK_MAP_ROOT
-            |admin website: $protocol://localhost:$port$ADMIN_ROOT
-            |admin API:     $protocol://localhost:$port$ADMIN_API_ROOT
-          """.trimMargin())
-            result.complete()
-          }
-        }
-    } catch (err: Throwable) {
-      result.fail(err)
-    }
-    return result
-  }
-
-  private fun createRouter(): Router {
-    val router = Router.router(vertx)
-    bindCordaNetworkMapAPI(router)
-    bindAdmin(router)
-    return router
-  }
-
-  private fun bindAdmin(router: Router) {
-    val authProvider = InMemoryAuthProvider(user)
-
-    router.route().handler(CookieHandler.create())
-    router.route().handler(SessionHandler.create(LocalSessionStore.create(vertx)))
-
-    router.route().handler(UserSessionHandler.create(authProvider))
-    val redirectAuthHandler = RedirectAuthHandler.create(authProvider, "login.html")
-    router.route("$ADMIN_ROOT*").handler(BodyHandler.create())
-    router.post("$ADMIN_API_ROOT/login").handler(FormLoginHandler.create(authProvider))
-    router.route("$ADMIN_API_ROOT/logout").handler { context ->
-      context.clearUser()
-      // Redirect back to the index page
-      context.response()
-        .setNoCache()
-        .putHeader("location", ADMIN_ROOT).setStatusCode(302).end()
-    }
-
-    router.route("$ADMIN_ROOT*").handler(redirectAuthHandler)
-    router.get("$ADMIN_API_ROOT/whitelist")
-      .produces(HttpHeaderValues.TEXT_PLAIN.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveWhitelist(this)
-        }
-      }
-
-    router.get("$ADMIN_API_ROOT/notaries")
-      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
-      .handler {
-        it.handleExceptions {
-          inputsStorage.serveNotaries(this)
-        }
-      }
-
-    router.get("$ADMIN_API_ROOT/nodes")
-      .produces(HttpHeaderValues.APPLICATION_JSON.toString())
-      .handler {
-        it.handleExceptions {
-          getAllNodeInfos()
-        }
-      }
-
-    router.get(ADMIN_ROOT).handler(StaticHandler.create("website")
-      .setCachingEnabled(false).setWebRoot("admin"))
-
-    router.get("/user").handler { context ->
-      context.setNoCache().end(context.user().principal())
-    }
-
-    router.route().handler(StaticHandler.create("website")
-      .setCachingEnabled(false)
-      .setMaxCacheSize(1)
-      .setCacheEntryTimeout(1))
-  }
-
-
-  private fun bindCordaNetworkMapAPI(router: Router) {
-    router.post("$NETWORK_MAP_ROOT/publish")
-      .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
-      .handler {
-        it.handleExceptions { postNodeInfo() }
-      }
-
-    router.post("$NETWORK_MAP_ROOT/ack-parameters")
-      .consumes(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
-      .handler {
-        it.handleExceptions {
-          postAckNetworkParameters()
-        }
-      }
-
-    router.get(NETWORK_MAP_ROOT)
-      .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
-      .handler { it.handleExceptions { getNetworkMap() } }
-
-    router.get("$NETWORK_MAP_ROOT/node-info/:hash")
-      .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
-      .handler {
-        it.handleExceptions {
-          val hash = SecureHash.parse(request().getParam("hash"))
-          getNodeInfo(hash)
-        }
-      }
-
-    router.get("$NETWORK_MAP_ROOT/network-parameters/:hash")
-      .produces(HttpHeaderValues.APPLICATION_OCTET_STREAM.toString())
-      .handler {
-        it.handleExceptions {
-          val hash = SecureHash.parse(request().getParam("hash"))
-          getNetworkParameters(hash)
-        }
-      }
-
-    router.get("$NETWORK_MAP_ROOT/my-hostname")
-      .handler {
-        it.handleExceptions {
-          val remote = it.request().connection().remoteAddress()
-          val ia = InetAddress.getByName(remote.host())
-          if (ia.isAnyLocalAddress || ia.isLoopbackAddress) {
-            end("localhost")
-          } else {
-            vertx.createDnsClient().lookup(remote.host()) {
-              if (it.failed()) {
-                end(it.cause())
-              } else {
-                end(it.result())
-              }
-            }
-          }
-        }
-      }
-
-  }
-
-  private fun RoutingContext.getNetworkParameters(hash: SecureHash.SHA256) {
-    signedNetworkParametersStorage.get(hash.toString())
-      .onSuccess { snp ->
-        response().apply {
-          putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-          end(Buffer.buffer(snp.serializeOnContext().bytes))
-        }
-      }
-      .catch {
-        logger.error("failed to retrieve node info for hash $hash")
-        this.end(it)
-      }
-  }
-
-
-  private fun RoutingContext.postAckNetworkParameters() {
-    request().bodyHandler { buffer ->
-      this.handleExceptions {
-        val signedParameterHash = buffer.bytes.deserializeOnContext<SignedData<SecureHash>>()
-        val hash = signedParameterHash.verified()
-        nodeInfoStorage.get(hash.toString())
-          .onSuccess {
-            logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
-          }
-          .catch {
-            logger.warn("received acknowledgement from unknown node!")
-          }
-
-        response().end()
-      }
-    }
+  private fun setupStorage(): Future<Unit> {
+    return all(
+      inputsStorage.makeDirs(),
+      signedNetworkParametersStorage.makeDirs(),
+      signedNetworkMapStorage.makeDirs(),
+      nodeInfoStorage.makeDirs(),
+      textStorage.makeDirs(),
+      paramUpdateStorage.makeDirs(),
+      certificateAndKeyPairStorage.makeDirs()
+    ).mapEmpty()
   }
 
   private fun ensureCertExists(
@@ -356,7 +194,6 @@ class NetworkMapService(
       }
   }
 
-
   private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
     val keyPair = Crypto.generateKeyPair(signatureScheme)
     val cert = X509Utilities.createCertificate(
@@ -368,49 +205,7 @@ class NetworkMapService(
     return CertificateAndKeyPair(cert, keyPair)
   }
 
-  private fun RoutingContext.postNodeInfo() {
-    request().bodyHandler { buffer ->
-      val signedNodeInfo = buffer.bytes.deserializeOnContext<SignedNodeInfo>()
-      processor.addNode(signedNodeInfo)
-        .onSuccess {
-          end("OK")
-        }
-        .catch {
-          end(it)
-        }
-    }
-  }
-
-  private fun RoutingContext.getNetworkMap() {
-    signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, this, cacheTimeout)
-  }
-
-  private fun RoutingContext.getNodeInfo(hash: SecureHash) {
-    nodeInfoStorage.get(hash.toString())
-      .onSuccess { sni ->
-        response().apply {
-          putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
-          end(Buffer.buffer(sni.serializeOnContext().bytes))
-        }
-      }
-      .catch {
-        this.end(it)
-      }
-  }
-
-  private fun RoutingContext.getAllNodeInfos() {
-    setNoCache()
-    nodeInfoStorage.getAll()
-      .onSuccess {
-        end(it.map {
-          val node = it.value.verified()
-          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
-        })
-      }
-      .catch { end(it) }
-  }
-
-  private fun createJksOptions() : JksOptions {
+  private fun createJksOptions(): JksOptions {
     return when {
       !tls -> JksOptions() // just return a blank option as it won't be used
       certPath.isNotBlank() && keyPath.isNotBlank() -> {
@@ -438,6 +233,114 @@ class NetworkMapService(
     }
   }
 
-  data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
-  data class NameAndKey(val name: CordaX500Name, val key: PublicKey)
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
+    produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
+  fun getNetworkMap(context: RoutingContext) {
+    signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the node to upload its signed NodeInfo object to the network map",
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postNodeInfo(nodeInfo: Buffer) : Future<Unit> {
+    val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+    return processor.addNode(signedNodeInfo)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = NodeInfo::class)
+  fun getAllNodeInfos(context: RoutingContext) {
+    context.setNoCache()
+    nodeInfoStorage.getAll()
+      .onSuccess {
+        context.end(it.map {
+          val node = it.value.verified()
+          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
+        })
+      }
+      .catch { context.end(it) }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
+  fun postAckNetworkParameters(signedSecureHash: Buffer): Future<Unit> {
+    val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
+    val hash = signedParameterHash.verified()
+    return nodeInfoStorage.get(hash.toString())
+      .onSuccess {
+        logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
+      }
+      .catch {
+        logger.warn("received acknowledgement from unknown node!")
+      }
+      .mapEmpty<Unit>()
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve a signed NodeInfo as specified in the network map object.",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun getNodeInfo(context: RoutingContext) {
+    val hash = SecureHash.parse(context.request().getParam("hash"))
+    nodeInfoStorage.get(hash.toString())
+      .onSuccess { sni ->
+        context.response().apply {
+          setCacheControl(cacheTimeout)
+          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(sni.serializeOnContext().bytes))
+        }
+      }
+      .catch {
+        logger.error("failed to retrieve node info for hash $hash")
+        context.end(it)
+      }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve the signed network parameters. The entire object is signed with the network map certificate which is also attached.",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  fun getNetworkParameter(context: RoutingContext) {
+    val hash = SecureHash.parse(context.request().getParam("hash"))
+    signedNetworkParametersStorage.get(hash.toString())
+      .onSuccess { snp ->
+        context.response().apply {
+          setCacheControl(cacheTimeout)
+          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(snp.serializeOnContext().bytes))
+        }
+      }
+      .catch {
+        logger.error("failed to retrieve node info for hash $hash")
+        context.end(it)
+      }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "undocumented Corda Networkmap API for retrieving the callers IP",
+    response = String::class,
+    produces = MediaType.TEXT_PLAIN)
+  fun getMyHostname(context: RoutingContext) {
+    val remote = context.request().connection().remoteAddress()
+    val ia = InetAddress.getByName(remote.host())
+    if (ia.isAnyLocalAddress || ia.isLoopbackAddress) {
+      context.end("localhost")
+    } else {
+      // try to do a reverse DNS
+      vertx.createDnsClient().lookup(remote.host()) {
+        if (it.failed()) {
+          context.end(remote.host())
+        } else {
+          context.end(it.result())
+        }
+      }
+    }
+  }
 }
+
+data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
+data class NameAndKey(val name: CordaX500Name, val key: PublicKey)
+
