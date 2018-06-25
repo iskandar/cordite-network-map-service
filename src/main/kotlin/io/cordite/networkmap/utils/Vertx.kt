@@ -21,6 +21,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 
 private val logger = loggerFor<NetworkMapService>()
@@ -99,6 +100,10 @@ fun HttpServerResponse.setNoCache() : HttpServerResponse {
   return putHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
     .putHeader("pragma", "no-cache")
     .putHeader("expires", "0")
+}
+
+fun HttpServerResponse.setCacheControl(cacheTimeout: Duration) {
+  putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
 }
 
 fun <T> Vertx.executeBlocking(fn: () -> T): Future<T> {

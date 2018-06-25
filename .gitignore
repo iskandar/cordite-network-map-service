@@ -4,3 +4,4 @@ network-map-service.iml
 **/.vertx
 **/.db
 build
+**/file-uploads

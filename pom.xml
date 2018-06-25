@@ -23,6 +23,7 @@
     <jar.name>network-map-service</jar.name>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
+    <braid.version>3.1.5</braid.version>
   </properties>
 
   <repositories>
@@ -90,7 +91,6 @@
       <groupId>net.corda</groupId>
       <artifactId>corda-node</artifactId>
       <version>${corda.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>net.corda</groupId>
@@ -102,6 +102,11 @@
       <groupId>net.corda</groupId>
       <artifactId>corda-node-driver</artifactId>
       <version>${corda.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.bluebank.braid</groupId>
+      <artifactId>braid-corda</artifactId>
+      <version>${braid.version}</version>
     </dependency>
   </dependencies>
 
