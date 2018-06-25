@@ -81,16 +81,16 @@ class NetworkMapServiceProcessor(
     }
 
     return execute {
-      inputs.digest()
-        .compose { currentDigest ->
-          processNewDigest(currentDigest, "first setup", true)
-        }
-    }.compose {
       ensureCertExists("signing", NetworkMapService.SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP)
     }.map {
       certs = it
     }.compose {
       setupStorage()
+    }.compose {
+      inputs.digest()
+        .compose { currentDigest ->
+          processNewDigest(currentDigest, "first setup", true)
+        }
     }
   }
 
