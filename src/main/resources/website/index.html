@@ -104,7 +104,7 @@
 
   function getData() {
     apiGet("/admin/api/notaries", setupNotaries);
-    apiGet("/admin/api/whitelist", setupWhitelist);
+    apiGetRaw("/admin/api/whitelist", setupWhitelist);
     apiGet("/admin/api/nodes", setupNodes);
   }
 
@@ -173,7 +173,7 @@
     return false;
   }
 
-  function apiGet(url, success) {
+  function apiGetRaw(url, success) {
     $.ajax({
       url: url,
       headers: {
@@ -183,14 +183,22 @@
     })
       .done(data => {
         if (success) {
-          const json = JSON.parse(data);
-          success(json);
+          success(data);
         }
       })
       .fail(err => {
         console.error("error during GET " + url, err);
       })
     ;
+  }
+
+  function apiGet(url, success) {
+    apiGetRaw(url, data => {
+      if (success) {
+        const json = JSON.parse(data);
+        success(json);
+      }
+    });
   }
 </script>
 </body>
