@@ -114,7 +114,7 @@ class NetworkMapServiceProcessor(
       val registeredNames = nodes.flatMap { it.value.verified().legalIdentities }.map { it.name }
       val intersect = registeredNames.intersect(names)
       if (intersect.isNotEmpty()) {
-        throw RuntimeException("node's names already registered: ${intersect.map { it.toString() }.joinToString(", ")}")
+        throw RuntimeException("node's names already registered: ${intersect.joinToString(", ") { it.toString() }}")
       }
       ni
     }.compose { ni ->
