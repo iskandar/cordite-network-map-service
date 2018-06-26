@@ -115,18 +115,20 @@ class NetworkMapServiceProcessor(
       }.onSuccess { nodes ->
         // flatten the current nodes to Party -> PublicKey map
         val registered = nodes.flatMap {
-          it.value.verified().legalIdentitiesAndCerts.map { it.party to it.owningKey }
+          it.value.verified().legalIdentitiesAndCerts.map {
+            it.party.name to it.owningKey
+          }
         }.toMap()
 
         // now filter the party and certs of the nodeinfo we're trying to register
         val registeredWithDifferentKey = partyAndCerts.filter {
           // looking for where the public keys differ
-          registered[it.party].let { pk ->
+          registered[it.party.name].let { pk ->
             pk != null && pk != it.owningKey
           }
         }
         if (registeredWithDifferentKey.any()) {
-          val names = registeredWithDifferentKey.map { it.name.toString() }.joinToString("\n")
+          val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
           val msg = "node failed to registered because the following names have already been registered with different public keys $names"
           logger.warn(msg)
           throw RuntimeException(msg)

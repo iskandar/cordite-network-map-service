@@ -26,10 +26,7 @@ import java.nio.file.Files
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapServiceTest {
@@ -117,6 +114,32 @@ class NetworkMapServiceTest {
     val nhs = nm.nodeInfoHashes
     context.assertEquals(1, nhs.size)
     assertEquals(sni.signed.raw.hash, nhs[0])
+  }
+
+  @Test(expected = NullPointerException::class)
+  fun `that we cannot register the same node name with a different key`(context: TestContext) {
+    val nmc = createNetworkMapClient(context)
+
+    val sni1 = TestNodeInfoBuilder().let {
+      it.addIdentity(ALICE_NAME)
+      it.buildWithSigned()
+    }
+    nmc.publish(sni1.signed)
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    val nm = nmc.getNetworkMap().payload
+    val nhs = nm.nodeInfoHashes
+    context.assertEquals(1, nhs.size)
+    assertEquals(sni1.signed.raw.hash, nhs[0])
+
+    val sni2 = TestNodeInfoBuilder().let {
+      it.addIdentity(ALICE_NAME)
+      it.buildWithSigned()
+    }
+
+    val pk1 = sni1.nodeInfo.legalIdentities.first().owningKey
+    val pk2 = sni2.nodeInfo.legalIdentities.first().owningKey
+    assertNotEquals(pk1, pk2)
+    nmc.publish(sni2.signed) // <-- will throw a meaningless NPE see https://github.com/corda/corda/issues/3442
   }
 
 
