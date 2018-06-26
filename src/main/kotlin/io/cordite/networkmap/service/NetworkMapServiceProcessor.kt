@@ -6,6 +6,7 @@ import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.cordite.networkmap.utils.withFuture
 import io.vertx.core.Future
+import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import net.corda.core.crypto.Crypto
@@ -104,24 +105,41 @@ class NetworkMapServiceProcessor(
   }
 
   fun addNode(signedNodeInfo: SignedNodeInfo): Future<Unit> {
-    logger.info("adding signed nodeinfo ${signedNodeInfo.raw.hash}")
-
-    return execute {
-      nodeInfoStorage.getAll()
-    }.map { nodes ->
+    try {
+      logger.info("adding signed nodeinfo ${signedNodeInfo.raw.hash}")
       val ni = signedNodeInfo.verified()
-      val names = ni.legalIdentities.map { it.name }
-      val registeredNames = nodes.flatMap { it.value.verified().legalIdentities }.map { it.name }
-      val intersect = registeredNames.intersect(names)
-      if (intersect.isNotEmpty()) {
-        throw RuntimeException("node's names already registered: ${intersect.joinToString(", ") { it.toString() }}")
+      val partyAndCerts = ni.legalIdentitiesAndCerts
+
+      return execute {
+        nodeInfoStorage.getAll()
+      }.onSuccess { nodes ->
+        // flatten the current nodes to Party -> PublicKey map
+        val registered = nodes.flatMap {
+          it.value.verified().legalIdentitiesAndCerts.map { it.party to it.owningKey }
+        }.toMap()
+
+        // now filter the party and certs of the nodeinfo we're trying to register
+        val registeredWithDifferentKey = partyAndCerts.filter {
+          // looking for where the public keys differ
+          registered[it.party].let { pk ->
+            pk != null && pk != it.owningKey
+          }
+        }
+        if (registeredWithDifferentKey.any()) {
+          val names = registeredWithDifferentKey.map { it.name.toString() }.joinToString("\n")
+          val msg = "node failed to registered because the following names have already been registered with different public keys $names"
+          logger.warn(msg)
+          throw RuntimeException(msg)
+        }
+      }.compose {
+        val hash = signedNodeInfo.raw.sha256()
+        nodeInfoStorage.put(hash.toString(), signedNodeInfo)
+          .onSuccess { scheduleNetworkMapRebuild() }
+          .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
       }
-      ni
-    }.compose { ni ->
-      val hash = signedNodeInfo.raw.sha256()
-      nodeInfoStorage.put(hash.toString(), signedNodeInfo)
-        .onSuccess { scheduleNetworkMapRebuild() }
-        .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
+    } catch(err: Throwable) {
+      logger.error("failed to add node", err)
+      return failedFuture(err)
     }
   }
 
