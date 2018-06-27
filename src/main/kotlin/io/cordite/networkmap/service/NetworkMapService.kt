@@ -52,7 +52,8 @@ class NetworkMapService(
   private val tls: Boolean,
   private val certPath: String = "",
   private val keyPath: String = "",
-  private val vertx: Vertx = Vertx.vertx()
+  private val vertx: Vertx = Vertx.vertx(),
+  private val hostname: String = "localhost"
 ) {
   companion object {
     internal const val SIGNING_CERT_NAME = "nms"
@@ -93,7 +94,7 @@ class NetworkMapService(
         .withAuthConstructor(authService::createAuthProvider)
         .withService("admin", adminService)
         .withRootPath(ADMIN_BRAID_ROOT)
-        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setSsl(tls).setKeyStoreOptions(createJksOptions()))
+        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls).setKeyStoreOptions(createJksOptions()))
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(SWAGGER_ROOT)
