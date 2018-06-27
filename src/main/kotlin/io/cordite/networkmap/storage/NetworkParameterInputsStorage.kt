@@ -93,15 +93,14 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  @ApiOperation(value = "server set of notaries", response = NotaryInfo::class, responseContainer = "List")
-  fun serveNotaries(routingContext: RoutingContext) {
-    this.readNotaries()
-      .onSuccess {
-        routingContext.setNoCache().end(it)
-      }
-      .catch {
-        routingContext.setNoCache().end(it)
-      }
+  fun deleteNotary(identity: String, validating: Boolean) : Future<Unit> {
+    val file = if (validating) {
+      File(validatingNotariesPath, identity)
+    } else {
+      File(nonValidatingNotariesPath, identity)
+    }
+    return vertx.fileSystem().deleteFile(file.absolutePath)
+      .mapEmpty()
   }
 
   fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
@@ -166,13 +165,13 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  fun readNotaries(): Future<List<NotaryInfo>> {
+  fun readNotaries(): Future<List<Pair<String, NotaryInfo>>> {
     val validating = readNodeInfos(validatingNotariesPath)
       .compose { nodeInfos ->
         vertx.executeBlocking {
           nodeInfos.mapNotNull { nodeInfo ->
             try {
-              NotaryInfo(nodeInfo.verified().notaryIdentity(), true)
+              nodeInfo.first to NotaryInfo(nodeInfo.second.verified().notaryIdentity(), true)
             } catch (err: Throwable) {
               log.error("failed to process notary", err)
               null
@@ -186,7 +185,7 @@ class NetworkParameterInputsStorage(parentDir: File,
         vertx.executeBlocking {
           nodeInfos.mapNotNull { nodeInfo ->
             try {
-              NotaryInfo(nodeInfo.verified().notaryIdentity(), false)
+              nodeInfo.first to NotaryInfo(nodeInfo.second.verified().notaryIdentity(), false)
             } catch (err: Throwable) {
               log.error("failed to process notary", err)
               null
@@ -209,13 +208,13 @@ class NetworkParameterInputsStorage(parentDir: File,
       }
   }
 
-  private fun readNodeInfos(dir: File): Future<List<SignedNodeInfo>> {
+  private fun readNodeInfos(dir: File): Future<List<Pair<String, SignedNodeInfo>>> {
     return vertx.fileSystem().readFiles(dir.absolutePath)
       .compose { buffers ->
         vertx.executeBlocking {
           buffers.mapNotNull { (file, buffer) ->
             try {
-              buffer.bytes.deserializeOnContext<SignedNodeInfo>()
+              file to buffer.bytes.deserializeOnContext<SignedNodeInfo>()
             } catch (err: Throwable) {
               log.error("failed to deserialize SignedNodeInfo $file")
               null
@@ -258,7 +257,7 @@ fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {
         try {
           it[0] to AttachmentId.parse(it[1])
         } catch (err: Throwable) {
-          NetworkParameterInputsStorage.log.error("failed to parse attachment id", err)
+          NetworkParameterInputsStorage.log.error("failed to parse attachment nodeKey", err)
           null
         }
       }

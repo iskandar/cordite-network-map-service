@@ -219,6 +219,12 @@ fun FileSystem.readFiles(dirPath: String) : Future<List<Pair<String, Buffer>>> {
     }
 }
 
+fun FileSystem.deleteFile(filePath: String) : Future<Void> {
+  return withFuture {
+    delete(filePath, it.completer())
+  }
+}
+
 inline fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
   val result = future<T>()
   fn(result)

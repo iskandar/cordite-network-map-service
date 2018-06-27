@@ -24,6 +24,7 @@ open class NetworkMapApp  {
       val tlsOpt = options.addOption("tls", "true", "whether TLS is enabled or not")
       val certPathOpt = options.addOption("tls.cert.path", "", "path to cert if TLS is turned on")
       val keyPathOpt = options.addOption("tls.key.path", "", "path to key if TLS turned on")
+      val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
       if (args.contains("--help")) {
         options.printOptions()
         return
@@ -48,7 +49,8 @@ open class NetworkMapApp  {
         networkMapQueuedUpdateDelay = networkMapUpdateDelay,
         tls = tls,
         certPath = certPath,
-        keyPath = keyPath
+        keyPath = keyPath,
+        hostname = hostNameOpt.value
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

@@ -3,7 +3,6 @@ package io.cordite.networkmap.service
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.utils.getFreePort
 import io.cordite.networkmap.utils.onSuccess
-import io.cordite.networkmap.utils.readFiles
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -46,13 +45,6 @@ class CordaNodeTest {
   @Before
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
-
-    val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
-    val async = context.async()
-    fRead.setHandler { async.complete() }
-    async.await()
-
-
     val path = dbDirectory.absolutePath
     println("db path: $path")
     println("port   : $port")
@@ -86,17 +78,20 @@ class CordaNodeTest {
   @Test
   fun `that we can start up a node that connects to networkmap and registers`(context: TestContext) {
     val nmc = createNetworkMapClient(context)
-    nmc.getNetworkMap().payload
-    nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
+    val nm = nmc.getNetworkMap().payload
+    val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
+    val notaries = nmp.notaries
+    val whitelist = nmp.whitelistedContractImplementations
+    val nodes = nm.nodeInfoHashes.map { nmc.getNodeInfo(it) }
 
-    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {}), DriverParameters(isDebug = true, waitForAllNodesToFinish = true)) {
+    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {}), DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = false)) {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow()
 //      val nodeInfo = node.nodeInfo
-      val nodes = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
-      println(nodes)
+//      println(nodes)
       node.stop()
     }
+    val nodes2 = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
   }
 
   private fun <A> driverWithCompatZone(compatibilityZone: CompatibilityZoneParams, defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {

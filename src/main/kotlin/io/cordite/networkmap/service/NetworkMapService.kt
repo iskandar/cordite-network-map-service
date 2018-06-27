@@ -27,7 +27,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -52,7 +52,8 @@ class NetworkMapService(
   private val tls: Boolean,
   private val certPath: String = "",
   private val keyPath: String = "",
-  private val vertx: Vertx = Vertx.vertx()
+  private val vertx: Vertx = Vertx.vertx(),
+  private val hostname: String = "localhost"
 ) {
   companion object {
     internal const val SIGNING_CERT_NAME = "nms"
@@ -93,7 +94,7 @@ class NetworkMapService(
         .withAuthConstructor(authService::createAuthProvider)
         .withService("admin", adminService)
         .withRootPath(ADMIN_BRAID_ROOT)
-        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setSsl(tls).setKeyStoreOptions(createJksOptions()))
+        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls).setKeyStoreOptions(createJksOptions()))
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(SWAGGER_ROOT)
@@ -125,8 +126,10 @@ class NetworkMapService(
                 put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
                 post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
                 delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
-                get("$ADMIN_REST_ROOT/notaries", inputsStorage::serveNotaries)
-                get("$ADMIN_REST_ROOT/nodes", thisService::getAllNodeInfos)
+                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
+                delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
+                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
+                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
               }
             }
           }
@@ -161,17 +164,42 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = NodeInfo::class)
-  fun getAllNodeInfos(context: RoutingContext) {
+  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
+  fun serveNodes(context: RoutingContext) {
     context.setNoCache()
     nodeInfoStorage.getAll()
       .onSuccess {
         context.end(it.map {
           val node = it.value.verified()
-          SimpleNodeInfo(node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
+          SimpleNodeInfo(it.key, node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
         })
       }
       .catch { context.end(it) }
+  }
+
+  @ApiOperation(value = "server set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
+  fun serveNotaries(routingContext: RoutingContext) {
+    inputsStorage.readNotaries()
+      .onSuccess {
+        val simpleNotaryInfos = it.map { SimpleNotaryInfo(File(it.first).name, it.second) }
+        routingContext.setNoCache().end(simpleNotaryInfos)
+      }
+      .catch {
+        routingContext.setNoCache().end(it)
+      }
+  }
+
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a node by its key")
+  fun deleteNode(nodeKey: String) : Future<Unit> {
+    return nodeInfoStorage.delete(nodeKey)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a notary")
+  fun deleteNotary(simpleNotary: SimpleNotaryInfo): Future<Unit> {
+    return inputsStorage.deleteNotary(simpleNotary.nodeKey, simpleNotary.notaryInfo.validating)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -225,7 +253,7 @@ class NetworkMapService(
         }
       }
       .catch {
-        logger.error("failed to retrieve node info for hash $hash")
+        logger.error("failed to retrieve the signed network parameters for hash $hash")
         context.end(it)
       }
   }
@@ -316,6 +344,7 @@ class NetworkMapService(
   }
 }
 
-data class SimpleNodeInfo(val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
+data class SimpleNodeInfo(val nodeKey: String, val addresses: List<NetworkHostAndPort>, val parties: List<NameAndKey>, val platformVersion: Int)
+data class SimpleNotaryInfo(val nodeKey: String, val notaryInfo: NotaryInfo)
 data class NameAndKey(val name: CordaX500Name, val key: PublicKey)
 
