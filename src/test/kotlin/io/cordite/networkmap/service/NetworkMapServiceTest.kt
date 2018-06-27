@@ -109,7 +109,7 @@ class NetworkMapServiceTest {
     tnib.addIdentity(ALICE_NAME)
     val sni = tnib.buildWithSigned()
     nmc.publish(sni.signed)
-    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
     val nm = nmc.getNetworkMap().payload
     val nhs = nm.nodeInfoHashes
     context.assertEquals(1, nhs.size)
@@ -125,7 +125,7 @@ class NetworkMapServiceTest {
       it.buildWithSigned()
     }
     nmc.publish(sni1.signed)
-    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
     val nm = nmc.getNetworkMap().payload
     val nhs = nm.nodeInfoHashes
     context.assertEquals(1, nhs.size)
@@ -148,7 +148,7 @@ class NetworkMapServiceTest {
     val nmc = createNetworkMapClient(context)
     deleteValidatingNotaries(dbDirectory)
     Thread.sleep(NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)
-    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis())
+    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
     val nm = nmc.getNetworkMap().payload
     assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
     val deadLine = nm.parametersUpdate!!.updateDeadline
