@@ -119,16 +119,16 @@ class NetworkMapService(
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
+                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
                 router { route("/*").handler(staticHandler) }
               }
               protected {
-                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
                 post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
                 delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
-                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
-                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
               }
             }
