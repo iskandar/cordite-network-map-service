@@ -1,0 +1,49 @@
+.table-component
+  border none
+  border-radius 3px
+
+  table
+    border-spacing 0px 4px
+    color #EEE
+    font-size 1.6rem
+
+    td, th
+      
+      &:first-child
+        border-radius 3px 0 0 3px
+
+    thead 
+      color #717171
+      cursor pointer
+      font-size 1.4rem
+      text-align center
+
+      img 
+        height 12px
+
+      th
+        padding 10px
+        text-align center
+    
+    tbody
+      height 400px
+      overflow-y auto
+
+      td
+        color #717171
+        padding 5px
+        text-align center
+
+        &:nth-child(3n)
+          color #0FF
+
+        &:nth-child(3n + 2)
+          color #00EC00
+        
+        &.true
+          background-image url('png/tick.png')
+          background-repeat no-repeat
+          background-position 45% 50%
+
+    .table-row-component
+      border none

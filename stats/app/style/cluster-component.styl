@@ -1,0 +1,55 @@
+.cluster
+  
+  &.cluster-component    
+    position relative
+
+    img
+      -webkit-animation pulse 2s ease-out !important
+      -moz-animation pulse 2s ease-out !important
+      animation pulse 2s ease-out !important
+      -webkit-animation-iteration-count infinite !important
+      -moz-animation-iteration-count infinite !important
+      animation-iteration-count infinite !important
+      height 46px !important
+      left 3px !important
+      position absolute !important 
+      top 3px !important
+      z-index 1 !important
+
+    div
+      background-color #36927b !important
+      border-radius 50% !important
+      color #eee !important
+      font-family "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important
+      font-size 12px !important 
+      font-weight 100 !important
+      height 15px !important      
+      left 35% !important
+      line-height 16px !important
+      position absolute !important
+      top 35% !important      
+      width 15px !important
+      z-index 10 !important
+   
+    
+  @keyframes pulse
+    0% 
+      transform: scale(0)
+      opacity: 0.0;
+    
+    25%
+      transform: scale(0.25)
+      opacity: 0.1;
+    
+    50%
+      transform: scale(0.5)
+      opacity: 0.3;
+    
+    75% 
+      transform: scale(0.75)
+      opacity: 0.5;
+    
+    100% 
+      transform: scale(1)
+      opacity: 0.0;
+    

@@ -1,0 +1,68 @@
+.logout-modal-component
+  background rgba(0, 0, 0, 0.5)
+  bottom 0px
+  display block
+  left 0px
+  opacity 0
+  pointer-events none
+  position fixed
+  right 0px
+  -webkit-transition opacity .5s ease-in-out
+  transition opacity .5s ease-in-out   
+  top 0px
+  z-index 9999
+
+  .lm-container    
+    background rgba(24, 184, 171, 0.8)
+    left 0px
+    padding 10px 20px
+    position absolute
+    top 35%
+    width 100%
+
+    .lm-middle
+      color #FFF
+      left 25%
+      position relative
+      width 50%
+
+      .lm-title
+        float left
+        font-family 'Courier New', Courier, monospace
+        font-size 31px
+        font-weight 400
+        line-height 36px
+        width 100%
+      
+      .lm-content
+        float left
+        padding 10px 0px 0px
+        width 100%
+
+        p
+          margin-bottom 10px
+
+      .lm-footer
+        float left
+        padding 10px 0 0
+        width 100%
+
+        .btn.pull-right
+          background-color #28e8b6
+          border-radius 0
+          color #fff
+          float right
+          width 70px          
+
+          &:first-child
+            background-color #eee
+            color rgba(0,0,0,0.8)
+            margin-left 5px
+          
+          &:hover
+            background-color rgba(0, 0, 0, 0.6)
+            color #fff
+
+  &.on
+    opacity 1
+    pointer-events all
