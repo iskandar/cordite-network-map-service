@@ -100,7 +100,8 @@ class NetworkMapService(
           .withSwaggerPath(SWAGGER_ROOT)
           .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
           .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
-          .withDescription("""|<b>Please note:</b> The protected parts of this API require JWT authentication.
+          .withDescription("""|<h4><a href="/">Cordite Networkmap Service</a></h4>
+            |<b>Please note:</b> The protected parts of this API require JWT authentication.
             |To activate, execute the <code>login</code> method.
             |Then copy the returned JWT token and insert it into the <i>Authorize</i> swagger dialog box as
             |<code>Bearer &lt;token&gt;</code>
