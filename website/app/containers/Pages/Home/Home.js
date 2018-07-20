@@ -1,9 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types';
-import { Nav } from 'components/Nav/Nav'
-import { Table } from 'components/Table/Table';
+import {Nav} from 'components/Nav/Nav'
+import {Table} from 'components/Table/Table';
 import DemoMap from 'components/Map/MyMap';
-import { Metrics } from 'components/Metrics/Metrics';
+import {Metrics} from 'components/Metrics/Metrics';
 
 export const Home = (props) => {
   const { nodes, notaries, headersList, sortTable } = props

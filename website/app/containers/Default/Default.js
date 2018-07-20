@@ -1,12 +1,11 @@
 import React from 'react'
-import { Page } from 'containers/Page/Page';
-import { Nav } from 'components/Nav/Nav';
-import { Sidebar } from 'components/Sidebar/Sidebar';
-import { login, getNodes, getNotaries } from 'scripts/restCalls';
-import { mutateNodes,  } from 'scripts/processData';
-import { headersList } from 'scripts/headersList'
+import {Page} from 'containers/Page/Page';
+import {Nav} from 'components/Nav/Nav';
+import {Sidebar} from 'components/Sidebar/Sidebar';
+import {getNodes, getNotaries, login} from 'scripts/restCalls';
+import {isNotary, mutateNodes, sortNodes,} from 'scripts/processData';
+import {headersList} from 'scripts/headersList'
 import navOptions from 'navOptions.json';
-import { isNotary, sortNodes } from 'scripts/processData';
 
 export default class Default extends React.Component {
   constructor(props) {

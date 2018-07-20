@@ -113,8 +113,59 @@
   <build>
     <sourceDirectory>src/main/kotlin</sourceDirectory>
     <testSourceDirectory>src/test/kotlin</testSourceDirectory>
-
+    <resources>
+      <resource>
+        <directory>website/public</directory>
+        <targetPath>website/public</targetPath>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>clean-website</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <delete dir="website/public"/>
+                <delete dir="website/node_modules"/>
+              </target>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>build-website</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <exec executable="npm" failonerror="true">
+                  <arg value="install"/>
+                  <arg value="-g"/>
+                  <arg value="brunch"/>
+                </exec>
+                <exec executable="npm" failonerror="true" dir="website">
+                  <arg value="install"/>
+                </exec>
+                <exec executable="brunch" failonerror="true" dir="website">
+                  <arg value="build"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>

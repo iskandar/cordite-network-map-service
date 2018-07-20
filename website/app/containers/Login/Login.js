@@ -1,5 +1,4 @@
 import React from 'react'
-import loginData from 'login.json';
 
 const handleLogin = (nmsLogin, loginData) => {
   let result = nmsLogin(loginData);
@@ -9,7 +8,7 @@ const handleLogin = (nmsLogin, loginData) => {
 export const Login = (props) => {
   return (
     <div className='login-component'>
-      <LoginContainer {...props} /> 
+      <LoginContainer {...props} />
     </div>
   )
 }
@@ -44,9 +43,9 @@ const LoginFooter = () => {
     <div className='login-footer-component'>
       <div className='brand-copyright'>&#169; 2018 Cordite</div>
       <div className="footer-links">
-        <a href="#">About</a> 
+        <a href="#">About</a>
         &nbsp;|&nbsp;
-        <a href="#">Privacy</a> 
+        <a href="#">Privacy</a>
         &nbsp;|&nbsp;
         <a href="#">Contact Us</a>
       </div>
@@ -64,8 +63,8 @@ class LoginForm extends React.Component {
   constructor(props){
     super(props)
     this.state = {
-      user: loginData[1].user || '',
-      password: loginData[1].password || '',
+      user: '',
+      password: '',
       error: ''
     }
     this.handleChange = this.handleChange.bind(this);
@@ -100,14 +99,14 @@ class LoginForm extends React.Component {
   render(){
     return(
       <form className='login-form-component'>
-        <FormTextInput 
-          placeholder="Username" 
-          value={this.state.value} 
+        <FormTextInput
+          placeholder="Username"
+          value={this.state.value}
           handleChange={this.handleChange} />
-        <FormPassword 
+        <FormPassword
           placeholder="Password"
           value={this.state.value}
-          onChange={this.handleChange} />
+          handleChange={this.handleChange} />
         <FormError error={this.state.error}/>
         <FormButtons onClick={this.handleClick} />
       </form>
@@ -119,9 +118,10 @@ const FormTextInput = (props) => {
   let { placeholder, value, handleChange } = props
   return(
     <div className="form-text-input-component">
-        <input 
-          className="form-control" 
-          placeholder={placeholder} 
+        <input
+          autoFocus="true"
+          className="form-control"
+          placeholder={placeholder}
           value={value}
           type="text"
           onChange={(e) => handleChange(e)} />
@@ -133,9 +133,9 @@ const FormPassword = (props) => {
   let { placeholder, value, handleChange } = props
   return(
     <div className="form-password-component">
-        <input 
-          className="form-control" 
-          placeholder={placeholder} 
+        <input
+          className="form-control"
+          placeholder={placeholder}
           value={value}
           type="password"
           onChange={(e) => handleChange(e)} />
@@ -148,7 +148,7 @@ const FormButtons = (props) => {
   return(
     <div className="form-buttons-component">
       <a href="#" className="btn">Forgot your password?</a>
-      <button 
+      <button
         className="btn"
         onClick={(e) => onClick(e)}>
         Log In

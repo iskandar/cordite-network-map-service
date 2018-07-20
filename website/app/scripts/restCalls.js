@@ -1,9 +1,4 @@
-const baseURL = 'http://192.168.129.31';
-const local = 'https://localhost'
-const port = '7001';
-const prodURL = 'https://network-map-test.cordite.foundation';
-const prodPort = '443'
-const url = `${prodURL}:${prodPort}/`
+const url = window.location.protocol + "//" + window.location.host;
 
 export async function login(loginData){
   const response = await fetch(`${url}/admin/api/login`, {

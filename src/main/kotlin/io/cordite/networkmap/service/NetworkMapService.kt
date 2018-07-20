@@ -86,7 +86,7 @@ class NetworkMapService(
   private fun startupBraid(): Future<Unit> {
     try {
       val thisService = this
-      val staticHandler = StaticHandler.create("website")
+      val staticHandler = StaticHandler.create("website/public").setCachingEnabled(false)
       val result = Future.future<Unit>()
       BraidConfig()
         .withVertx(vertx)

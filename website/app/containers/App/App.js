@@ -1,8 +1,8 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
-import { Login } from 'containers/Login/Login'
-import { checkAuth, login } from 'scripts/restCalls';
-import { LogoutModal } from 'components/LogoutModal/LogoutModal';
+import {Login} from 'containers/Login/Login'
+import {checkAuth, login} from 'scripts/restCalls';
+import {LogoutModal} from 'components/LogoutModal/LogoutModal';
 
 export default class App extends React.Component {
   constructor(props) {
