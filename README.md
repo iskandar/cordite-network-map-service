@@ -1,24 +1,25 @@
-[![pipeline status](https://gitlab.com/cordite/network-map-service/badges/master/pipeline.svg)](https://gitlab.com/cordite/network-map-service/commits/master)
+## Supported tags and respective Dockerfile links
+* `v0.1.0`, `latest` - latest stable release
+* `edge` - latest master build, unstable
 
-# Design Criteria
+## Design Criteria
+1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise.
+2. Completely stateless - capable of running in load-balanced clusters.
+3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
+4. Transparent filesystem design to simplify maintenance, backup, and testing.
 
-0. Meet the requirements of the Corda Network Map Service protocol, both documented and otherwise.
-1. Completely stateless - capable of running in load-balanced clusters.
-2. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
-3. Transparent filesystem design to simplify maintenance, backup, and testing.
+## How to get in touch?
+We use #cordite channel on [Corda slack](https://slack.corda.net/) 
+We informally meet at the [Corda London meetup](https://www.meetup.com/pro/corda/)
 
-# CI/CD
-  + This repo is integrated to Azure AKS. See CI/CD->Kubernetes for details of which cluster.
-  + The cluster has a runner deployed and all CI jobs in gitlab-ci.yaml spawn pods in the cluster to run.
-  + network-map-service environment can be built using `./deployment/kube_deploy.sh`
-  + DNS is provided by CloudFlare and configured using [external-dns](https://github.com/kubernetes-incubator/external-dns)
-  + external-dns runs in the kube-system namespace and is deployed using `./deployment/external-dns.yaml'
-  + More details on CI/CD and recreating this integration can be found in `./deployment/readme.md`
-  + Persistent storge mapped to NMS_DB_DIR under storage account `corditeedge8` as an Azure file share
-  + Release CI job uses deployment rollout strategy to release newer version of image
-  + Pods can scale horizontally by changing `replicas: 1` in `./deployment/deployment.yaml`
 
-# Command line parameters
+## How to use this image
+```  
+$ docker run -p 8080:8080 cordite/network-map
+```
+Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`
+
+## Command line parameters / Environment Variables
 
 | Property          | Env Variable              | Default   | Description                                                         |
 | ----------------- | ------------------------- | --------- | ------------------------------------------------------------------- |
@@ -34,12 +35,9 @@
 | tls.key.path      | NMS_TLS_KEY_PATH          |           | path to key if TLS turned on                                        |
 
 
+## License
+View [license information](https://gitlab.com/cordite/cordite/blob/master/LICENSE) for the software contained in this image.
 
-# Certs
-```
-helm install \
-  --name cert-manager \
-  --namespace kube-system \
-  --set rbac.create=false \
-  stable/cert-manager
-```
+As with all Docker images, these likely also contain other software which may be under other licenses (such as Bash, etc from the base distribution, along with any direct or indirect dependencies of the primary software being contained).
+
+As for any pre-built image usage, it is the image user's responsibility to ensure that any use of this image complies with any relevant licenses for all software contained within.
