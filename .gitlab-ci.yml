@@ -1,6 +1,4 @@
 stages:
- - build
- - package
  - release
 
 # For more information on Maven see
@@ -96,7 +94,7 @@ release:docker:
   stage: release
   script:
     - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
-    - docker pull -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
+    - docker pull ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
     - docker tag ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} ${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:latest # backward compatible
     - docker tag ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} ${CI_REGISTRY_IMAGE}:edge ; docker push ${CI_REGISTRY_IMAGE}:edge
     - docker tag ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG:-edge} ; docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG:-edge}
