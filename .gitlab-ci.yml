@@ -1,4 +1,6 @@
 stages:
+ - build
+ - package
  - release
 
 # For more information on Maven see
