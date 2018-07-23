@@ -8,7 +8,13 @@ const loggingOut = (isAuthorised) => {
 export const LogoutModal = (props) => {
   return(
     <div className={`logout-modal-component ${props.style}`} onClick={e => props.toggleModal(e)} >
-      <Modal isAuthorised={props.isAuthorised} />
+    </div>
+  );
+}
+
+export const LoginModal = (props) => {
+  return(
+     <div className={`logout-modal-component ${props.style}`} onClick={e => props.toggleModal(e)} >
     </div>
   );
 }

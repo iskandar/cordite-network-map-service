@@ -11,13 +11,12 @@
   ],
   [
     {
-      "title": "Swagger",
-      "icon": "fa-sitemap"
-    },
-    {
       "title": "Braid",
       "icon": "fa-random"
+    },
+    {
+      "title": "GitLab",
+      "icon": "fa-gitlab"
     }
-
   ]
 ]
