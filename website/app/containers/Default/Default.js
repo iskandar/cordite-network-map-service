@@ -62,11 +62,12 @@ export default class Default extends React.Component {
       <div className='default-component'>
         <Nav toggleModal={this.props.toggleModal} />
         <div className="row">
-          <Sidebar 
-            navOptions={navOptions} 
-            handleBtn={this.handleBtn}/> 
-          <section id="main-content" className="column column-offset-20">
-            <Page           
+          {this.props.admin ? 
+            <Sidebar 
+              navOptions={navOptions} 
+              handleBtn={this.handleBtn}/>  : "" }
+          <section id="main-content" className={"column" + (this.props.admin ? " column-offset-20" : "")}>
+            <Page          
               headersList={headersList}
               nodes={this.state.nodes}
               notaries={this.state.notaries}

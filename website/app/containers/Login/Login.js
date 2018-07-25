@@ -7,13 +7,13 @@ const handleLogin = (nmsLogin, loginData) => {
 
 export const Login = (props) => {
   return (
-    <div className='login-component'>
+    <div className='login-component' >
       <LoginContainer {...props} />
     </div>
   )
 }
 
-const LoginContainer = (props) => {
+export const LoginContainer = (props) => {
   return(
     <div className='login-container-component'>
       <LoginLogo title="Cordite stats" />

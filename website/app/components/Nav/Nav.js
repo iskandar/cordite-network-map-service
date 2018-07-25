@@ -8,7 +8,7 @@ export const Nav = (props) => {
       <Icon 
         icon="gitlab"
         link="https://gitlab.com/cordite/cordite"
-        toggleModal={console.log('click')} />
+        toggleModal={e => console.log('click')} />
       <Icon 
         icon="sign-in"
         link="#"
@@ -99,7 +99,7 @@ const SvgLinks = (props) => {
 const Icon = (props) => {
   return(
     <div className="icon-component column column-10"> 
-      <a href={props.link} onClick={e => props.toggleModal(e)}>
+      <a href={props.link} data-link={props.icon} onClick={e => props.toggleModal(e)}>
         <em className={"fa fa-" + props.icon}></em>
       </a>
     </div>

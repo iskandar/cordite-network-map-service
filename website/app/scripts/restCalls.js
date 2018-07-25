@@ -1,3 +1,4 @@
+import { checkToken } from 'scripts/jwtProcess';
 const url = window.location.protocol + "//" + window.location.host;
 
 export async function login(loginData){
@@ -19,15 +20,12 @@ export async function login(loginData){
 }
 
 export async function checkAuth(){
-  const token = sessionStorage["corditeAccessToken"];
-  const response = await fetch(`${url}/admin/api/nodes`,{
-    method: 'GET',
-    headers: {
-      'accept': 'application/json',
-      "Authorization": `Bearer ${token}`
-    }
-  })
-  let status = await response.status;
+  let status = 403
+  const token = sessionStorage['corditeAccessToken'];
+  if(token && checkToken(token)){
+    status = 200;
+  }
+  console.log(status);
   return status;
 }
 

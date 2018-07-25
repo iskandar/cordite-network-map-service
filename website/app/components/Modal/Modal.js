@@ -1,34 +1,34 @@
 import React from 'react'
+import { LoginContainer } from 'containers/Login/Login';
 
 const loggingOut = (isAuthorised) => {
-  sessionStorage.clear();
-  isAuthorised();
-}
-
-export const LogoutModal = (props) => {
-  return(
-    <div className={`logout-modal-component ${props.style}`} onClick={e => props.toggleModal(e)} >
-    </div>
-  );
+  //sessionStorage.clear();
+  //isAuthorised();
 }
 
 export const LoginModal = (props) => {
   return(
-     <div className={`logout-modal-component ${props.style}`} onClick={e => props.toggleModal(e)} >
+    <div 
+      className={`modal-component ${props.style}`} 
+      data-link='sign-in' 
+      onClick={e => props.toggleModal(e)} >
+      <LoginContainer nmsLogin={props.nmsLogin} />
     </div>
   );
 }
 
-const Modal = (props) => {
+export const LogoutModal = (props) => {
   return(
-    <div className="lm-container">
-      <div className="lm-middle">
-        <ModalTitle />
-        <ModalContent />
-        <ModalButtonGroup 
-          isAuthorised={props.isAuthorised}
-          toggleModal={props.toggleModal}
-          />
+    <div className={`modal-component ${props.style}`} data-link='sign-out' onClick={e => props.toggleModal(e)} >
+      <div className="lm-container">
+        <div className="lm-middle">
+          <ModalTitle />
+          <ModalContent />
+          <ModalButtonGroup 
+            isAuthorised={props.isAuthorised}
+            toggleModal={props.toggleModal}
+            />
+        </div>
       </div>
     </div>
   );

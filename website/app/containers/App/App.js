@@ -1,16 +1,18 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
-import {Login} from 'containers/Login/Login'
-import {checkAuth, login} from 'scripts/restCalls';
-import {LogoutModal} from 'components/LogoutModal/LogoutModal';
+import { Login } from 'containers/Login/Login'
+import { checkAuth, login } from 'scripts/restCalls';
+import { LoginModal, LogoutModal } from 'components/Modal/Modal';
 
 export default class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      status: 'await',
+      admin: false,
+      status: 'done',
       subDomain: 'default',
-      style: ''
+      style: '',
+      modal: 'sign-in'
     }
 
     this.NMSLogin = this.NMSLogin.bind(this);
@@ -33,7 +35,10 @@ export default class App extends React.Component {
   }
 
   toggleModal(e){
-    this.state.style ? this.setState({style: ''}) : this.setState({style: 'on'});
+    this.setState({
+      modal: e.target.dataset.link.toString(),
+      style: this.state.style ? '' : 'on'
+    })    
   }
 
   isAuthorised(){
@@ -41,6 +46,7 @@ export default class App extends React.Component {
     .then(status => {
       if(status == 200){
         this.setState({
+          admin: true,
           status: 'done',
           subDomain: 'default',
         })
@@ -48,7 +54,7 @@ export default class App extends React.Component {
       else{
         this.setState({
           status: 'done',
-          subDomain: 'login',
+          subDomain: 'default',
         })
       }
       return status;
@@ -63,20 +69,38 @@ export default class App extends React.Component {
         page = <Login nmsLogin={this.NMSLogin} />;
         break;
       case 'default':
-        page = <Default toggleModal={this.toggleModal} />;
+        page = <Default 
+                toggleModal={this.toggleModal} 
+                admin={this.state.admin} />;
         break;
       default: 
         page = <Login nmsLogin={this.nmsLogin} />;
+        break;
+    }
+
+    let modal = null;
+    switch(this.state.modal){
+      case 'sign-in':
+        modal = <LoginModal
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  nmsLogin={this.NMSLogin}/>
+        break;
+      case 'sign-out':
+        modal = <LogoutModal 
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  isAuthorised={this.isAuthorised} />
+        break;
+      default:
+        modal = "";
         break;
     }
     
     return (
       <div className='app-component'>
         { (this.state.status == 'done') ? page :  "" }
-        <LogoutModal 
-          toggleModal={this.toggleModal}
-          style={this.state.style} 
-          isAuthorised={this.isAuthorised} />
+        {modal}
       </div>    
     );
   }
