@@ -9,7 +9,7 @@ const loggingOut = (isAuthorised) => {
 export const LoginModal = (props) => {
   return(
     <div 
-      className={`modal-component ${props.style}`} 
+      className={`modal-component ${ props.style ? 'on' : '' }`} 
       data-link='sign-in' 
       onClick={e => props.toggleModal(e)} >
       <LoginContainer nmsLogin={props.nmsLogin} />

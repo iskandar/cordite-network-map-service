@@ -113,7 +113,7 @@
 }
 
 .fa-pulse {
-  -webkit-animation: fa-spin 1s infinite steps(8);
+  -webkit-animation: fa-spin 1s infinite steps(4);
   animation: fa-spin 1s infinite steps(8)
 }
 

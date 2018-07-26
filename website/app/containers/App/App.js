@@ -11,8 +11,8 @@ export default class App extends React.Component {
       admin: false,
       status: 'done',
       subDomain: 'default',
-      style: '',
-      modal: 'sign-in'
+      style: false,
+      modal: ''
     }
 
     this.NMSLogin = this.NMSLogin.bind(this);
@@ -37,7 +37,7 @@ export default class App extends React.Component {
   toggleModal(e){
     this.setState({
       modal: e.target.dataset.link.toString(),
-      style: this.state.style ? '' : 'on'
+      style: !this.state.style
     })    
   }
 
@@ -100,7 +100,7 @@ export default class App extends React.Component {
     return (
       <div className='app-component'>
         { (this.state.status == 'done') ? page :  "" }
-        {modal}
+        { modal }
       </div>    
     );
   }
