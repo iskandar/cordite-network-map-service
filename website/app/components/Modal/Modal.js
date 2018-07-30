@@ -10,7 +10,7 @@ export const LoginModal = (props) => {
   return(
     <div 
       className={`modal-component ${ props.style ? 'on' : '' }`} 
-      data-link='sign-in' 
+      data-link='default' 
       onClick={e => props.toggleModal(e)} >
       <LoginContainer nmsLogin={props.nmsLogin} />
     </div>

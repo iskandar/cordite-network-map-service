@@ -25,7 +25,6 @@ export async function checkAuth(){
   if(token && checkToken(token)){
     status = 200;
   }
-  console.log(status);
   return status;
 }
 

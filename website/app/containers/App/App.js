@@ -1,7 +1,7 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
 import { Login } from 'containers/Login/Login'
-import { checkAuth, login } from 'scripts/restCalls';
+import { login } from 'scripts/restCalls';
 import { LoginModal, LogoutModal } from 'components/Modal/Modal';
 
 export default class App extends React.Component {
@@ -16,13 +16,9 @@ export default class App extends React.Component {
     }
 
     this.NMSLogin = this.NMSLogin.bind(this);
-    this.isAuthorised = this.isAuthorised.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
   }
-
-  componentDidMount(){
-    this.isAuthorised();
-  }
+  
 
   NMSLogin(loginData){
     return login(loginData)
@@ -35,31 +31,12 @@ export default class App extends React.Component {
   }
 
   toggleModal(e){
-    this.setState({
-      modal: e.target.dataset.link.toString(),
-      style: !this.state.style
-    })    
-  }
-
-  isAuthorised(){
-    return checkAuth()
-    .then(status => {
-      if(status == 200){
-        this.setState({
-          admin: true,
-          status: 'done',
-          subDomain: 'default',
-        })
-      }
-      else{
-        this.setState({
-          status: 'done',
-          subDomain: 'default',
-        })
-      }
-      return status;
-    })
-    .catch(err => console.log(err));
+    if(e.target.dataset.link){
+      this.setState({
+        modal: e.target.dataset.link || '',
+        style: !this.state.style
+      })    
+    }
   }
 
   render(){

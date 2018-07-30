@@ -78,7 +78,8 @@ class LoginForm extends React.Component {
       password: this.state.password
     }
     let result = await this.props.nmsLogin(loginData);
-    (result == 'fail') ? this.setState({error: 'error'}) : this.setState({error: ''});
+    console.log(result);
+    if (result == 'fail') this.setState({error: 'error'})
   }
 
   handleChange(e){
@@ -147,11 +148,16 @@ const FormButtons = (props) => {
   const { onClick } = props
   return(
     <div className="form-buttons-component">
-      <a href="#" className="btn">Forgot your password?</a>
+      <a href="#" className="btn">Forgot your password?</a>     
       <button
         className="btn"
         onClick={(e) => onClick(e)}>
         Log In
+      </button>
+      <button
+        className="btn"
+        onClick={(e) => onClick(e)}>
+        Cancel
       </button>
     </div>
   );
