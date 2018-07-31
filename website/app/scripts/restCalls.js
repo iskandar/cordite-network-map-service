@@ -1,5 +1,6 @@
 import { checkToken } from 'scripts/jwtProcess';
 const url = window.location.protocol + "//" + window.location.host;
+// const url = 'https://network-map-test.cordite.foundation/'
 
 export async function login(loginData){
   const response = await fetch(`${url}/admin/api/login`, {
