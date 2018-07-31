@@ -1,7 +1,7 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
 import { Login } from 'containers/Login/Login'
-import { login } from 'scripts/restCalls';
+import { login, checkAuth } from 'scripts/restCalls';
 import { LoginModal, LogoutModal } from 'components/Modal/Modal';
 
 export default class App extends React.Component {
@@ -22,7 +22,7 @@ export default class App extends React.Component {
 
   NMSLogin(loginData){
     return login(loginData)
-    .then( () => this.isAuthorised() )
+    .then( () => checkAuth() )
     .then( status => {
       if(status != 200)  return "fail";
       return "success";
@@ -31,7 +31,13 @@ export default class App extends React.Component {
   }
 
   toggleModal(e){
-    if(e.target.dataset.link){
+    if(!e){
+      this.setState({
+        modal: '',
+        style: !this.state.style
+      }) 
+    }
+    else if(e.target.dataset.link){
       this.setState({
         modal: e.target.dataset.link || '',
         style: !this.state.style

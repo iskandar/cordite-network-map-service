@@ -12,7 +12,9 @@ export const LoginModal = (props) => {
       className={`modal-component ${ props.style ? 'on' : '' }`} 
       data-link='default' 
       onClick={e => props.toggleModal(e)} >
-      <LoginContainer nmsLogin={props.nmsLogin} />
+      <LoginContainer 
+        nmsLogin={props.nmsLogin} 
+        toggleModal={props.toggleModal}/>
     </div>
   );
 }

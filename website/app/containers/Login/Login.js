@@ -17,7 +17,9 @@ export const LoginContainer = (props) => {
   return(
     <div className='login-container-component'>
       <LoginLogo title="Cordite stats" />
-      <LoginMain nmsLogin={props.nmsLogin} />
+      <LoginMain 
+      nmsLogin={props.nmsLogin} 
+      toggleModal={props.toggleModal}/>
       <LoginFooter />
     </div>
   );
@@ -33,7 +35,9 @@ const LoginMain = (props) => {
   return(
     <div className='login-main-component'>
       <LoginTitle title='Welcome, Please login' />
-      <LoginForm nmsLogin={props.nmsLogin} />
+      <LoginForm
+        nmsLogin={props.nmsLogin}
+        toggleModal={props.toggleModal} />
     </div>
   );
 }
@@ -78,8 +82,10 @@ class LoginForm extends React.Component {
       password: this.state.password
     }
     let result = await this.props.nmsLogin(loginData);
-    console.log(result);
     if (result == 'fail') this.setState({error: 'error'})
+    else{
+      this.props.toggleModal();
+    }
   }
 
   handleChange(e){
