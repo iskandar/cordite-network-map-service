@@ -1,7 +1,7 @@
 import React from 'react'
 import { LoginContainer } from 'containers/Login/Login';
 
-const loggingOut = (e, toggleModal) => {
+const loggingOut = (toggleModal) => {
   sessionStorage.clear();
   toggleModal();
 }
@@ -14,7 +14,8 @@ export const LoginModal = (props) => {
       onClick={e => props.toggleModal(e)} >
       <LoginContainer 
         nmsLogin={props.nmsLogin} 
-        toggleModal={props.toggleModal}/>
+        toggleModal={props.toggleModal}
+        setAdmin={props.setAdmin}/>
     </div>
   );
 }
@@ -30,8 +31,8 @@ export const LogoutModal = (props) => {
           <ModalTitle />
           <ModalContent />
           <ModalButtonGroup 
-            isAuthorised={props.isAuthorised}
             toggleModal={props.toggleModal}
+            setAdmin={props.setAdmin}
             />
         </div>
       </div>
@@ -63,7 +64,7 @@ const ModalButtonGroup = (props) => {
       <button 
         className="btn pull-right"
         data-btn
-        onClick={ e => loggingOut(e, props.toggleModal) }>
+        onClick={ (e) => { props.setAdmin(false); loggingOut(props.toggleModal); } }>
         Yes
       </button>
       <button 

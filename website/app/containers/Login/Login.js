@@ -19,7 +19,8 @@ export const LoginContainer = (props) => {
       <LoginLogo title="Cordite stats" />
       <LoginMain 
       nmsLogin={props.nmsLogin} 
-      toggleModal={props.toggleModal}/>
+      toggleModal={props.toggleModal}
+      setAdmin={props.setAdmin} />
       <LoginFooter />
     </div>
   );
@@ -37,7 +38,8 @@ const LoginMain = (props) => {
       <LoginTitle title='Welcome, Please login' />
       <LoginForm
         nmsLogin={props.nmsLogin}
-        toggleModal={props.toggleModal} />
+        toggleModal={props.toggleModal}
+        setAdmin={props.setAdmin} />
     </div>
   );
 }
@@ -90,6 +92,7 @@ class LoginForm extends React.Component {
       this.setState({error: 'error'})
     }
     else {
+      this.props.setAdmin(true);
       this.props.toggleModal();
     }
   }

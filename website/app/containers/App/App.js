@@ -17,6 +17,7 @@ export default class App extends React.Component {
 
     this.NMSLogin = this.NMSLogin.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
+    this.setAdmin = this.setAdmin.bind(this)
   }
   
 
@@ -45,6 +46,10 @@ export default class App extends React.Component {
     }
   }
 
+  setAdmin(adminFlag){
+    this.setState({ admin: adminFlag});
+  }
+
   render(){
     let page = null;
     switch(this.state.subDomain){
@@ -67,13 +72,14 @@ export default class App extends React.Component {
         modal = <LoginModal
                   toggleModal={this.toggleModal}
                   style={this.state.style} 
-                  nmsLogin={this.NMSLogin}/>
+                  nmsLogin={this.NMSLogin}
+                  setAdmin={this.setAdmin}/>
         break;
       case 'sign-out':
         modal = <LogoutModal 
                   toggleModal={this.toggleModal}
                   style={this.state.style} 
-                  isAuthorised={this.isAuthorised} />
+                  setAdmin={this.setAdmin} />
         break;
       default:
         modal = "";
