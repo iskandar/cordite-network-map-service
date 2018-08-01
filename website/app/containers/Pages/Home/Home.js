@@ -18,6 +18,8 @@ export const Home = (props) => {
         headersList={headersList}
         rowData={nodes}
         sortTable={sortTable}
+        toggleModal={props.toggleModal}
+        admin={props.admin}
       />
     </section>
   )

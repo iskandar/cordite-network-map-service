@@ -66,3 +66,15 @@ export async function getBraidAPI(){
   return braidCode;
 }
 
+export async function deleteNodes(nodeKey){
+  const response = await fetch(`${url}/admin/api/nodes/${nodeKey}`, 
+    {
+      method: 'DELETE',
+      headers: {
+        'accept': 'application/json',
+        "Authorization": `Bearer ${sessionStorage["corditeAccessToken"]}`
+      }
+    });
+    return response;
+}
+

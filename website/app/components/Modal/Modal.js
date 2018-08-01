@@ -40,12 +40,60 @@ export const LogoutModal = (props) => {
   );
 }
 
+export const DeleteModal = (props) => {
+  return(
+    <div
+      className={`modal-component ${ props.style ? 'on' : '' }`} 
+      data-link='default' 
+      onClick={e => props.toggleModal(e)} >
+      <div className="lm-container">
+        <div className="lm-middle">
+          <ModalTitleDelete />
+          <ModalContentDelete node={props.selectedNode} />
+          <div className="lm-footer">
+            <button 
+              className="btn pull-right"
+              data-btn
+              onClick={ (e) => {props.deleteNode(); props.toggleModal()} }>
+              Yes
+            </button>
+            <button 
+              className="btn pull-right"        
+              data-btn="cancel" 
+              onClick={ e => props.toggleModal()}>
+              No
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ModalTitleDelete = (props) => {
+  return(
+   <div className="lm-title">
+      <span className="fa fa-trash"></span>
+      <strong>{`     Delete Node`}</strong>
+    </div>
+  );
+}
+
 const ModalTitle = (props) => {
   return(
    <div className="lm-title">
       <span className="fa fa-sign-out"></span>
       <strong>{` LOG OUT?`}</strong>
     </div>
+  );
+}
+
+const ModalContentDelete = (props) => {
+  return(
+    <div className="lm-content">
+      <p className="node-id">{props.node.O}</p>
+      <p>Are you sure you want to delete this node?</p>
+    </div>    
   );
 }
 

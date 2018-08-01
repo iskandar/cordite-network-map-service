@@ -86,6 +86,9 @@ export default class Default extends React.Component {
               page={this.state.page} 
               sortTable={this.sortTable}
               json={this.state.braid}
+              toggleModal={this.props.toggleModal}
+              admin={this.props.admin}
+              getNodes={this.getNodes}
             /> 
           </section>
         </div>        

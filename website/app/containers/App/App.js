@@ -1,8 +1,8 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
 import { Login } from 'containers/Login/Login'
-import { login, checkAuth } from 'scripts/restCalls';
-import { LoginModal, LogoutModal } from 'components/Modal/Modal';
+import { login, checkAuth, deleteNodes } from 'scripts/restCalls';
+import { LoginModal, LogoutModal, DeleteModal } from 'components/Modal/Modal';
 
 export default class App extends React.Component {
   constructor(props) {
@@ -17,7 +17,8 @@ export default class App extends React.Component {
 
     this.NMSLogin = this.NMSLogin.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
-    this.setAdmin = this.setAdmin.bind(this)
+    this.setAdmin = this.setAdmin.bind(this);
+    this.deleteNode = this.deleteNode.bind(this);
   }
   
 
@@ -31,7 +32,7 @@ export default class App extends React.Component {
     .catch( err => console.log(err) )
   }
 
-  toggleModal(e){
+  toggleModal(e, node){
     if(!e){
       this.setState({
         modal: '',
@@ -41,13 +42,19 @@ export default class App extends React.Component {
     else if(e.target.dataset.link){
       this.setState({
         modal: e.target.dataset.link || '',
-        style: !this.state.style
+        style: !this.state.style,
+        selectedNode: (!!node) ? node : null
       })    
     }
   }
 
   setAdmin(adminFlag){
     this.setState({ admin: adminFlag});
+  }
+
+  deleteNode(){
+    deleteNodes(this.state.selectedNode.key)
+    .then(result => this.setState({selectedNode: null}) )
   }
 
   render(){
@@ -80,6 +87,14 @@ export default class App extends React.Component {
                   toggleModal={this.toggleModal}
                   style={this.state.style} 
                   setAdmin={this.setAdmin} />
+        break;
+      case 'delete':
+        modal = <DeleteModal 
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  setAdmin={this.setAdmin}
+                  selectedNode={this.state.selectedNode}
+                  deleteNode={this.deleteNode} />
         break;
       default:
         modal = "";
