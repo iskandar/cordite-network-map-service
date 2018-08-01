@@ -1,9 +1,9 @@
 import React from 'react'
 import { LoginContainer } from 'containers/Login/Login';
 
-const loggingOut = (isAuthorised) => {
-  //sessionStorage.clear();
-  //isAuthorised();
+const loggingOut = (e, toggleModal) => {
+  sessionStorage.clear();
+  toggleModal();
 }
 
 export const LoginModal = (props) => {
@@ -21,7 +21,10 @@ export const LoginModal = (props) => {
 
 export const LogoutModal = (props) => {
   return(
-    <div className={`modal-component ${props.style}`} data-link='sign-out' onClick={e => props.toggleModal(e)} >
+    <div 
+      className={`modal-component ${ props.style ? 'on' : '' }`} 
+      data-link='default' 
+      onClick={e => props.toggleModal(e)} >
       <div className="lm-container">
         <div className="lm-middle">
           <ModalTitle />
@@ -57,8 +60,18 @@ const ModalContent = (props) => {
 const ModalButtonGroup = (props) => {
   return(
     <div className="lm-footer">
-      <button className="btn pull-right" onClick={ e => loggingOut(props.isAuthorised) }>Yes</button>
-      <button className="btn pull-right" onClick={ e => props.toggleModal(e)}>No</button>
+      <button 
+        className="btn pull-right"
+        data-btn
+        onClick={ e => loggingOut(e, props.toggleModal) }>
+        Yes
+      </button>
+      <button 
+        className="btn pull-right"        
+        data-btn="cancel" 
+        onClick={ e => props.toggleModal()}>
+        No
+      </button>
     </div>
   );
 }

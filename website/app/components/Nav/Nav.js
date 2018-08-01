@@ -10,7 +10,7 @@ export const Nav = (props) => {
         link="https://gitlab.com/cordite/cordite"
         toggleModal={e => console.log('click')} />
       <Icon 
-        icon="sign-in"
+        icon={(sessionStorage['corditeAccessToken']) ? "sign-out" : "sign-in"}
         link="#"
         toggleModal={props.toggleModal} />
       

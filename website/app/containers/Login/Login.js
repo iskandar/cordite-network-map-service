@@ -77,13 +77,19 @@ class LoginForm extends React.Component {
 
   handleClick = async function(e){
     e.preventDefault();
+    if(e.target.dataset.btn == 'cancel'){
+      this.props.toggleModal();
+      return;
+    }
     const loginData = {
       user: this.state.user,
       password: this.state.password
     }
     let result = await this.props.nmsLogin(loginData);
-    if (result == 'fail') this.setState({error: 'error'})
-    else{
+    if (result == 'fail') {
+      this.setState({error: 'error'})
+    }
+    else {
       this.props.toggleModal();
     }
   }
@@ -162,6 +168,7 @@ const FormButtons = (props) => {
       </button>
       <button
         className="btn"
+        data-btn="cancel"
         onClick={(e) => onClick(e)}>
         Cancel
       </button>
