@@ -99,7 +99,10 @@ const SvgLinks = (props) => {
 const Icon = (props) => {
   return(
     <div className="icon-component column column-10"> 
-      <a href={props.link} data-link={props.icon} onClick={e => props.toggleModal(e)}>
+      <a 
+        href="javascript:void(0)" 
+        data-link={props.icon} 
+        onClick={e => props.toggleModal(e)}>
         <em className={"fa fa-" + props.icon}></em>
       </a>
     </div>

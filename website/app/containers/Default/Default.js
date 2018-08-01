@@ -2,7 +2,7 @@ import React from 'react'
 import {Page} from 'containers/Page/Page';
 import {Nav} from 'components/Nav/Nav';
 import {Sidebar} from 'components/Sidebar/Sidebar';
-import {getNodes, getNotaries, login} from 'scripts/restCalls';
+import {getNodes, getNotaries, getBraidAPI, login} from 'scripts/restCalls';
 import {isNotary, mutateNodes, sortNodes,} from 'scripts/processData';
 import {headersList} from 'scripts/headersList'
 import navOptions from 'navOptions.json';
@@ -13,7 +13,8 @@ export default class Default extends React.Component {
     this.state = {
       nodes: [],
       notaries: [],
-      page: 'home'
+      page: 'home',
+      braid: {}
     }
     
     this.getNodes = this.getNodes.bind(this);
@@ -47,10 +48,21 @@ export default class Default extends React.Component {
 
     switch (btnType.toLowerCase()) {
       case 'swagger':
-        this.setState({page: 'swagger'})
+        window.location = "/swagger/"
         break
       case 'dashboard':
         this.setState({page: 'home'});
+        break;
+      case 'braid':
+        // window.location = "/braid/api/"
+        getBraidAPI()
+        .then(result => {
+          this.setState({
+            braid: result,
+            page: 'braid'
+          });
+        })
+        
         break;
       default:
         break;
@@ -73,6 +85,7 @@ export default class Default extends React.Component {
               notaries={this.state.notaries}
               page={this.state.page} 
               sortTable={this.sortTable}
+              json={this.state.braid}
             /> 
           </section>
         </div>        

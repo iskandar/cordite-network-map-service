@@ -26,7 +26,10 @@ export const Sidebar = (props) => {
           }, {props: props})
         }
         <li key={Math.floor(Math.random() * 100) + 7}>
-          <button className='sidebar-button-component' data-btn={props.title} onClick={e => props.handleBtn(e)}>
+          <button 
+          className='sidebar-button-component' 
+          data-btn="swagger"
+          onClick={e => props.handleBtn(e)}>
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
               viewBox="0 0 305.5 305.7" 

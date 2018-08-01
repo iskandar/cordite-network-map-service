@@ -53,3 +53,16 @@ export async function getNotaries() {
   let notaries = await response.json();
   return notaries;
 }
+
+export async function getBraidAPI(){
+  const response = await fetch(`${url}/braid/api`,{
+    method: 'GET',
+    headers: {
+      'accept': 'application/json',
+      "Authorization": `Bearer ${sessionStorage["corditeAccessToken"]}`
+    }
+  })
+  let braidCode = await response.json();
+  return braidCode;
+}
+

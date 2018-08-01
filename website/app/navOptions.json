@@ -3,20 +3,12 @@
     {
       "title": "dashboard",
       "icon": "fa-desktop"
-    },
-    {
-      "title": "admin",
-      "icon": "fa-lock"
     }
   ],
   [
     {
       "title": "Braid",
       "icon": "fa-random"
-    },
-    {
-      "title": "GitLab",
-      "icon": "fa-gitlab"
     }
   ]
 ]
