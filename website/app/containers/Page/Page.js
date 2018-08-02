@@ -2,10 +2,12 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import {Home} from 'containers/Pages/Home/Home'
 import {Swagger} from 'containers/Pages/Swagger/Swagger';
+import {Braid} from 'containers/Pages/Braid/Braid'
 
 const PAGES = {
   home: Home,
-  swagger: Swagger
+  swagger: Swagger,
+  braid: Braid
 }
 
 export const Page = (props) => {

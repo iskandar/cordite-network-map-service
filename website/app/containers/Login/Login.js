@@ -7,17 +7,20 @@ const handleLogin = (nmsLogin, loginData) => {
 
 export const Login = (props) => {
   return (
-    <div className='login-component'>
+    <div className='login-component' >
       <LoginContainer {...props} />
     </div>
   )
 }
 
-const LoginContainer = (props) => {
+export const LoginContainer = (props) => {
   return(
     <div className='login-container-component'>
       <LoginLogo title="Cordite stats" />
-      <LoginMain nmsLogin={props.nmsLogin} />
+      <LoginMain 
+      nmsLogin={props.nmsLogin} 
+      toggleModal={props.toggleModal}
+      setAdmin={props.setAdmin} />
       <LoginFooter />
     </div>
   );
@@ -33,7 +36,10 @@ const LoginMain = (props) => {
   return(
     <div className='login-main-component'>
       <LoginTitle title='Welcome, Please login' />
-      <LoginForm nmsLogin={props.nmsLogin} />
+      <LoginForm
+        nmsLogin={props.nmsLogin}
+        toggleModal={props.toggleModal}
+        setAdmin={props.setAdmin} />
     </div>
   );
 }
@@ -73,12 +79,22 @@ class LoginForm extends React.Component {
 
   handleClick = async function(e){
     e.preventDefault();
+    if(e.target.dataset.btn == 'cancel'){
+      this.props.toggleModal();
+      return;
+    }
     const loginData = {
       user: this.state.user,
       password: this.state.password
     }
     let result = await this.props.nmsLogin(loginData);
-    (result == 'fail') ? this.setState({error: 'error'}) : this.setState({error: ''});
+    if (result == 'fail') {
+      this.setState({error: 'error'})
+    }
+    else {
+      this.props.setAdmin(true);
+      this.props.toggleModal();
+    }
   }
 
   handleChange(e){
@@ -147,11 +163,17 @@ const FormButtons = (props) => {
   const { onClick } = props
   return(
     <div className="form-buttons-component">
-      <a href="#" className="btn">Forgot your password?</a>
+      <a href="#" className="btn">Forgot your password?</a>     
       <button
         className="btn"
         onClick={(e) => onClick(e)}>
         Log In
+      </button>
+      <button
+        className="btn"
+        data-btn="cancel"
+        onClick={(e) => onClick(e)}>
+        Cancel
       </button>
     </div>
   );

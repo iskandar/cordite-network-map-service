@@ -3,21 +3,12 @@
     {
       "title": "dashboard",
       "icon": "fa-desktop"
-    },
-    {
-      "title": "admin",
-      "icon": "fa-lock"
     }
   ],
   [
     {
-      "title": "Swagger",
-      "icon": "fa-sitemap"
-    },
-    {
       "title": "Braid",
       "icon": "fa-random"
     }
-
   ]
 ]

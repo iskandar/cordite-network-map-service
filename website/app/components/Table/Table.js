@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types'
 
 export const Table = (props) => {
-  const { headersList, rowData, sortTable } = props;
+  const { headersList, rowData, sortTable, admin, toggleModal } = props;
   return(
     <div className="row grid-responsive mt-2">
       <div className="column ">
@@ -12,10 +12,14 @@ export const Table = (props) => {
               <table>
                 <TableHead 
                   headersList={headersList}
-                  sortTable={sortTable}/>
+                  sortTable={sortTable}
+                  admin={admin}
+                />                  
                 <TableBody 
                   headersList={headersList}
                   rowData={rowData}
+                  toggleModal={toggleModal}
+                  admin={admin}
                 />  
               </table>
             </div>
@@ -27,27 +31,34 @@ export const Table = (props) => {
 }
 
 const TableHead = (props) => {
-  const { headersList, sortTable } = props;
+  const { headersList, sortTable, admin } = props;
   const sortCol = (e) => {
     sortTable(e)
   }
   return(
     <thead>
       <tr>
-      {
-        Array.from(headersList.values()).map((h, index) => (
-          <th key={index} data-header={h} onClick={e => sortCol(e)}>{h}<img src='png/sort.png' data-header={h}/></th>
-        ))
-      }
+        {
+          Array.from(headersList.values()).map((h, index) => (
+            <th key={index} data-header={h} onClick={e => sortCol(e)}>{h}<img src='png/sort.png' data-header={h}/></th>
+          ))
+        }
+        { admin ? <th>Controls</th> : null }
       </tr>
     </thead>
   )
 }
 
 const TableBody = (props) => {
-  const { headersList, rowData } = props;
+  const { headersList, rowData, toggleModal, admin } = props;
   let tr = rowData.map((node, index) => {
-      return ( <TableRow key={index} node={node} headersList={headersList} /> );
+      return ( 
+      <TableRow 
+        key={index} 
+        node={node} 
+        headersList={headersList} 
+        toggleModal={toggleModal}
+        admin={admin} /> );
   })  
   return (
       <tbody>{tr}</tbody>
@@ -55,7 +66,7 @@ const TableBody = (props) => {
 }
 
 const TableRow = (props) => {
-  const { node, headersList } = props;
+  const { node, headersList, toggleModal, admin } = props;
   const valueArray = [];
   Object.keys(node).forEach((key,index) => {
     if(headersList.has(key))
@@ -72,6 +83,16 @@ const TableRow = (props) => {
             td =  <td key={index}>{value.toString()}</td>         
           return td;
         })
+      }
+      { (admin) ? 
+        <td key={9}>
+          <button 
+            className='wibble' 
+            data-link="delete" 
+            onClick={ e => { toggleModal(e, node) }} >
+              <em className="fa fa-trash"></em> 
+          </button> 
+        </td> : null
       }
     </tr>
   );

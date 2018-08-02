@@ -1,30 +1,30 @@
 import React from 'react';
 import Default from 'containers/Default/Default';
-import {Login} from 'containers/Login/Login'
-import {checkAuth, login} from 'scripts/restCalls';
-import {LogoutModal} from 'components/LogoutModal/LogoutModal';
+import { Login } from 'containers/Login/Login'
+import { login, checkAuth, deleteNodes } from 'scripts/restCalls';
+import { LoginModal, LogoutModal, DeleteModal } from 'components/Modal/Modal';
 
 export default class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      status: 'await',
+      admin: (sessionStorage["corditeAccessToken"]) ? true : false,
+      status: 'done',
       subDomain: 'default',
-      style: ''
+      style: false,
+      modal: ''
     }
 
     this.NMSLogin = this.NMSLogin.bind(this);
-    this.isAuthorised = this.isAuthorised.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
+    this.setAdmin = this.setAdmin.bind(this);
+    this.deleteNode = this.deleteNode.bind(this);
   }
-
-  componentDidMount(){
-    this.isAuthorised();
-  }
+  
 
   NMSLogin(loginData){
     return login(loginData)
-    .then( () => this.isAuthorised() )
+    .then( () => checkAuth() )
     .then( status => {
       if(status != 200)  return "fail";
       return "success";
@@ -32,28 +32,29 @@ export default class App extends React.Component {
     .catch( err => console.log(err) )
   }
 
-  toggleModal(e){
-    this.state.style ? this.setState({style: ''}) : this.setState({style: 'on'});
+  toggleModal(e, node){
+    if(!e){
+      this.setState({
+        modal: '',
+        style: !this.state.style
+      }) 
+    }
+    else if(e.target.dataset.link){
+      this.setState({
+        modal: e.target.dataset.link || '',
+        style: !this.state.style,
+        selectedNode: (!!node) ? node : null
+      })    
+    }
   }
 
-  isAuthorised(){
-    return checkAuth()
-    .then(status => {
-      if(status == 200){
-        this.setState({
-          status: 'done',
-          subDomain: 'default',
-        })
-      }
-      else{
-        this.setState({
-          status: 'done',
-          subDomain: 'login',
-        })
-      }
-      return status;
-    })
-    .catch(err => console.log(err));
+  setAdmin(adminFlag){
+    this.setState({ admin: adminFlag});
+  }
+
+  deleteNode(){
+    deleteNodes(this.state.selectedNode.key)
+    .then(result => this.setState({selectedNode: null}) )
   }
 
   render(){
@@ -63,20 +64,47 @@ export default class App extends React.Component {
         page = <Login nmsLogin={this.NMSLogin} />;
         break;
       case 'default':
-        page = <Default toggleModal={this.toggleModal} />;
+        page = <Default 
+                toggleModal={this.toggleModal} 
+                admin={this.state.admin} />;
         break;
       default: 
         page = <Login nmsLogin={this.nmsLogin} />;
+        break;
+    }
+
+    let modal = null;
+    switch(this.state.modal){
+      case 'sign-in':
+        modal = <LoginModal
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  nmsLogin={this.NMSLogin}
+                  setAdmin={this.setAdmin}/>
+        break;
+      case 'sign-out':
+        modal = <LogoutModal 
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  setAdmin={this.setAdmin} />
+        break;
+      case 'delete':
+        modal = <DeleteModal 
+                  toggleModal={this.toggleModal}
+                  style={this.state.style} 
+                  setAdmin={this.setAdmin}
+                  selectedNode={this.state.selectedNode}
+                  deleteNode={this.deleteNode} />
+        break;
+      default:
+        modal = "";
         break;
     }
     
     return (
       <div className='app-component'>
         { (this.state.status == 'done') ? page :  "" }
-        <LogoutModal 
-          toggleModal={this.toggleModal}
-          style={this.state.style} 
-          isAuthorised={this.isAuthorised} />
+        { modal }
       </div>    
     );
   }
