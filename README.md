@@ -1,5 +1,5 @@
-## Supported tags and respective Dockerfile links
-* `v0.1.0`, `latest` - latest stable release
+## Supported tags and respective Dockerfile links
+* `v0.2.1`, `latest` - latest stable release
 * `edge` - latest master build, unstable
 
 ## Design Criteria
