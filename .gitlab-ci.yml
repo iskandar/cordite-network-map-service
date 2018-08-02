@@ -11,7 +11,7 @@ stages:
 
 
 build:maven:
-  image: maven:3.3.9-jdk-8
+  image: jimador/docker-jdk-8-maven-node
   stage: build
   variables:
     MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
@@ -31,45 +31,45 @@ build:maven:
       - target/network-map-service.jar
       - target/site/jacoco/index.html
 
-code_quality:
-  stage: build
-  image: docker:stable
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
-    - docker run
-        --env SOURCE_CODE="$PWD"
-        --volume "$PWD":/code
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
-  artifacts:
-    paths: [gl-code-quality-report.json]
-  tags:
-    - docker
+#code_quality:
+#  stage: build
+#  image: docker:stable
+#  variables:
+#    DOCKER_DRIVER: overlay2
+#  allow_failure: true
+#  services:
+#    - docker:stable-dind
+#  script:
+#    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
+#    - docker run
+#        --env SOURCE_CODE="$PWD"
+#        --volume "$PWD":/code
+#        --volume /var/run/docker.sock:/var/run/docker.sock
+#        "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
+#  artifacts:
+#    paths: [gl-code-quality-report.json]
+#  tags:
+#    - docker
 
-sast:
-  stage: build
-  image: docker:stable
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
-    - docker run
-        --env SAST_CONFIDENCE_LEVEL="${SAST_CONFIDENCE_LEVEL:-3}"
-        --volume "$PWD:/code"
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        "registry.gitlab.com/gitlab-org/security-products/sast:$SP_VERSION" /app/bin/run /code
-  artifacts:
-    paths: [gl-sast-report.json]
-  tags:
-    - docker
+#sast:
+#  stage: build
+#  image: docker:stable
+#  variables:
+#    DOCKER_DRIVER: overlay2
+#  allow_failure: true
+#  services:
+#    - docker:stable-dind
+#  script:
+#    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
+#    - docker run
+#        --env SAST_CONFIDENCE_LEVEL="${SAST_CONFIDENCE_LEVEL:-3}"
+#        --volume "$PWD:/code"
+#        --volume /var/run/docker.sock:/var/run/docker.sock
+#        "registry.gitlab.com/gitlab-org/security-products/sast:$SP_VERSION" /app/bin/run /code
+#  artifacts:
+#    paths: [gl-sast-report.json]
+#  tags:
+#    - docker
 
 package:docker:
   stage: package

@@ -86,7 +86,7 @@ class NetworkMapService(
   private fun startupBraid(): Future<Unit> {
     try {
       val thisService = this
-      val staticHandler = StaticHandler.create("website")
+      val staticHandler = StaticHandler.create("website/public").setCachingEnabled(false)
       val result = Future.future<Unit>()
       BraidConfig()
         .withVertx(vertx)
@@ -100,7 +100,8 @@ class NetworkMapService(
           .withSwaggerPath(SWAGGER_ROOT)
           .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
           .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
-          .withDescription("""|<b>Please note:</b> The protected parts of this API require JWT authentication.
+          .withDescription("""|<h4><a href="/">Cordite Networkmap Service</a></h4>
+            |<b>Please note:</b> The protected parts of this API require JWT authentication.
             |To activate, execute the <code>login</code> method.
             |Then copy the returned JWT token and insert it into the <i>Authorize</i> swagger dialog box as
             |<code>Bearer &lt;token&gt;</code>
@@ -119,16 +120,16 @@ class NetworkMapService(
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
+                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
                 router { route("/*").handler(staticHandler) }
               }
               protected {
-                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
                 post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
                 delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
-                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
-                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
               }
             }
