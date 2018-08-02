@@ -38,6 +38,7 @@ const TableHead = (props) => {
   return(
     <thead>
       <tr>
+        <th>Node</th>
         {
           Array.from(headersList.values()).map((h, index) => (
             <th key={index} data-header={h} onClick={e => sortCol(e)}>{h}<img src='png/sort.png' data-header={h}/></th>
@@ -68,12 +69,18 @@ const TableBody = (props) => {
 const TableRow = (props) => {
   const { node, headersList, toggleModal, admin } = props;
   const valueArray = [];
-  Object.keys(node).forEach((key,index) => {
-    if(headersList.has(key))
-      valueArray.push(node[key])
+
+  headersList.forEach((value, key) => {
+    if (node.hasOwnProperty(key)) {
+      valueArray.push(node[key]);
+    } else {
+      valueArray.push("");
+    }
   });
+
   return (
     <tr className="table-row-component">
+      <td><TableTooltip tooltip={node.nodeKey}/>{node.nodeKey.slice(0, 3) + '...' + node.nodeKey.substr(-3)}</td>
       {
         valueArray.map((value, index) => {
           let td
@@ -96,8 +103,14 @@ const TableRow = (props) => {
       }
     </tr>
   );
-}
+};
 
+
+const TableTooltip = (props) => {
+  return (
+    <div className='table-tooltip-component'>{props.tooltip}</div>
+  );
+};
 
 Table.propTypes = {
   headersList: PropTypes.object.isRequired,
@@ -115,3 +128,4 @@ TableBody.propTypes = {
 TableRow.propTypes = {
   nodes: PropTypes.object
 }
+

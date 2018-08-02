@@ -22,16 +22,16 @@ export const parseNodes = (nodes) => {
 
 function parseParties(node, formatedNodeArray){
   for(let i in node.parties){
-    formatedNodeArray.push(parseParty(node.parties[i]));
+    formatedNodeArray.push(parseParty(node.nodeKey, node.parties[i]));
   }
   return formatedNodeArray
 }
 
-function parseParty(party){
+function parseParty(nodeKey, party){
   let partyObj = {}
   partyObj = parseX500(party, partyObj);
   partyObj = parseKey(party, partyObj);
-
+  partyObj.nodeKey = nodeKey;
   return partyObj
 }
 

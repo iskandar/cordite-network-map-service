@@ -92,6 +92,7 @@ const ModalContentDelete = (props) => {
   return(
     <div className="lm-content">
       <p className="node-id">{props.node.O}</p>
+      <p className="node-id">for node {props.node.nodeKey}</p>
       <p>Are you sure you want to delete this node?</p>
     </div>    
   );
