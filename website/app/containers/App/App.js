@@ -53,7 +53,7 @@ export default class App extends React.Component {
   }
 
   deleteNode(){
-    deleteNodes(this.state.selectedNode.key)
+    deleteNodes(this.state.selectedNode.nodeKey)
     .then(result => this.setState({selectedNode: null}) )
   }
 
