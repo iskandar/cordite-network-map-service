@@ -33,6 +33,13 @@
     </repository>
   </repositories>
 
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -141,7 +148,6 @@
               </target>
             </configuration>
           </execution>
-
           <execution>
             <id>build-website</id>
             <phase>generate-resources</phase>
@@ -187,7 +193,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -201,7 +206,48 @@
           </archive>
         </configuration>
       </plugin>
-
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>3.0</version>
+        <configuration>
+          <header>LICENSE</header>
+          <excludes>
+            <exclude>**/fonts/*</exclude>
+            <exclude>**/*.txt</exclude>
+            <exclude>**/pom.xml.versionsBackup</exclude>
+            <exclude>**/*.json</exclude>
+            <exclude>**/node_modules/**/*</exclude>
+            <exclude>build/**</exclude>
+            <exclude>LICENSE</exclude>
+            <exclude>**/.babelrc</exclude>
+          </excludes>
+          <includes>
+            <include>**/*.kt</include>
+            <include>**/*.js</include>
+            <include>**/*.md</include>
+          </includes>
+          <mapping>
+            <md>XML_STYLE</md>
+          </mapping>
+        </configuration>
+        <executions>
+          <execution>
+            <id>license-format</id>
+            <phase>none</phase>
+            <goals>
+              <goal>format</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>license-check</id>
+            <phase>none</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
