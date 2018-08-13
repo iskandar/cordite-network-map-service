@@ -23,7 +23,6 @@ import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.save
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
@@ -64,11 +63,11 @@ class CertTests {
     val key = keyStore.getKey("key-alias", password.toCharArray())
     println(aliases)
 
-    val homeDir = File(System.getProperty("user.home"))
-    val dst = homeDir / "tmp" / "test.jks"
-    dst.delete()
-    println("writing to ${dst}")
-    keyStore.save(dst.toPath(), password)
+//    val homeDir = File(System.getProperty("user.home"))
+//    val dst = homeDir / "tmp" / "test.jks"
+//    dst.delete()
+//    println("writing to ${dst}")
+//    keyStore.save(dst.toPath(), password)
   }
 }
 
