@@ -39,7 +39,6 @@ import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
@@ -47,14 +46,11 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.io.File
 import java.net.InetAddress
 import java.security.PublicKey
 import java.time.Duration
-import javax.security.auth.x500.X500Principal
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
@@ -71,13 +67,13 @@ class NetworkMapService(
   private val hostname: String = "localhost"
 ) {
   companion object {
-    internal const val SIGNING_CERT_NAME = "nms"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_REST_ROOT = "/admin/api"
+    internal const val CERTMAN_REST_ROOT = "/certman/api"
     private const val ADMIN_BRAID_ROOT = "/braid/api"
     private const val SWAGGER_ROOT = "/swagger"
+    val BASE_NAME = CordaX500Name("<replace me>", "Cordite Foundation Network", "Cordite Foundation", "London", "London", "GB")
     private val logger = loggerFor<NetworkMapService>()
-
     init {
       SerializationEnvironment.init()
     }
@@ -91,9 +87,11 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
+  internal val certificateManager = CertificateManager(BASE_NAME, DEV_ROOT_CA, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
     return setupStorage()
+      .compose { certificateManager.init() }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
@@ -148,6 +146,11 @@ class NetworkMapService(
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
               }
             }
+            group("certman") {
+              unprotected {
+                post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForNewSubscription)
+              }
+            }
           }
         ).bootstrapBraid(serviceHub = StubAppServiceHub(), fn = Handler {
           if (it.succeeded()) {
@@ -161,7 +164,6 @@ class NetworkMapService(
       return Future.failedFuture(err)
     }
   }
-
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
@@ -303,7 +305,7 @@ class NetworkMapService(
       nodeInfoStorage,
       signedNetworkMapStorage,
       signedNetworkParametersStorage,
-      certificateAndKeyPairStorage,
+      certificateManager,
       networkParamUpdateDelay,
       networkMapQueuedUpdateDelay
     )
@@ -318,17 +320,6 @@ class NetworkMapService(
       nodeInfoStorage.makeDirs(),
       certificateAndKeyPairStorage.makeDirs()
     ).mapEmpty()
-  }
-
-  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val cert = X509Utilities.createCertificate(
-      certificateType,
-      rootCa.certificate,
-      rootCa.keyPair,
-      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
-      keyPair.public)
-    return CertificateAndKeyPair(cert, keyPair)
   }
 
   private fun createJksOptions(): JksOptions {
@@ -354,7 +345,7 @@ class NetworkMapService(
       else -> {
         logger.info("generating temporary TLS certificates")
         val inMemoryOnlyPassword = "inmemory"
-        createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
+        certificateManager.createCertificate(BASE_NAME, CertificateType.TLS,  Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
       }
     }
   }

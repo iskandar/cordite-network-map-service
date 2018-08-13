@@ -24,19 +24,14 @@ import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkMap
@@ -45,7 +40,6 @@ import rx.Subscription
 import java.io.File
 import java.time.Duration
 import java.time.Instant
-import javax.security.auth.x500.X500Principal
 
 /**
  * Event processor for the network map
@@ -54,12 +48,12 @@ import javax.security.auth.x500.X500Principal
  */
 class NetworkMapServiceProcessor(
   private val vertx: Vertx,
-  private val dbDirectory: File,
+  dbDirectory: File,
   private val inputs: NetworkParameterInputsStorage,
   private val nodeInfoStorage: SignedNodeInfoStorage,
   private val networkMapStorage: SignedNetworkMapStorage,
   private val networkParamsStorage: SignedNetworkParametersStorage,
-  private val certificateAndKeyPairStorage: CertificateAndKeyPairStorage,
+  private val certificateManager: CertificateManager,
   private val networkParameterUpdateDelay: Duration,
   private val networkMapQueueDelay: Duration
 ) {
@@ -97,7 +91,7 @@ class NetworkMapServiceProcessor(
     }
 
     return execute {
-      ensureCertExists("signing", NetworkMapService.SIGNING_CERT_NAME, "Network Map", CertificateType.NETWORK_MAP)
+      certificateManager.ensureNetworkMapCertExists()
     }.map {
       certs = it
     }.compose {
@@ -359,40 +353,10 @@ class NetworkMapServiceProcessor(
       }
   }
 
-  private fun ensureCertExists(
-    description: String,
-    certName: String,
-    commonName: String,
-    certificateType: CertificateType,
-    signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME,
-    rootCa: CertificateAndKeyPair = DEV_ROOT_CA
-  ): Future<CertificateAndKeyPair> {
-    logger.info("checking for $description certificate")
-    return certificateAndKeyPairStorage.get(certName)
-      .recover {
-        // we couldn't find the cert - so generate one
-        logger.warn("failed to find $description cert for this NMS. generating new cert")
-        val cert = createSigningCert(rootCa, commonName, certificateType, signatureScheme)
-        certificateAndKeyPairStorage.put(certName, cert).map { cert }
-      }
-  }
-
-  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val cert = X509Utilities.createCertificate(
-      certificateType,
-      rootCa.certificate,
-      rootCa.keyPair,
-      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
-      keyPair.public)
-    return CertificateAndKeyPair(cert, keyPair)
-  }
-
   private fun setupStorage(): Future<Unit> {
     return all(
       textStorage.makeDirs(),
       parametersUpdateStorage.makeDirs()
       ).mapEmpty()
   }
-
 }

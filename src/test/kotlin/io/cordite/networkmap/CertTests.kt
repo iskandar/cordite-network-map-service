@@ -15,7 +15,15 @@
  */
 package io.cordite.networkmap
 
+import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.keystore.toX509KeyStore
+import net.corda.core.crypto.Crypto
+import net.corda.core.identity.CordaX500Name
+import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.save
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
@@ -28,10 +36,39 @@ class CertTests {
     val nodeKeyStorePath = certificateDirectory / "nodekeystore.jks"
     val password = "cordacadevpass"
   }
+
   @Test
   fun test1() {
     println(System.getProperty("user.dir"))
     nodeKeyStorePath.toX509KeyStore(password)
+  }
+
+  @Test
+  fun `generate a JKS with cert and private key`() {
+    val password = "password"
+    val signatureScheme = Crypto.ECDSA_SECP256R1_SHA256
+    val certificateType = CertificateType.LEGAL_IDENTITY
+    val keyPair = Crypto.generateKeyPair(signatureScheme)
+    val rootCa = DEV_ROOT_CA
+    val name = CordaX500Name("myorg.org", "Unit in My Org", "My Org", "London", "London", "GB")
+    val cert = X509Utilities.createCertificate(
+      certificateType,
+      rootCa.certificate,
+      rootCa.keyPair,
+      name.x500Principal,
+      keyPair.public)
+    val certAndKey = CertificateAndKeyPair(cert, keyPair)
+    val keyStore = certAndKey.toKeyStore("cert-alias", "key-alias", password, certPath = listOf(rootCa.certificate))
+    val aliases = keyStore.aliases().toList()
+    val certificate = keyStore.getCertificate("cert-alias")
+    val key = keyStore.getKey("key-alias", password.toCharArray())
+    println(aliases)
+
+    val homeDir = File(System.getProperty("user.home"))
+    val dst = homeDir / "tmp" / "test.jks"
+    dst.delete()
+    println("writing to ${dst}")
+    keyStore.save(dst.toPath(), password)
   }
 }
 
