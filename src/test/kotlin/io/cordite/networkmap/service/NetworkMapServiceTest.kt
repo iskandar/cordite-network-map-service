@@ -15,12 +15,8 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage
-import io.cordite.networkmap.utils.CryptoUtils
-import io.cordite.networkmap.utils.getFreePort
-import io.cordite.networkmap.utils.readFiles
-import io.cordite.networkmap.utils.setupDefaultInputFiles
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpClientResponse
@@ -47,70 +43,71 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.zip.ZipInputStream
 import kotlin.test.*
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapServiceTest {
   companion object {
     init {
-      SerializationEnvironment.init()
+      SerializationTestEnvironment.init()
     }
 
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
     val NETWORK_MAP_QUEUE_DELAY = 1.seconds
     val TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
-      "MIIDmDCCAoACCQC3XUbDbyNK3zANBgkqhkiG9w0BAQsFADCBjTELMAkGA1UEBhMC\n" +
-      "VUsxDzANBgNVBAgMBkxvbmRvbjEPMA0GA1UEBwwGTG9uZG9uMREwDwYDVQQKDAhC\n" +
-      "bHVlYmFuazEPMA0GA1UECwwGRW1UZWNoMRQwEgYDVQQDDAtibHVlYmFuay5pbzEi\n" +
-      "MCAGCSqGSIb3DQEJARYTc3VwcG9ydEBibHVlYmFuay5pbzAeFw0xODA4MDExNDI4\n" +
-      "NTJaFw0xOTA4MDExNDI4NTJaMIGNMQswCQYDVQQGEwJVSzEPMA0GA1UECAwGTG9u\n" +
-      "ZG9uMQ8wDQYDVQQHDAZMb25kb24xETAPBgNVBAoMCEJsdWViYW5rMQ8wDQYDVQQL\n" +
-      "DAZFbVRlY2gxFDASBgNVBAMMC2JsdWViYW5rLmlvMSIwIAYJKoZIhvcNAQkBFhNz\n" +
-      "dXBwb3J0QGJsdWViYW5rLmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC\n" +
-      "AQEAts30+8GMfpts/zVbcOx669NLQFygl7XohIdxPGSGeqFbda5VgWz4I5jK3zqc\n" +
-      "poRpm0JKvfY2RDqfjV7E9DOO6NYsIfBb9ANMyyvV90V1szVEyxAlWr8Sl2DyiVIN\n" +
-      "VfouwCZRs6uQ7QH2Xl9Cl8U3/qP3XU1ZyTDqdjMlWvEwXsDqJFfAsft3SKqJblUa\n" +
-      "pKYwEy7fN4V6fzOIROpwnlhhdo8it2pojEjAwOhUYjR321gCcfWVOFspzaP6xPrY\n" +
-      "iGwJunfJgzGYCDQYPDLvxmC10D20XQWfJyxD5mnvtYqMTd3pLtslqb3ZKrkoWdMF\n" +
-      "xEpVrtJt51PmKQ1tjHFF/1Y3BQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAOjFc1\n" +
-      "r4g6aq1r9muhYauRtJtZUfYY2M/2nbdguw/AigCDmmHqv49k25+9BqNfpjHejL+m\n" +
-      "5PTa+D4mwT6/jnyT1x92VY/fhC8Enu5PXLpyfCJqD7z+XNS3einW9XF5h/8AJK2H\n" +
-      "asttWX2o9glxGgUbZUCIKkYbeikMdiX5tGswVL9AMRtCgCj8oi9xxV95fitMXlWQ\n" +
-      "IJ4z2zY+6getCfb/lGwhLObUG4miuoVEvBFV2SvT0pCFVGpCEJdwLMB1WxAfu4I6\n" +
-      "VJ7p1J4c7rAKzd82LT3D+wmJQ6yzJNr8qA3i9f+odiwfrs2j42Sf2N5TnhHWtNvM\n" +
-      "0al+ndBR2JtMeaCq\n" +
+      "MIIDoDCCAogCCQDHFxXNfHiwizANBgkqhkiG9w0BAQsFADCBkTELMAkGA1UEBhMC\n" +
+      "R0IxDzANBgNVBAgMBkxvbmRvbjEPMA0GA1UEBwwGTG9uZG9uMREwDwYDVQQKDAhC\n" +
+      "bHVlYmFuazEPMA0GA1UECwwGRW1UZWNoMRgwFgYDVQQDDA9FbVRlY2ggQmx1ZWJh\n" +
+      "bmsxIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAYmx1ZWJhbmsuaW8wHhcNMTgwODEw\n" +
+      "MTQ0ODQwWhcNMTkwODEwMTQ0ODQwWjCBkTELMAkGA1UEBhMCR0IxDzANBgNVBAgM\n" +
+      "BkxvbmRvbjEPMA0GA1UEBwwGTG9uZG9uMREwDwYDVQQKDAhCbHVlYmFuazEPMA0G\n" +
+      "A1UECwwGRW1UZWNoMRgwFgYDVQQDDA9FbVRlY2ggQmx1ZWJhbmsxIjAgBgkqhkiG\n" +
+      "9w0BCQEWE3N1cHBvcnRAYmx1ZWJhbmsuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IB\n" +
+      "DwAwggEKAoIBAQDh5A78CfW5tAvrQpcXFWzXvlxZQ8BitkvyLEc8vW1SM8FqVhg9\n" +
+      "2ufRbHiSLAf5CQLNYExcr6sPbAQ9QbqYyIe10rF0mwh4mL38yZ3acTI0duTG45CL\n" +
+      "AC8c7Rh57OavsT4I3p5ZKGRuo4g4l46SbqmgZ/VbYbOTJCYmSFfHVZycQIDwe61H\n" +
+      "fCkBY0XYTS4t75RADqj/2d7Z2zfrIbVhWpRXOHuq/bD/Ean+/0znTN4Gz6zaFXss\n" +
+      "Tw2zmzM65tRCh1I0o/60Gk17/mvk2cQo730k/AeVsBGDXN1P6Aidfc+iWobqYP4d\n" +
+      "wztZYjOxrULvyfoRy0vy3Fz3jjN8dWRFFzNBAgMBAAEwDQYJKoZIhvcNAQELBQAD\n" +
+      "ggEBAHZbp0NhtiJmCqKKRWyVz2KLVv71ref2e23v3cThV3/2d+CneQK2i71AqEw2\n" +
+      "Xw6vWwBUtRtoG4hSNfDlyp5zJEhb6f93o97rNV/UUM6LI7Yw0Vc5DOabmmErTyeD\n" +
+      "KLRT+4E2vb2sDemxxLEZqPSOzRUQ5YDBOcm06I2pvz6ynGbWDR+FDnfpx+GqTLX/\n" +
+      "bruKnRHykXJG85jiQpL9tHlImVuI8H5DY9g9qJy4Bzisz4QphYsLQ5TA2zGhe4TX\n" +
+      "1aSu713IZhOLMdIPy54KbIl8eYAA5BV8s+ybFxqxHQe557tthsnU2GH/BR/77L6/\n" +
+      "Tl3Q1mLJ/rx9N6Ae6M5FcBklyu0=\n" +
       "-----END CERTIFICATE-----\n"
   }
 
   val TEST_PRIV_KEY = "-----BEGIN PRIVATE KEY-----\n" +
-    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2zfT7wYx+m2z/\n" +
-    "NVtw7Hrr00tAXKCXteiEh3E8ZIZ6oVt1rlWBbPgjmMrfOpymhGmbQkq99jZEOp+N\n" +
-    "XsT0M47o1iwh8Fv0A0zLK9X3RXWzNUTLECVavxKXYPKJUg1V+i7AJlGzq5DtAfZe\n" +
-    "X0KXxTf+o/ddTVnJMOp2MyVa8TBewOokV8Cx+3dIqoluVRqkpjATLt83hXp/M4hE\n" +
-    "6nCeWGF2jyK3amiMSMDA6FRiNHfbWAJx9ZU4WynNo/rE+tiIbAm6d8mDMZgINBg8\n" +
-    "Mu/GYLXQPbRdBZ8nLEPmae+1ioxN3eku2yWpvdkquShZ0wXESlWu0m3nU+YpDW2M\n" +
-    "cUX/VjcFAgMBAAECggEBAKQdsWRYNl7wAOH6MDboR87yaivFPPQW/0IEKvgSM91i\n" +
-    "ga7cLa29e+TRZskUYNDqLbmSwXFb2wpUKywLOf0XUKTeqs5pcNRYJhh9KWIOfQW/\n" +
-    "vBwmSbL3uaQoCHaaMJjQvCoL/Ou2Cq2NRnchRLLm/0dgQ1MDf6ktfkFR16aWxFs7\n" +
-    "iEaIhFG/aBznf/OGdyz906YrcYKDi3AJXjCxXvoGi9lVErNrimBm+Zn4YpRxFvB3\n" +
-    "kFvk9rf9KEkGB0OAieEieI8Gr6Xbq6dzDqfjcCiv3XzlZ0txJgaqwRFmhkU1UO+J\n" +
-    "VyRtmb30SrcSFgrYDD8ifqRaFKTjk9ZmUSXybi/sXV0CgYEA2nvbOfItDULuJ+iq\n" +
-    "rymhHHk5IQ4B6/BExqe0WJJWdc1kezjHIZ35/9N9xFnqcD8I/q1iu/ZpHIJI00wC\n" +
-    "YEMSZE1Xk+X4002dBKby8QCB6JUY7wXPMFWQxMCR0cskPfNGdGRfEwhrNbKy8E84\n" +
-    "hq3SIF+UBfSvJPOLvvhGEY7bcnMCgYEA1jG0dqh3/aM2otW+fgkcTKf4QlQUW8VY\n" +
-    "3hqtwtJzPRciXHJIxLSiMD5kkaN+ydCxSqXoBo0/tjimVXyH0zQ1xgR5cy7OEQuB\n" +
-    "y5dvC/gPHU238nPadZb5Z9ErzRew50VB6H5tBrkxOE1TDGaySquhvVKVCxJJlt6X\n" +
-    "GpmZxIIduqcCgYA2kRh/sGxwE3dHoGSAuvTyF5SdHNJ+CtQiiWARfvr5EQM3g0a4\n" +
-    "rqvxqPCQSaSzxAqLEOLH7xLxe9iUbTdqs1W0l1x4I8exfoDo2Il0h5vqatJ/YAQP\n" +
-    "Hk+51B6XNxUmI8xE5YyZRFECaE8olaCYgnEohLaDhkj4AZu1ZmyZlgRY4QKBgA8h\n" +
-    "AaMj8R28Kn7D5CmY0SPk9VcSA0IcJVPCxKUvIi6ddLLc66DhNVd9ALN8vdbZY7xn\n" +
-    "DYVw8qAXTkBZhGp5lJbA+CcXljyD+I39yz0oL0EdnTGF11dY65LWpmZdFwSu0qHu\n" +
-    "VBsWd5CHfacxlcRKbSknLRnUF9iNLlUVplPH8PufAoGAEK3IvUfA7lOveOjto6kP\n" +
-    "D0nW7GicgcVVqmJS3H26zLBGCUIVE18grdJoUVWK3UIONbWapKBWYKIGJjP3pHgL\n" +
-    "e7v0dZkXHmz+aQ7Df1H+0Lz2DxPVJ4mmHKt5kvnSsjciGK0vtLsE3kgDrxI7ve9i\n" +
-    "sd33h8YmCt8965Z4NFAfUsc=\n" +
-    "-----END PRIVATE KEY-----"
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDh5A78CfW5tAvr\n" +
+    "QpcXFWzXvlxZQ8BitkvyLEc8vW1SM8FqVhg92ufRbHiSLAf5CQLNYExcr6sPbAQ9\n" +
+    "QbqYyIe10rF0mwh4mL38yZ3acTI0duTG45CLAC8c7Rh57OavsT4I3p5ZKGRuo4g4\n" +
+    "l46SbqmgZ/VbYbOTJCYmSFfHVZycQIDwe61HfCkBY0XYTS4t75RADqj/2d7Z2zfr\n" +
+    "IbVhWpRXOHuq/bD/Ean+/0znTN4Gz6zaFXssTw2zmzM65tRCh1I0o/60Gk17/mvk\n" +
+    "2cQo730k/AeVsBGDXN1P6Aidfc+iWobqYP4dwztZYjOxrULvyfoRy0vy3Fz3jjN8\n" +
+    "dWRFFzNBAgMBAAECggEBAJk4HOXeR5uXwYHpIBzbPoG0MGWn7AXIywjP+d38Svu3\n" +
+    "+ViMX1MNebJ2le3oCdxkvU7bI9C2oxwJ03JNdCkP0+WDrTR/uCY8zJl7lCPIJhqq\n" +
+    "DpHNZ4yxKkO/mpuREgRX/9D6V4P4Pu9A4zQnsOAoScxw118NjUWf/nR3G3ss2dat\n" +
+    "L7NJRnDbc7sMZ6ae42+PFjS0/klfs9UVn0mcB8Ny0FHJNW2IAncZG9C4FaUFXbRZ\n" +
+    "6y9Ymwyv1uJglUT4yjok3EpyMlPrfDgN0Acoq2GYc4QLSWuqzVVQim1ErTAXF5GJ\n" +
+    "XRG1HkOydHWOSkGiYtQ7XUHPugs8NIUSQ99wnuSPPsECgYEA9qjd6I6I7ydIkTeC\n" +
+    "LUwFiWBeVoVic7hKIK9V5wyDZPfoNJzN3IEF0F3eD/uc14MCKKrh9GyweN9FAeHE\n" +
+    "nty1vrHt4qHntZDw9lcvj4W1Gmidxc9VT1oJJ+tprIKVaGkVAkpjRJM5ra1aQr44\n" +
+    "MIrvhW5nustUf24gr+mJR+4T0TkCgYEA6nHbntnqJA07IT8UKgEPodI/EV87lRju\n" +
+    "ewW2aNhwfmvRoHU74ihYTMYP6zxl/Z/v6T7iSgZrfyhQ36NI5sQmF1jdTNqeoSKS\n" +
+    "6NXElvmT7hel02T4a2ubVtI2HhyrHnrDFlMTA/tNxPr2vZCaLHjwci2dKxQKjCxy\n" +
+    "Kt8Ur5l22kkCgYEAqFV6jFmqDjyrA5/0UWGObcC84SNKm1rsC/5dC7+4dFHTwQQ6\n" +
+    "YgATra5B/HplAZdBA+wLJLqAfR0yhSRFAX3y8t+PT5na/kiaiiPaK4K+o/U9p1/m\n" +
+    "Aq+ZjArXJYpA2O7ODbAiqwwm0uZ5sQ8MXeSTrmY4mHxngEfyOtuQeux5zdECgYBC\n" +
+    "PLDkDIVOcj6Ggh/cTjhwa8pNyi43TbfzIgYLUTtXPHcZcoXcu7FW346X05StN4a8\n" +
+    "y3t7lpzAbE+NH8D1Ee4BIqZDlHDE7dO73MmSLilRV3UOaLSXBOv6d6G6mDbwgZak\n" +
+    "tAvnUBUE1jLoE/a7IeAtIh4Jkbv5JoWK/0QE6MLfoQKBgGVdROa8ojkec2ILJv6w\n" +
+    "WDJp8nJnwH4y3aEvoprVfIG8wK53J+4+OGUJcN5i+/wWHlQF4MGDGh/l4+R1XhrP\n" +
+    "ZvnS0xzmBX/Ng14Q8F0a7FAaV2eY8oGdJ4/mfKN02fEYIOZXjYbUjyg0S9ovtd4/\n" +
+    "L0wpAim0Z/ZxMyUIQzwODgdW\n" +
+    "-----END PRIVATE KEY-----\n"
 
   private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()
@@ -215,7 +212,7 @@ class NetworkMapServiceTest {
 
 
   @Test
-  fun `that we can modify the network parameters`(context: TestContext) {
+  fun `that we can modify the network parameters`() {
     val nmc = createNetworkMapClient()
     deleteValidatingNotaries(dbDirectory)
     Thread.sleep(NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)
@@ -256,7 +253,14 @@ class NetworkMapServiceTest {
           context.fail("failed with ${it.statusMessage()}")
         }
         it.bodyHandler { body ->
-          async.complete()
+          ZipInputStream(ByteArrayInputStream(body.bytes)).use {
+            var entry = it.nextEntry
+            while (entry != null) {
+
+              entry = it.nextEntry
+            }
+            async.complete()
+          }
         }
       }
       .end(payload)
@@ -267,7 +271,7 @@ class NetworkMapServiceTest {
 
 
   private fun createNetworkMapClient(): NetworkMapClient {
-    return NetworkMapClient(URL("http://localhost:$port"), service.certificateManager.networkMapCertAndKeyPair.certificate)
+    return NetworkMapClient(URL("http://localhost:$port"), service.certificateManager.rootCertificate.certificate)
   }
 
   private fun createTempDir(): File {

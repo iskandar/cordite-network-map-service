@@ -42,7 +42,9 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     inline fun <reified T : Any> deserialize(file: File, vertx: Vertx): Future<T> {
       val result = Future.future<Buffer>()
       vertx.fileSystem().readFile(file.absolutePath, result.completer())
-      return result.map { it.bytes.deserializeOnContext<T>() }
+      return result.map {
+        it.bytes.deserializeOnContext<T>()
+      }
     }
 
     inline fun <reified T : Any> serialize(value: T, file: File, vertx: Vertx) : Future<Unit> {

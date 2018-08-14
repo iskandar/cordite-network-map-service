@@ -24,6 +24,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
@@ -57,15 +58,21 @@ class SerializationEnvironment {
     }
 
     private fun initialiseSerialisationEnvironment() {
+      if (_globalSerializationEnv.get() != null) {
+        // special case when we're running in an integration test with a node
+        return
+      }
+
       if (nodeSerializationEnv == null) {
         val factory =  NMSSerializationFactoryImpl("nms-factory").apply {
           registerScheme(KryoClientSerializationScheme())
           registerScheme(AMQPServerSerializationScheme(emptyList()))
         }
-        nodeSerializationEnv = SerializationEnvironmentImpl(
+        val serializationEnv = SerializationEnvironmentImpl(
           factory,
           AMQP_P2P_CONTEXT
         )
+        nodeSerializationEnv = serializationEnv
       } else {
         log.error("***** SERIALIZATION ENVIRONMENT ALREADY SET! ******")
       }

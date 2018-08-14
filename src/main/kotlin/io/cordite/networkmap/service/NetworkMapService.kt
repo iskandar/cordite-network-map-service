@@ -271,7 +271,7 @@ class NetworkMapService(
         }
       }
       .catch {
-        logger.error("failed to retrieve the signed network parameters for hash $hash")
+        logger.error("failed to retrieve the signed network parameters for hash $hash", it)
         context.end(it)
       }
   }
