@@ -91,7 +91,9 @@ class CordaNodeTest {
     // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
     _globalSerializationEnv.set(null)
 
-    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {}), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
+    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {
+      // TODO: register notaries
+    }), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
 
