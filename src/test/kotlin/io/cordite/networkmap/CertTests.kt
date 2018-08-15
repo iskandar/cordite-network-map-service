@@ -26,6 +26,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 operator fun Path.div(other: String): Path = resolve(other)
 operator fun File.div(other: String) : File = File(this, other)
@@ -59,15 +61,9 @@ class CertTests {
     val certAndKey = CertificateAndKeyPair(cert, keyPair)
     val keyStore = certAndKey.toKeyStore("cert-alias", "key-alias", password, certPath = listOf(rootCa.certificate))
     val aliases = keyStore.aliases().toList()
+    assertTrue(aliases.contains("cert-alias"))
+    assertTrue(aliases.contains("key-alias"))
     val certificate = keyStore.getCertificate("cert-alias")
-    val key = keyStore.getKey("key-alias", password.toCharArray())
-    println(aliases)
-
-//    val homeDir = File(System.getProperty("user.home"))
-//    val dst = homeDir / "tmp" / "test.jks"
-//    dst.delete()
-//    println("writing to ${dst}")
-//    keyStore.save(dst.toPath(), password)
+    assertEquals(cert, certificate)
   }
 }
-

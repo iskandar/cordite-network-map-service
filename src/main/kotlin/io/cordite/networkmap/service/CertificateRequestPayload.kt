@@ -53,26 +53,7 @@ class CertificateRequestPayload(val cert: X509Certificate, val signature: ByteAr
   }
 
   val x500Name: CordaX500Name by lazy {
-    val name = X500Name.getInstance(cert.subjectX500Principal.encoded)
-    val attributesMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = name.rdNs
-      .flatMap { it.typesAndValues.asList() }
-      .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
-      .mapValues {
-        require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
-        it.value[0]
-      }
-
-    val cn = attributesMap[BCStyle.CN]?.toString()
-    val ou = attributesMap[BCStyle.OU]?.toString()
-    val o = attributesMap[BCStyle.O]?.toString()
-      ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-    val l = attributesMap[BCStyle.L]?.toString()
-      ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
-    val st = attributesMap[BCStyle.ST]?.toString()
-    val c = attributesMap[BCStyle.C]?.toString()
-      ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
-
-    CordaX500Name(cn, ou, o, l, st, c)
+    X500Name.getInstance(cert.subjectX500Principal.encoded).toCordaX500Name()
   }
 
   fun verify() {
@@ -81,4 +62,26 @@ class CertificateRequestPayload(val cert: X509Certificate, val signature: ByteAr
       verify(signature)
     }
   }
+}
+
+fun X500Name.toCordaX500Name() : CordaX500Name {
+  val attributesMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = this.rdNs
+    .flatMap { it.typesAndValues.asList() }
+    .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
+    .mapValues {
+      require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
+      it.value[0]
+    }
+
+  val cn = attributesMap[BCStyle.CN]?.toString()
+  val ou = attributesMap[BCStyle.OU]?.toString()
+  val o = attributesMap[BCStyle.O]?.toString()
+    ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
+  val l = attributesMap[BCStyle.L]?.toString()
+    ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+  val st = attributesMap[BCStyle.ST]?.toString()
+  val c = attributesMap[BCStyle.C]?.toString()
+    ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+
+  return CordaX500Name(cn, ou, o, l, st, c)
 }

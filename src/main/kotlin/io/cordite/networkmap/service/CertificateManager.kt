@@ -20,6 +20,7 @@ import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.CertificateAndKeyPairStorage
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
+import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.crypto.Crypto
@@ -30,21 +31,28 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
+import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.X509Certificate
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
 import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 
+
 class CertificateManager(
+  private val vertx: Vertx,
   private val rootX500Name: CordaX500Name,
-  internal val rootCertificate: CertificateAndKeyPair,
+  internal val rootCertificateAndKeyPair: CertificateAndKeyPair,
   private val storage: CertificateAndKeyPairStorage) {
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
+    private var lastSerialNumber = 0L
 
     internal const val NODE_IDENTITY_PASSWORD = "cordacadevpass" // TODO: move this as a request parameter
     internal const val TRUST_STORE_PASSWORD = "trustpass"
@@ -59,7 +67,9 @@ class CertificateManager(
     }
   }
 
-  internal lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
+  private val csrResponse = mutableMapOf<String, Optional<X509Certificate>>()
+
+  private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
   private lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
 
 
@@ -78,15 +88,9 @@ class CertificateManager(
     try {
       val payload= CertificateRequestPayload.parse(context.bodyAsString)
       payload.verify()
-      val nodeCA = createCertificate(doormanCertAndKeyPair, payload.x500Name, CertificateType.NODE_CA)
-      val nodeIdentity = createCertificate(nodeCA, payload.x500Name, CertificateType.LEGAL_IDENTITY)
-      val nodeTLS = createCertificate(nodeCA, payload.x500Name, CertificateType.TLS)
-
-      val certificatePath = listOf(nodeCA.certificate, doormanCertAndKeyPair.certificate, rootCertificate.certificate)
-      val bytes = ByteArrayOutputStream().use {
-        ZipOutputStream(it).use { writeKeyStores(it, nodeIdentity, certificatePath, nodeTLS) }
-        it.toByteArray()
-      }
+      val x500Name = payload.x500Name
+      val stream = generateJKSZipOutputStream(x500Name)
+      val bytes = stream.toByteArray()
       context.response()
         .putHeader(CONTENT_TYPE, "application/zip")
         .putHeader(CONTENT_DISPOSITION, "attachment; filename=keys.zip")
@@ -96,8 +100,9 @@ class CertificateManager(
     }
   }
 
+
   fun ensureNetworkMapCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("signing", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificate)
+    return ensureCertExists("signing", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificateAndKeyPair)
   }
 
   fun createCertificate(
@@ -105,11 +110,24 @@ class CertificateManager(
     certificateType: CertificateType,
     signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
   ): CertificateAndKeyPair {
-    return createCertificate(rootCertificate, name, certificateType, signatureScheme)
+    return createCertificate(rootCertificateAndKeyPair, name, certificateType, signatureScheme)
+  }
+
+  private fun generateJKSZipOutputStream(x500Name: CordaX500Name): ByteArrayOutputStream {
+    val nodeCA = createCertificate(doormanCertAndKeyPair, x500Name, CertificateType.NODE_CA)
+    val nodeIdentity = createCertificate(nodeCA, x500Name, CertificateType.LEGAL_IDENTITY)
+    val nodeTLS = createCertificate(nodeCA, x500Name, CertificateType.TLS)
+
+    val certificatePath = listOf(nodeCA.certificate, doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
+    val stream = ByteArrayOutputStream().use {
+      ZipOutputStream(it).use { writeKeyStores(it, nodeIdentity, certificatePath, nodeTLS) }
+      it
+    }
+    return stream
   }
 
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("signing", DOORMAN_CERT_KEY, rootX500Name.copy(commonName = DOORMAN_COMMON_NAME), CertificateType.INTERMEDIATE_CA, rootCertificate)
+    return ensureCertExists("signing", DOORMAN_CERT_KEY, rootX500Name.copy(commonName = DOORMAN_COMMON_NAME), CertificateType.INTERMEDIATE_CA, rootCertificateAndKeyPair)
   }
 
   private fun ensureCertExists(
@@ -118,7 +136,7 @@ class CertificateManager(
     name: CordaX500Name,
     certificateType: CertificateType,
     rootCa: CertificateAndKeyPair,
-    signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME
+    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
   ): Future<CertificateAndKeyPair> {
     logger.info("checking for $description certificate")
     return storage.get(certName)
@@ -137,14 +155,24 @@ class CertificateManager(
     signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
   ): CertificateAndKeyPair {
     val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val cert = X509Utilities.createCertificate(
+    val certificate = createCertificate(rootCa, name, keyPair.public, certificateType)
+    return CertificateAndKeyPair(certificate, keyPair)
+  }
+
+  private fun createCertificate(
+    rootCa: CertificateAndKeyPair,
+    name: CordaX500Name,
+    publicKey: PublicKey,
+    certificateType: CertificateType
+  ): X509Certificate {
+    return X509Utilities.createCertificate(
       certificateType,
       rootCa.certificate,
       rootCa.keyPair,
       name.x500Principal,
-      keyPair.public)
-    return CertificateAndKeyPair(cert, keyPair)
+      publicKey)
   }
+
 
   private fun writeKeyStores(it: ZipOutputStream, nodeIdentity: CertificateAndKeyPair, certificatePath: List<X509Certificate>, nodeTLS: CertificateAndKeyPair) {
     writeTrustStore(it)
@@ -168,8 +196,35 @@ class CertificateManager(
     it.putNextEntry(ZipEntry("truststore.jks"))
     X509KeyStore(TRUST_STORE_PASSWORD).apply {
       setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
-      setCertificate("cordarootca", rootCertificate.certificate)
+      setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
     }.internal.store(it, TRUST_STORE_PASSWORD.toCharArray())
     it.closeEntry()
+  }
+
+  fun processCSR(pkcs10Holder: PKCS10CertificationRequest): Future<String> {
+    val id = UUID.randomUUID().toString()
+    csrResponse[id] = Optional.empty()
+
+    vertx.runOnContext {
+      try {
+        val nodePublicKey = JcaPEMKeyConverter().getPublicKey(pkcs10Holder.subjectPublicKeyInfo)
+        val name = pkcs10Holder.subject.toCordaX500Name()
+        val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, CertificateType.NODE_CA)
+        csrResponse[id] = Optional.of(certificate)
+      } catch (err: Throwable) {
+        logger.error("failed to create certificate for CSR", err)
+      }
+    }
+    return Future.succeededFuture(id)
+  }
+
+  fun retrieveCSRCertificates(id: String) : Array<X509Certificate> {
+    val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
+
+    return if (response.isPresent) {
+      arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
+    } else {
+      arrayOf()
+    }
   }
 }

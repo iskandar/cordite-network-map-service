@@ -47,10 +47,15 @@ import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateType
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.security.PublicKey
 import java.time.Duration
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
@@ -64,7 +69,8 @@ class NetworkMapService(
   private val certPath: String = "",
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
-  private val hostname: String = "localhost"
+  private val hostname: String = "localhost",
+  private val doorManCSRProcessingEnabled: Boolean = true
 ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
@@ -87,7 +93,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(BASE_NAME, DEV_ROOT_CA, certificateAndKeyPairStorage)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, DEV_ROOT_CA, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
     return setupStorage()
@@ -128,6 +134,12 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
+              }
+            }
+            group("doorman") {
+              unprotected {
+                post("/certificate", thisService::postCSR)
+                get("/certificate/:id", thisService::retrieveCSRResult)
               }
             }
             group("admin") {
@@ -182,6 +194,47 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Receives a certificate signing request",
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postCSR(pkcS10CertificationRequest: Buffer): Future<String> {
+    if (!doorManCSRProcessingEnabled) {
+      throw RuntimeException("doorman CSR facility is not enabled on this instance")
+    }
+    val csr = PKCS10CertificationRequest(pkcS10CertificationRequest.bytes)
+    return certificateManager.processCSR(csr)
+  }
+
+  @ApiOperation(value = "Retrieve the certificate chain as a zipped binary block")
+  fun retrieveCSRResult(routingContext: RoutingContext) {
+    try {
+      val id = routingContext.request().getParam("id")
+      val certificates = certificateManager.retrieveCSRCertificates(id)
+      if (certificates.isEmpty()) {
+        routingContext.response().setStatusCode(HttpURLConnection.HTTP_NO_CONTENT).end()
+      } else {
+        val bytes = ByteArrayOutputStream().use {
+          ZipOutputStream(it).use { zipStream ->
+            certificates.forEach { certificate ->
+              zipStream.putNextEntry(ZipEntry(certificate.subjectX500Principal.name))
+              zipStream.write(certificate.encoded)
+              zipStream.closeEntry()
+            }
+          }
+          it.toByteArray()
+        }
+        routingContext.response().apply {
+          putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
+          putHeader(HttpHeaders.CONTENT_LENGTH, bytes.size.toString())
+          end(Buffer.buffer(bytes))
+        }
+      }
+    } catch (err: Throwable) {
+      routingContext.response().setStatusMessage(err.message).setStatusCode(HttpURLConnection.HTTP_UNAUTHORIZED).end()
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
   fun serveNodes(context: RoutingContext) {
     context.setNoCache()
@@ -206,7 +259,6 @@ class NetworkMapService(
         routingContext.setNoCache().end(it)
       }
   }
-
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a node by its key")

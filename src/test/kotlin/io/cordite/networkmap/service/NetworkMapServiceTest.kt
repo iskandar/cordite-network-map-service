@@ -271,7 +271,7 @@ class NetworkMapServiceTest {
 
 
   private fun createNetworkMapClient(): NetworkMapClient {
-    return NetworkMapClient(URL("http://localhost:$port"), service.certificateManager.rootCertificate.certificate)
+    return NetworkMapClient(URL("http://localhost:$port"), service.certificateManager.rootCertificateAndKeyPair.certificate)
   }
 
   private fun createTempDir(): File {

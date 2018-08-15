@@ -32,7 +32,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -91,9 +91,11 @@ class CordaNodeTest {
     // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
     _globalSerializationEnv.set(null)
 
-    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {
+    val nmsCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+
+    driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port"), {
       // TODO: register notaries
-    }), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
+    }, nmsCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
 
