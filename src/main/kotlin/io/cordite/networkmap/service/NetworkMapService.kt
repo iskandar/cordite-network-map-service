@@ -98,7 +98,7 @@ class NetworkMapService(
 
   fun start(): Future<Unit> {
     return setupStorage()
-      .compose { certificateManager.init() }
+      .compose { startCertManager() }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
@@ -368,6 +368,9 @@ class NetworkMapService(
     }
   }
 
+  private fun startCertManager() : Future<Unit> {
+    return certificateManager.init()
+  }
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
       vertx,
