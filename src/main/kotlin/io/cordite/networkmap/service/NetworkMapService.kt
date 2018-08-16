@@ -33,28 +33,28 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.http.HttpHeaders
 import io.vertx.core.net.JksOptions
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.security.PublicKey
 import java.time.Duration
-import javax.security.auth.x500.X500Principal
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
@@ -68,14 +68,17 @@ class NetworkMapService(
   private val certPath: String = "",
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
-  private val hostname: String = "localhost"
+  private val hostname: String = "localhost",
+  private val enableDoorman: Boolean = true,
+  private val enableCertman: Boolean = true
 ) {
   companion object {
-    internal const val SIGNING_CERT_NAME = "nms"
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_REST_ROOT = "/admin/api"
+    internal const val CERTMAN_REST_ROOT = "/certman/api"
     private const val ADMIN_BRAID_ROOT = "/braid/api"
     private const val SWAGGER_ROOT = "/swagger"
+    val BASE_NAME = CordaX500Name("<replace me>", "Cordite Foundation Network", "Cordite Foundation", "London", "London", "GB")
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -91,9 +94,11 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
     return setupStorage()
+      .compose { certificateManager.init() }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
@@ -130,6 +135,22 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
+                get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
+              }
+            }
+            if (enableDoorman) {
+              group("doorman") {
+                unprotected {
+                  post("/certificate", thisService::postCSR)
+                  get("/certificate/:id", thisService::retrieveCSRResult)
+                }
+              }
+            }
+            if (enableCertman) {
+              group("certman") {
+                unprotected {
+                  post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForTLSCertAndSig)
+                }
               }
             }
             group("admin") {
@@ -162,7 +183,6 @@ class NetworkMapService(
     }
   }
 
-
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
@@ -177,6 +197,44 @@ class NetworkMapService(
   fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
     return processor.addNode(signedNodeInfo)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Receives a certificate signing request",
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postCSR(pkcS10CertificationRequest: Buffer): Future<String> {
+    val csr = PKCS10CertificationRequest(pkcS10CertificationRequest.bytes)
+    return certificateManager.doormanProcessCSR(csr)
+  }
+
+  @ApiOperation(value = "Retrieve the certificate chain as a zipped binary block")
+  fun retrieveCSRResult(routingContext: RoutingContext) {
+    try {
+      val id = routingContext.request().getParam("id")
+      val certificates = certificateManager.doormanRetrieveCSRResponse(id)
+      if (certificates.isEmpty()) {
+        routingContext.response().setStatusCode(HttpURLConnection.HTTP_NO_CONTENT).end()
+      } else {
+        val bytes = ByteArrayOutputStream().use {
+          ZipOutputStream(it).use { zipStream ->
+            certificates.forEach { certificate ->
+              zipStream.putNextEntry(ZipEntry(certificate.subjectX500Principal.name))
+              zipStream.write(certificate.encoded)
+              zipStream.closeEntry()
+            }
+          }
+          it.toByteArray()
+        }
+        routingContext.response().apply {
+          putHeader(CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_LENGTH, bytes.size.toString())
+          end(Buffer.buffer(bytes))
+        }
+      }
+    } catch (err: Throwable) {
+      routingContext.response().setStatusMessage(err.message).setStatusCode(HttpURLConnection.HTTP_UNAUTHORIZED).end()
+    }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -205,10 +263,9 @@ class NetworkMapService(
       }
   }
 
-
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a node by its key")
-  fun deleteNode(nodeKey: String) : Future<Unit> {
+  fun deleteNode(nodeKey: String): Future<Unit> {
     return nodeInfoStorage.delete(nodeKey)
   }
 
@@ -244,7 +301,7 @@ class NetworkMapService(
       .onSuccess { sni ->
         context.response().apply {
           setCacheControl(cacheTimeout)
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(sni.serializeOnContext().bytes))
         }
       }
@@ -264,14 +321,30 @@ class NetworkMapService(
       .onSuccess { snp ->
         context.response().apply {
           setCacheControl(cacheTimeout)
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(snp.serializeOnContext().bytes))
         }
       }
       .catch {
-        logger.error("failed to retrieve the signed network parameters for hash $hash")
+        logger.error("failed to retrieve the signed network parameters for hash $hash", it)
         context.end(it)
       }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve this network-map's truststore",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  fun getNetworkTrustStore(context: RoutingContext) {
+    try {
+      context.response().apply {
+        putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"network-truststore.jks\"")
+        end(Buffer.buffer(certificateManager.generateTrustStoreByteArray()))
+      }
+    } catch (err: Throwable) {
+      context.end(err)
+    }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -303,7 +376,7 @@ class NetworkMapService(
       nodeInfoStorage,
       signedNetworkMapStorage,
       signedNetworkParametersStorage,
-      certificateAndKeyPairStorage,
+      certificateManager,
       networkParamUpdateDelay,
       networkMapQueuedUpdateDelay
     )
@@ -318,17 +391,6 @@ class NetworkMapService(
       nodeInfoStorage.makeDirs(),
       certificateAndKeyPairStorage.makeDirs()
     ).mapEmpty()
-  }
-
-  private fun createSigningCert(rootCa: CertificateAndKeyPair, commonName: String, certificateType: CertificateType, signatureScheme: SignatureScheme): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val cert = X509Utilities.createCertificate(
-      certificateType,
-      rootCa.certificate,
-      rootCa.keyPair,
-      X500Principal("CN=$commonName,O=Cordite,L=London,C=GB"),
-      keyPair.public)
-    return CertificateAndKeyPair(cert, keyPair)
   }
 
   private fun createJksOptions(): JksOptions {
@@ -354,7 +416,7 @@ class NetworkMapService(
       else -> {
         logger.info("generating temporary TLS certificates")
         val inMemoryOnlyPassword = "inmemory"
-        createSigningCert(DEV_ROOT_CA, "localhost", CertificateType.TLS, Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
+        certificateManager.createCertificate(BASE_NAME, CertificateType.TLS, Crypto.ECDSA_SECP256R1_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
       }
     }
   }

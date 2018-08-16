@@ -15,26 +15,25 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.serialisation.SerializationEnvironment
+import io.cordite.networkmap.utils.SerializationTestEnvironment
+import io.cordite.networkmap.utils.driverWithCompatZone
 import io.cordite.networkmap.utils.getFreePort
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.CompatibilityZoneParams
-import net.corda.testing.node.internal.DriverDSLImpl
-import net.corda.testing.node.internal.genericDriver
+import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.URL
@@ -43,12 +42,12 @@ import java.security.cert.X509Certificate
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
-    init {
-      SerializationEnvironment.init()
-    }
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 1.millis
     val NETWORK_MAP_QUEUE_DELAY = 1.millis
+    init {
+      SerializationTestEnvironment.init()
+    }
   }
 
   private var vertx = Vertx.vertx()
@@ -59,13 +58,15 @@ class CordaNodeTest {
 
   @Before
   fun before(context: TestContext) {
+    // we'll need to have a serialization context so that the NMS can set itself up
+    // BUT we can't use the one used by the application
+
     vertx = Vertx.vertx()
     val path = dbDirectory.absolutePath
     println("db path: $path")
     println("port   : $port")
 
 //    setupDefaultInputFiles(dbDirectory)
-
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
@@ -76,7 +77,6 @@ class CordaNodeTest {
       tls = false,
       vertx = vertx
     )
-
     service.start().setHandler(context.asyncAssertSuccess())
   }
 
@@ -85,62 +85,41 @@ class CordaNodeTest {
     vertx.close(context.asyncAssertSuccess())
   }
 
-  /**
-   * The following test is broken because the corda node seems to request node infos that are not present in the network map
-   * Is node PartyA attempting to get hold of the notary that's not been registered?
-   */
-  @Ignore
   @Test
-  fun `that we can start up a node that connects to networkmap and registers`(context: TestContext) {
-    val nmc = createNetworkMapClient(context)
-    val nm = nmc.getNetworkMap().payload
-    val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
-    val notaries = nmp.notaries
-    val whitelist = nmp.whitelistedContractImplementations
-    val nodes = nm.nodeInfoHashes.map { nmc.getNodeInfo(it) }
+  fun `runNode`(context: TestContext) {
+    // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
+    _globalSerializationEnv.set(null)
 
-    driverWithCompatZone(CompatibilityZoneParams(URL("http://localhost:$port"), {}), DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = false)) {
+    val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+
+    driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port"), {
+      // TODO: register notaries
+    }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
-      val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow()
-//      val nodeInfo = node.nodeInfo
-//      println(nodes)
-      node.stop()
+      val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
+
+      // we'll directly access the network map and compare
+      val nmc = createNetworkMapClient(context, rootCert)
+      val nm = nmc.getNetworkMap().payload
+      val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
+      context.assertEquals(node.internalServices.networkParameters, nmp)
+      val nodeNodes = node.internalServices.networkMapCache.allNodes.toSet()
+      val nmNodes = nm.nodeInfoHashes.map { nmc.getNodeInfo(it) }.toSet()
+      context.assertEquals(nodeNodes, nmNodes)
+      context.assertEquals(2, nodeNodes.size)
     }
-    val nodes2 = nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
   }
 
-  private fun <A> driverWithCompatZone(compatibilityZone: CompatibilityZoneParams, defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
-    return genericDriver(
-      driverDsl = DriverDSLImpl(
-        portAllocation = defaultParameters.portAllocation,
-        debugPortAllocation = defaultParameters.debugPortAllocation,
-        systemProperties = defaultParameters.systemProperties,
-        driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
-        useTestClock = defaultParameters.useTestClock,
-        isDebug = defaultParameters.isDebug,
-        startNodesInProcess = defaultParameters.startNodesInProcess,
-        waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-        notarySpecs = defaultParameters.notarySpecs,
-        extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
-        jmxPolicy = defaultParameters.jmxPolicy,
-        compatibilityZone = compatibilityZone,
-        networkParameters = defaultParameters.networkParameters
-      ),
-      coerce = { it },
-      dsl = dsl,
-      initialiseSerialization = true
-    )
-  }
 
-  private fun createNetworkMapClient(context: TestContext): NetworkMapClient {
+  private fun createNetworkMapClient(context: TestContext, rootCert: X509Certificate): NetworkMapClient {
     val async = context.async()
-    service.certificateAndKeyPairStorage.get(NetworkMapService.SIGNING_CERT_NAME)
+    service.certificateAndKeyPairStorage.get(CertificateManager.NETWORK_MAP_CERT_KEY)
       .onSuccess {
         context.put<X509Certificate>("cert", it.certificate)
         async.complete()
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    return NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
+    return NetworkMapClient(URL("http://localhost:$port"), rootCert)
   }
 }

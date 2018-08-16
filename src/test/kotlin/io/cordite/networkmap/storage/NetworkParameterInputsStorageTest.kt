@@ -15,7 +15,6 @@
  */
 package io.cordite.networkmap.storage
 
-import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
@@ -38,7 +37,7 @@ class NetworkParameterInputsStorageTest {
     private lateinit var vertx: Vertx
 
     init {
-      SerializationEnvironment.init()
+      SerializationTestEnvironment.init()
     }
 
     @JvmStatic

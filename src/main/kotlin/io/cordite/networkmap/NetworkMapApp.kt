@@ -40,6 +40,9 @@ open class NetworkMapApp  {
       val certPathOpt = options.addOption("tls.cert.path", "", "path to cert if TLS is turned on")
       val keyPathOpt = options.addOption("tls.key.path", "", "path to key if TLS turned on")
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
+      val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
+      val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
+
       if (args.contains("--help")) {
         options.printOptions()
         return
@@ -54,6 +57,8 @@ open class NetworkMapApp  {
       val certPath = certPathOpt.value
       val keyPath = keyPathOpt.value
       val user = InMemoryUser.createUser("System Admin", usernameOpt.value, passwordOpt.value)
+      val enableDoorman = doormanOpt.value.toBoolean()
+      val enableCertman = certmanOpt.value.toBoolean()
 
       NetworkMapService(
         dbDirectory = dbDirectory,
@@ -65,7 +70,9 @@ open class NetworkMapApp  {
         tls = tls,
         certPath = certPath,
         keyPath = keyPath,
-        hostname = hostNameOpt.value
+        hostname = hostNameOpt.value,
+        enableCertman = enableCertman,
+        enableDoorman = enableDoorman
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())
