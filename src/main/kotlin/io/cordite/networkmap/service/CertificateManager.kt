@@ -92,7 +92,7 @@ class CertificateManager(
       val bytes = stream.toByteArray()
       context.response()
         .putHeader(CONTENT_TYPE, "application/zip")
-        .putHeader(CONTENT_DISPOSITION, "attachment; filename=keys.zip")
+        .putHeader(CONTENT_DISPOSITION, "attachment; filename=\"keys.zip\"")
         .end(Buffer.buffer(bytes))
     } catch (err: Throwable) {
       context.write(err)

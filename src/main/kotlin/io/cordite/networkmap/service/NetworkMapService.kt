@@ -33,7 +33,6 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.http.HttpHeaders
 import io.vertx.core.net.JksOptions
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
@@ -57,6 +56,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
@@ -229,8 +229,8 @@ class NetworkMapService(
           it.toByteArray()
         }
         routingContext.response().apply {
-          putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
-          putHeader(HttpHeaders.CONTENT_LENGTH, bytes.size.toString())
+          putHeader(CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_LENGTH, bytes.size.toString())
           end(Buffer.buffer(bytes))
         }
       }
@@ -303,7 +303,7 @@ class NetworkMapService(
       .onSuccess { sni ->
         context.response().apply {
           setCacheControl(cacheTimeout)
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(sni.serializeOnContext().bytes))
         }
       }
@@ -323,7 +323,7 @@ class NetworkMapService(
       .onSuccess { snp ->
         context.response().apply {
           setCacheControl(cacheTimeout)
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(snp.serializeOnContext().bytes))
         }
       }
@@ -340,8 +340,8 @@ class NetworkMapService(
   fun getNetworkTrustStore(context: RoutingContext) {
     try {
       context.response().apply {
-        putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-        putHeader(javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"network-truststore.jks\"")
+        putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"network-truststore.jks\"")
         end(Buffer.buffer(certificateManager.generateTrustStoreByteArray()))
       }
     } catch (err: Throwable) {
