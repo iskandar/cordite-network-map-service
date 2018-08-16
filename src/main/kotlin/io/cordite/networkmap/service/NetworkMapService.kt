@@ -197,6 +197,10 @@ class NetworkMapService(
   )
   fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+    if (enableDoorman || enableCertman) {
+      // formally check that this node has been registered via our certs
+      certificateManager.validateNodeInfoCertificates(signedNodeInfo.verified())
+    }
     return processor.addNode(signedNodeInfo)
   }
 

@@ -27,6 +27,7 @@ import io.vertx.ext.web.RoutingContext
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -83,6 +84,12 @@ class CertificateManager(
       .compose { ensureDoormanCertExists() }.onSuccess {
         doormanCertAndKeyPair = it
       }.mapEmpty()
+  }
+
+  fun validateNodeInfoCertificates(nodeInfo: NodeInfo) {
+    nodeInfo.legalIdentitiesAndCerts.forEach {
+      X509Utilities.validateCertPath(rootCertificateAndKeyPair.certificate, it.certPath)
+    }
   }
 
   fun generateJKSZipForTLSCertAndSig(context: RoutingContext) {
@@ -209,7 +216,7 @@ class CertificateManager(
       }
   }
 
-  private fun createCertificateAndKeyPair(
+  internal fun createCertificateAndKeyPair(
     rootCa: CertificateAndKeyPair,
     name: CordaX500Name,
     certificateType: CertificateType,
