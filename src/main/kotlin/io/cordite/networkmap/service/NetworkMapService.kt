@@ -43,9 +43,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
@@ -72,9 +70,8 @@ class NetworkMapService(
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
   private val enableDoorman: Boolean = true,
-  private val enableCertman: Boolean = true,
-  private val rootCertAndKeyPair: CertificateAndKeyPair = DEV_ROOT_CA
-  ) {
+  private val enableCertman: Boolean = true
+) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_REST_ROOT = "/admin/api"
@@ -83,6 +80,7 @@ class NetworkMapService(
     private const val SWAGGER_ROOT = "/swagger"
     val BASE_NAME = CordaX500Name("<replace me>", "Cordite Foundation Network", "Cordite Foundation", "London", "London", "GB")
     private val logger = loggerFor<NetworkMapService>()
+
     init {
       SerializationEnvironment.init()
     }
@@ -96,7 +94,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, rootCertAndKeyPair, certificateAndKeyPairStorage)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
     return setupStorage()
@@ -267,7 +265,7 @@ class NetworkMapService(
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a node by its key")
-  fun deleteNode(nodeKey: String) : Future<Unit> {
+  fun deleteNode(nodeKey: String): Future<Unit> {
     return nodeInfoStorage.delete(nodeKey)
   }
 
@@ -418,7 +416,7 @@ class NetworkMapService(
       else -> {
         logger.info("generating temporary TLS certificates")
         val inMemoryOnlyPassword = "inmemory"
-        certificateManager.createCertificate(BASE_NAME, CertificateType.TLS,  Crypto.RSA_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
+        certificateManager.createCertificate(BASE_NAME, CertificateType.TLS, Crypto.ECDSA_SECP256R1_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
       }
     }
   }

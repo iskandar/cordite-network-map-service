@@ -27,7 +27,6 @@ import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
@@ -91,16 +90,16 @@ class CordaNodeTest {
     // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
     _globalSerializationEnv.set(null)
 
-    val nmsCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+    val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
     driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port"), {
       // TODO: register notaries
-    }, nmsCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
+    }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
 
       // we'll directly access the network map and compare
-      val nmc = createNetworkMapClient(context)
+      val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
       val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
       context.assertEquals(node.internalServices.networkParameters, nmp)
@@ -112,7 +111,7 @@ class CordaNodeTest {
   }
 
 
-  private fun createNetworkMapClient(context: TestContext): NetworkMapClient {
+  private fun createNetworkMapClient(context: TestContext, rootCert: X509Certificate): NetworkMapClient {
     val async = context.async()
     service.certificateAndKeyPairStorage.get(CertificateManager.NETWORK_MAP_CERT_KEY)
       .onSuccess {
@@ -121,6 +120,6 @@ class CordaNodeTest {
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    return NetworkMapClient(URL("http://localhost:$port"), DEV_ROOT_CA.certificate)
+    return NetworkMapClient(URL("http://localhost:$port"), rootCert)
   }
 }

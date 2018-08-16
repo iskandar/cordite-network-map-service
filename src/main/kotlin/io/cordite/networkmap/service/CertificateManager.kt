@@ -47,7 +47,6 @@ import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 class CertificateManager(
   private val vertx: Vertx,
   private val rootX500Name: CordaX500Name,
-  internal val rootCertificateAndKeyPair: CertificateAndKeyPair,
   private val storage: CertificateAndKeyPairStorage) {
 
   companion object {
@@ -55,10 +54,12 @@ class CertificateManager(
 
     internal const val NODE_IDENTITY_PASSWORD = "cordacadevpass" // TODO: move this as a request parameter
     internal const val TRUST_STORE_PASSWORD = "trustpass"
+    const val ROOT_CERT_KEY= "root"
     const val NETWORK_MAP_CERT_KEY = "nms"
     const val DOORMAN_CERT_KEY = "dm"
     private const val SIG_ALGORITHM = "SHA256withRSA"
     private const val SIG_PROVIDER = "BC"
+    private const val ROOT_COMMON_NAME = "Root CA"
     private const val NETWORK_MAP_COMMON_NAME = "Network Map"
     private const val DOORMAN_COMMON_NAME = "Doorman"
     internal fun createSignature(): Signature {
@@ -70,10 +71,12 @@ class CertificateManager(
 
   private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
   private lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
-
+  internal lateinit var rootCertificateAndKeyPair: CertificateAndKeyPair
 
   fun init(): Future<Unit> {
-    return ensureNetworkMapCertExists()
+    return ensureRootCertExists()
+      .onSuccess { rootCertificateAndKeyPair = it}
+      .compose { ensureNetworkMapCertExists() }
       .onSuccess {
         networkMapCertAndKeyPair = it
       }.compose {
@@ -124,10 +127,6 @@ class CertificateManager(
     }
   }
 
-  fun ensureNetworkMapCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("signing", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificateAndKeyPair)
-  }
-
   fun createCertificate(
     name: CordaX500Name,
     certificateType: CertificateType,
@@ -149,8 +148,23 @@ class CertificateManager(
     return stream
   }
 
+  fun ensureRootCertExists() : Future<CertificateAndKeyPair> {
+    logger.info("checking for root certificate")
+    return storage.get(ROOT_CERT_KEY)
+      .recover {
+        // we couldn't find the cert - so generate one
+        logger.warn("failed to find root cert for this NMS. generating new cert")
+        val cert = createSelfSignedCertificateAndKeyPair(rootX500Name.copy(commonName = ROOT_COMMON_NAME))
+        storage.put(ROOT_CERT_KEY, cert).map { cert }
+      }
+  }
+
+  fun ensureNetworkMapCertExists(): Future<CertificateAndKeyPair> {
+    return ensureCertExists("network-map", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificateAndKeyPair)
+  }
+
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("signing", DOORMAN_CERT_KEY, rootX500Name.copy(commonName = DOORMAN_COMMON_NAME), CertificateType.INTERMEDIATE_CA, rootCertificateAndKeyPair)
+    return ensureCertExists("door-man", DOORMAN_CERT_KEY, rootX500Name.copy(commonName = DOORMAN_COMMON_NAME), CertificateType.INTERMEDIATE_CA, rootCertificateAndKeyPair)
   }
 
   private fun ensureCertExists(
@@ -189,13 +203,22 @@ class CertificateManager(
     certificateType: CertificateType
   ): X509Certificate {
     return X509Utilities.createCertificate(
-      certificateType,
-      rootCa.certificate,
-      rootCa.keyPair,
-      name.x500Principal,
-      publicKey)
+      certificateType = certificateType,
+      issuerCertificate = rootCa.certificate,
+      issuerKeyPair = rootCa.keyPair,
+      subject = name.x500Principal,
+      subjectPublicKey = publicKey
+      )
   }
 
+  private fun createSelfSignedCertificateAndKeyPair(name: CordaX500Name,
+                                                    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256) : CertificateAndKeyPair {
+    val keyPair = Crypto.generateKeyPair(signatureScheme)
+    val certificate = X509Utilities.createSelfSignedCACertificate(
+      subject = name.x500Principal, keyPair = keyPair
+    )
+    return CertificateAndKeyPair(certificate, keyPair)
+  }
 
   private fun writeKeyStores(it: ZipOutputStream, nodeIdentity: CertificateAndKeyPair, certificatePath: List<X509Certificate>, nodeTLS: CertificateAndKeyPair) {
     writeTrustStore(it)
