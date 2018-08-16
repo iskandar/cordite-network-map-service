@@ -85,23 +85,18 @@ class NetworkMapServiceProcessor(
   private lateinit var certs: CertificateAndKeyPair
 
   fun start(): Future<Unit> {
+    certs = certificateManager.networkMapCertAndKeyPair
     subscription = inputs.registerForChanges().subscribe { digest ->
       logger.info("input change detected with hash $digest")
       execute { processNewDigest(digest, "network parameters change") }
     }
-
-    return execute {
-      certificateManager.ensureNetworkMapCertExists()
-    }.map {
-      certs = it
-    }.compose {
-      setupStorage()
-    }.compose {
-      inputs.digest()
-        .compose { currentDigest ->
-          processNewDigest(currentDigest, "first setup", true)
-        }
-    }
+    return setupStorage()
+      .compose {
+        inputs.digest()
+          .compose { currentDigest ->
+            processNewDigest(currentDigest, "first setup", true)
+          }
+      }
   }
 
   fun close() {
@@ -148,7 +143,7 @@ class NetworkMapServiceProcessor(
           .onSuccess { scheduleNetworkMapRebuild() }
           .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
       }
-    } catch(err: Throwable) {
+    } catch (err: Throwable) {
       logger.error("failed to add node", err)
       return failedFuture(err)
     }
@@ -357,6 +352,6 @@ class NetworkMapServiceProcessor(
     return all(
       textStorage.makeDirs(),
       parametersUpdateStorage.makeDirs()
-      ).mapEmpty()
+    ).mapEmpty()
   }
 }

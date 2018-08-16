@@ -23,10 +23,17 @@ import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
+import net.corda.core.crypto.sign
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.signWithCert
+import net.corda.core.node.NodeInfo
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.network.NetworkMapClient
+import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.TestNodeInfoBuilder
 import org.apache.commons.io.FileUtils
@@ -138,6 +145,8 @@ class NetworkMapServiceTest {
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
       tls = false,
+      enableDoorman = true,
+      enableCertman = true,
       vertx = vertx
     )
 
@@ -173,9 +182,7 @@ class NetworkMapServiceTest {
   @Test
   fun `that we can add a new node`(context: TestContext) {
     val nmc = createNetworkMapClient()
-    val tnib = TestNodeInfoBuilder()
-    tnib.addIdentity(ALICE_NAME)
-    val sni = tnib.buildWithSigned()
+    val sni = createAliceSignedNodeInfo()
     nmc.publish(sni.signed)
     Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
     val nm = nmc.getNetworkMap().payload
@@ -285,6 +292,24 @@ class NetworkMapServiceTest {
   private fun deleteValidatingNotaries(directory: File) {
     val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
     FileUtils.cleanDirectory(File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES))
+  }
+
+  private fun createAliceSignedNodeInfo(): NodeInfoAndSigned {
+    val cm = service.certificateManager
+    // create the certificate chain from the doorman to node CA to legal identity
+    val nodeCA = cm.createCertificateAndKeyPair(cm.doormanCertAndKeyPair, ALICE_NAME, CertificateType.NODE_CA)
+    val legalIdentity = cm.createCertificateAndKeyPair(nodeCA, ALICE_NAME, CertificateType.LEGAL_IDENTITY)
+    val certPath = X509Utilities.buildCertPath(
+      legalIdentity.certificate,
+      nodeCA.certificate,
+      cm.doormanCertAndKeyPair.certificate,
+      cm.rootCertificateAndKeyPair.certificate
+    )
+    val alicePartyAndCertificate = PartyAndCertificate(certPath)
+    val ni = NodeInfo(listOf(NetworkHostAndPort("localhost", 10001)), listOf(alicePartyAndCertificate), 1, 1)
+    return NodeInfoAndSigned(ni) { _, serialised ->
+      legalIdentity.keyPair.private.sign(serialised.bytes)
+    }
   }
 }
 

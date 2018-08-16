@@ -97,8 +97,9 @@ class NetworkMapService(
   internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
+    // N.B. Ordering is important here
     return setupStorage()
-      .compose { certificateManager.init() }
+      .compose { startCertManager() }
       .compose { startProcessor() }
       .compose { startupBraid() }
   }
@@ -196,6 +197,10 @@ class NetworkMapService(
   )
   fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+    if (enableDoorman || enableCertman) {
+      // formally check that this node has been registered via our certs
+      certificateManager.validateNodeInfoCertificates(signedNodeInfo.verified())
+    }
     return processor.addNode(signedNodeInfo)
   }
 
@@ -208,6 +213,7 @@ class NetworkMapService(
     return certificateManager.doormanProcessCSR(csr)
   }
 
+  @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the certificate chain as a zipped binary block")
   fun retrieveCSRResult(routingContext: RoutingContext) {
     try {
@@ -368,6 +374,9 @@ class NetworkMapService(
     }
   }
 
+  private fun startCertManager() : Future<Unit> {
+    return certificateManager.init()
+  }
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
       vertx,

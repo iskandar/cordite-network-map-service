@@ -20,12 +20,14 @@ import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.CertificateAndKeyPairStorage
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -54,9 +56,9 @@ class CertificateManager(
 
     internal const val NODE_IDENTITY_PASSWORD = "cordacadevpass" // TODO: move this as a request parameter
     internal const val TRUST_STORE_PASSWORD = "trustpass"
-    const val ROOT_CERT_KEY= "root"
-    const val NETWORK_MAP_CERT_KEY = "nms"
-    const val DOORMAN_CERT_KEY = "dm"
+    const val ROOT_CERT_KEY = "root"
+    const val NETWORK_MAP_CERT_KEY = "network-map"
+    const val DOORMAN_CERT_KEY = "doorman"
     private const val SIG_ALGORITHM = "SHA256withRSA"
     private const val SIG_PROVIDER = "BC"
     private const val ROOT_COMMON_NAME = "Root CA"
@@ -69,26 +71,30 @@ class CertificateManager(
 
   private val csrResponse = mutableMapOf<String, Optional<X509Certificate>>()
 
-  private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
-  private lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
-  internal lateinit var rootCertificateAndKeyPair: CertificateAndKeyPair
+  lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
+    private set
+  lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
+    private set
+  lateinit var rootCertificateAndKeyPair: CertificateAndKeyPair
+    private set
 
   fun init(): Future<Unit> {
     return ensureRootCertExists()
-      .onSuccess { rootCertificateAndKeyPair = it}
       .compose { ensureNetworkMapCertExists() }
-      .onSuccess {
-        networkMapCertAndKeyPair = it
-      }.compose {
-        ensureDoormanCertExists()
-      }.onSuccess {
+      .compose { ensureDoormanCertExists() }.onSuccess {
         doormanCertAndKeyPair = it
       }.mapEmpty()
   }
 
+  fun validateNodeInfoCertificates(nodeInfo: NodeInfo) {
+    nodeInfo.legalIdentitiesAndCerts.forEach {
+      X509Utilities.validateCertPath(rootCertificateAndKeyPair.certificate, it.certPath)
+    }
+  }
+
   fun generateJKSZipForTLSCertAndSig(context: RoutingContext) {
     try {
-      val payload= CertificateRequestPayload.parse(context.bodyAsString)
+      val payload = CertificateRequestPayload.parse(context.bodyAsString)
       payload.verify()
       val x500Name = payload.x500Name
       val stream = generateJKSZipOutputStream(x500Name)
@@ -115,10 +121,10 @@ class CertificateManager(
         logger.error("failed to create certificate for CSR", err)
       }
     }
-    return Future.succeededFuture(id)
+    return succeededFuture(id)
   }
 
-  fun doormanRetrieveCSRResponse(id: String) : Array<X509Certificate> {
+  fun doormanRetrieveCSRResponse(id: String): Array<X509Certificate> {
     val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
     return if (response.isPresent) {
       arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
@@ -148,23 +154,47 @@ class CertificateManager(
     return stream
   }
 
-  fun ensureRootCertExists() : Future<CertificateAndKeyPair> {
+  private fun ensureRootCertExists(): Future<Unit> {
     logger.info("checking for root certificate")
     return storage.get(ROOT_CERT_KEY)
+      .onSuccess { logger.info("root certificate found") }
       .recover {
         // we couldn't find the cert - so generate one
-        logger.warn("failed to find root cert for this NMS. generating new cert")
+        logger.warn("failed to find root certificate. generating a new cert")
         val cert = createSelfSignedCertificateAndKeyPair(rootX500Name.copy(commonName = ROOT_COMMON_NAME))
-        storage.put(ROOT_CERT_KEY, cert).map { cert }
+        storage.put(ROOT_CERT_KEY, cert)
+          // but because we're creating a new root key, delete the old networkmap and doorman keys
+          .compose {
+            logger.info("clearing network-map cert")
+            storage.delete(NETWORK_MAP_CERT_KEY) }.recover { succeededFuture() }
+          .compose {
+            logger.info("clearing doorman cert")
+            storage.delete(DOORMAN_CERT_KEY) }.recover { succeededFuture() }
+          .map { cert }
       }
+      .onSuccess { rootCertificateAndKeyPair = it }
+      .mapEmpty()
   }
 
-  fun ensureNetworkMapCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("network-map", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificateAndKeyPair)
+  private fun ensureNetworkMapCertExists(): Future<Unit> {
+    return ensureCertExists(
+      "network-map",
+      NETWORK_MAP_CERT_KEY,
+      rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME),
+      CertificateType.NETWORK_MAP,
+      rootCertificateAndKeyPair)
+      .onSuccess { networkMapCertAndKeyPair = it }
+      .mapEmpty()
   }
 
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists("door-man", DOORMAN_CERT_KEY, rootX500Name.copy(commonName = DOORMAN_COMMON_NAME), CertificateType.INTERMEDIATE_CA, rootCertificateAndKeyPair)
+    return ensureCertExists(
+      "doorman",
+      DOORMAN_CERT_KEY,
+      rootX500Name.copy(commonName = DOORMAN_COMMON_NAME),
+      CertificateType.INTERMEDIATE_CA,
+      rootCertificateAndKeyPair
+    )
   }
 
   private fun ensureCertExists(
@@ -177,15 +207,16 @@ class CertificateManager(
   ): Future<CertificateAndKeyPair> {
     logger.info("checking for $description certificate")
     return storage.get(certName)
+      .onSuccess { logger.info("$description certificate found") }
       .recover {
         // we couldn't find the cert - so generate one
-        logger.warn("failed to find $description cert for this NMS. generating new cert")
+        logger.warn("failed to find $description certificate for this NMS. generating a new cert")
         val cert = createCertificateAndKeyPair(rootCa, name, certificateType, signatureScheme)
         storage.put(certName, cert).map { cert }
       }
   }
 
-  private fun createCertificateAndKeyPair(
+  internal fun createCertificateAndKeyPair(
     rootCa: CertificateAndKeyPair,
     name: CordaX500Name,
     certificateType: CertificateType,
@@ -208,11 +239,11 @@ class CertificateManager(
       issuerKeyPair = rootCa.keyPair,
       subject = name.x500Principal,
       subjectPublicKey = publicKey
-      )
+    )
   }
 
   private fun createSelfSignedCertificateAndKeyPair(name: CordaX500Name,
-                                                    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256) : CertificateAndKeyPair {
+                                                    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256): CertificateAndKeyPair {
     val keyPair = Crypto.generateKeyPair(signatureScheme)
     val certificate = X509Utilities.createSelfSignedCACertificate(
       subject = name.x500Principal, keyPair = keyPair
@@ -238,7 +269,7 @@ class CertificateManager(
     it.closeEntry()
   }
 
-  fun generateTrustStoreByteArray() : ByteArray {
+  fun generateTrustStoreByteArray(): ByteArray {
     return ByteArrayOutputStream().apply {
       X509KeyStore(TRUST_STORE_PASSWORD).apply {
         setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
@@ -252,7 +283,7 @@ class CertificateManager(
     it.closeEntry()
   }
 
-  private fun generateX509TrustStore() : X509KeyStore {
+  private fun generateX509TrustStore(): X509KeyStore {
     return X509KeyStore(TRUST_STORE_PASSWORD).apply {
       setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
       setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
