@@ -24,7 +24,7 @@
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
     <braid.version>3.1.5</braid.version>
-    <argLine></argLine>
+    <argLine> </argLine>
   </properties>
 
   <repositories>

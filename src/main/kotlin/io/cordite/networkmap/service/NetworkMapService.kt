@@ -70,8 +70,9 @@ class NetworkMapService(
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
-  private val doorManCSRProcessingEnabled: Boolean = true
-) {
+  private val enableDoorman: Boolean = true,
+  private val enableCertman: Boolean = true
+  ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
     private const val ADMIN_REST_ROOT = "/admin/api"
@@ -136,10 +137,19 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
               }
             }
-            group("doorman") {
-              unprotected {
-                post("/certificate", thisService::postCSR)
-                get("/certificate/:id", thisService::retrieveCSRResult)
+            if (enableDoorman) {
+              group("doorman") {
+                unprotected {
+                  post("/certificate", thisService::postCSR)
+                  get("/certificate/:id", thisService::retrieveCSRResult)
+                }
+              }
+            }
+            if (enableCertman) {
+              group("certman") {
+                unprotected {
+                  post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForTLSCertAndSig)
+                }
               }
             }
             group("admin") {
@@ -156,11 +166,6 @@ class NetworkMapService(
                 delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
                 delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
-              }
-            }
-            group("certman") {
-              unprotected {
-                post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForNewSubscription)
               }
             }
           }
@@ -198,18 +203,15 @@ class NetworkMapService(
     consumes = MediaType.APPLICATION_OCTET_STREAM
   )
   fun postCSR(pkcS10CertificationRequest: Buffer): Future<String> {
-    if (!doorManCSRProcessingEnabled) {
-      throw RuntimeException("doorman CSR facility is not enabled on this instance")
-    }
     val csr = PKCS10CertificationRequest(pkcS10CertificationRequest.bytes)
-    return certificateManager.processCSR(csr)
+    return certificateManager.doormanProcessCSR(csr)
   }
 
   @ApiOperation(value = "Retrieve the certificate chain as a zipped binary block")
   fun retrieveCSRResult(routingContext: RoutingContext) {
     try {
       val id = routingContext.request().getParam("id")
-      val certificates = certificateManager.retrieveCSRCertificates(id)
+      val certificates = certificateManager.doormanRetrieveCSRResponse(id)
       if (certificates.isEmpty()) {
         routingContext.response().setStatusCode(HttpURLConnection.HTTP_NO_CONTENT).end()
       } else {

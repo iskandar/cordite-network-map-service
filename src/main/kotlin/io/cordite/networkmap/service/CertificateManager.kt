@@ -52,7 +52,7 @@ class CertificateManager(
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
-    private var lastSerialNumber = 0L
+    private var lastSerialNumber = 0L // TODO: fix
 
     internal const val NODE_IDENTITY_PASSWORD = "cordacadevpass" // TODO: move this as a request parameter
     internal const val TRUST_STORE_PASSWORD = "trustpass"
@@ -84,7 +84,7 @@ class CertificateManager(
       }.mapEmpty()
   }
 
-  fun generateJKSZipForNewSubscription(context: RoutingContext) {
+  fun generateJKSZipForTLSCertAndSig(context: RoutingContext) {
     try {
       val payload= CertificateRequestPayload.parse(context.bodyAsString)
       payload.verify()
@@ -100,6 +100,30 @@ class CertificateManager(
     }
   }
 
+  fun doormanProcessCSR(pkcs10Holder: PKCS10CertificationRequest): Future<String> {
+    val id = UUID.randomUUID().toString()
+    csrResponse[id] = Optional.empty()
+    vertx.runOnContext {
+      try {
+        val nodePublicKey = JcaPEMKeyConverter().getPublicKey(pkcs10Holder.subjectPublicKeyInfo)
+        val name = pkcs10Holder.subject.toCordaX500Name()
+        val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, CertificateType.NODE_CA)
+        csrResponse[id] = Optional.of(certificate)
+      } catch (err: Throwable) {
+        logger.error("failed to create certificate for CSR", err)
+      }
+    }
+    return Future.succeededFuture(id)
+  }
+
+  fun doormanRetrieveCSRResponse(id: String) : Array<X509Certificate> {
+    val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
+    return if (response.isPresent) {
+      arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
+    } else {
+      arrayOf()
+    }
+  }
 
   fun ensureNetworkMapCertExists(): Future<CertificateAndKeyPair> {
     return ensureCertExists("signing", NETWORK_MAP_CERT_KEY, rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME), CertificateType.NETWORK_MAP, rootCertificateAndKeyPair)
@@ -110,13 +134,13 @@ class CertificateManager(
     certificateType: CertificateType,
     signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
   ): CertificateAndKeyPair {
-    return createCertificate(rootCertificateAndKeyPair, name, certificateType, signatureScheme)
+    return createCertificateAndKeyPair(rootCertificateAndKeyPair, name, certificateType, signatureScheme)
   }
 
   private fun generateJKSZipOutputStream(x500Name: CordaX500Name): ByteArrayOutputStream {
-    val nodeCA = createCertificate(doormanCertAndKeyPair, x500Name, CertificateType.NODE_CA)
-    val nodeIdentity = createCertificate(nodeCA, x500Name, CertificateType.LEGAL_IDENTITY)
-    val nodeTLS = createCertificate(nodeCA, x500Name, CertificateType.TLS)
+    val nodeCA = createCertificateAndKeyPair(doormanCertAndKeyPair, x500Name, CertificateType.NODE_CA)
+    val nodeIdentity = createCertificateAndKeyPair(nodeCA, x500Name, CertificateType.LEGAL_IDENTITY)
+    val nodeTLS = createCertificateAndKeyPair(nodeCA, x500Name, CertificateType.TLS)
 
     val certificatePath = listOf(nodeCA.certificate, doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
     val stream = ByteArrayOutputStream().use {
@@ -143,12 +167,12 @@ class CertificateManager(
       .recover {
         // we couldn't find the cert - so generate one
         logger.warn("failed to find $description cert for this NMS. generating new cert")
-        val cert = createCertificate(rootCa, name, certificateType, signatureScheme)
+        val cert = createCertificateAndKeyPair(rootCa, name, certificateType, signatureScheme)
         storage.put(certName, cert).map { cert }
       }
   }
 
-  private fun createCertificate(
+  private fun createCertificateAndKeyPair(
     rootCa: CertificateAndKeyPair,
     name: CordaX500Name,
     certificateType: CertificateType,
@@ -199,32 +223,5 @@ class CertificateManager(
       setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
     }.internal.store(it, TRUST_STORE_PASSWORD.toCharArray())
     it.closeEntry()
-  }
-
-  fun processCSR(pkcs10Holder: PKCS10CertificationRequest): Future<String> {
-    val id = UUID.randomUUID().toString()
-    csrResponse[id] = Optional.empty()
-
-    vertx.runOnContext {
-      try {
-        val nodePublicKey = JcaPEMKeyConverter().getPublicKey(pkcs10Holder.subjectPublicKeyInfo)
-        val name = pkcs10Holder.subject.toCordaX500Name()
-        val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, CertificateType.NODE_CA)
-        csrResponse[id] = Optional.of(certificate)
-      } catch (err: Throwable) {
-        logger.error("failed to create certificate for CSR", err)
-      }
-    }
-    return Future.succeededFuture(id)
-  }
-
-  fun retrieveCSRCertificates(id: String) : Array<X509Certificate> {
-    val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
-
-    return if (response.isPresent) {
-      arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
-    } else {
-      arrayOf()
-    }
   }
 }
