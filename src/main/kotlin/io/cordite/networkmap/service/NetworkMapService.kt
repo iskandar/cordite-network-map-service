@@ -97,6 +97,7 @@ class NetworkMapService(
   internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
+    // N.B. Ordering is important here
     return setupStorage()
       .compose { startCertManager() }
       .compose { startProcessor() }
@@ -208,6 +209,7 @@ class NetworkMapService(
     return certificateManager.doormanProcessCSR(csr)
   }
 
+  @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the certificate chain as a zipped binary block")
   fun retrieveCSRResult(routingContext: RoutingContext) {
     try {

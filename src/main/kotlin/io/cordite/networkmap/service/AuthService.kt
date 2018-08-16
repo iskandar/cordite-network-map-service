@@ -27,6 +27,9 @@ import net.corda.core.utilities.loggerFor
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * Authentication service for the REST service
+ */
 class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
   companion object {
     val log = loggerFor<AuthService>()
@@ -34,7 +37,6 @@ class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
 
   private val jwtSecret = "secret"
   private var jwtAuth: JWTAuth? = null
-
 
   fun login(request: LoginRequest): String {
     if (jwtAuth == null) {
