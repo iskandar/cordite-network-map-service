@@ -111,5 +111,4 @@ release:docker:
   tags:
     - docker
   only:
-    - master
     - tags
