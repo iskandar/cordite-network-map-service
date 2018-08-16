@@ -46,6 +46,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
@@ -71,7 +72,8 @@ class NetworkMapService(
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
   private val enableDoorman: Boolean = true,
-  private val enableCertman: Boolean = true
+  private val enableCertman: Boolean = true,
+  private val rootCertAndKeyPair: CertificateAndKeyPair = DEV_ROOT_CA
   ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
@@ -94,7 +96,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, DEV_ROOT_CA, certificateAndKeyPairStorage)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, rootCertAndKeyPair, certificateAndKeyPairStorage)
 
   fun start(): Future<Unit> {
     return setupStorage()
@@ -135,6 +137,7 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
+                get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
               }
             }
             if (enableDoorman) {
@@ -328,6 +331,22 @@ class NetworkMapService(
         logger.error("failed to retrieve the signed network parameters for hash $hash", it)
         context.end(it)
       }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve this network-map's truststore",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  fun getNetworkTrustStore(context: RoutingContext) {
+    try {
+      context.response().apply {
+        putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+        putHeader(javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"network-truststore.jks\"")
+        end(Buffer.buffer(certificateManager.generateTrustStoreByteArray()))
+      }
+    } catch (err: Throwable) {
+      context.end(err)
+    }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

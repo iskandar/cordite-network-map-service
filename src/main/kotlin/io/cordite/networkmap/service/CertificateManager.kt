@@ -52,7 +52,6 @@ class CertificateManager(
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
-    private var lastSerialNumber = 0L // TODO: fix
 
     internal const val NODE_IDENTITY_PASSWORD = "cordacadevpass" // TODO: move this as a request parameter
     internal const val TRUST_STORE_PASSWORD = "trustpass"
@@ -216,12 +215,24 @@ class CertificateManager(
     it.closeEntry()
   }
 
+  fun generateTrustStoreByteArray() : ByteArray {
+    return ByteArrayOutputStream().apply {
+      X509KeyStore(TRUST_STORE_PASSWORD).apply {
+        setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
+      }.internal.store(this, TRUST_STORE_PASSWORD.toCharArray())
+    }.toByteArray()
+  }
+
   private fun writeTrustStore(it: ZipOutputStream) {
     it.putNextEntry(ZipEntry("truststore.jks"))
-    X509KeyStore(TRUST_STORE_PASSWORD).apply {
+    generateX509TrustStore().internal.store(it, TRUST_STORE_PASSWORD.toCharArray())
+    it.closeEntry()
+  }
+
+  private fun generateX509TrustStore() : X509KeyStore {
+    return X509KeyStore(TRUST_STORE_PASSWORD).apply {
       setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
       setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
-    }.internal.store(it, TRUST_STORE_PASSWORD.toCharArray())
-    it.closeEntry()
+    }
   }
 }
