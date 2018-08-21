@@ -19,7 +19,8 @@ import {compose, withHandlers, withProps, withState} from "recompose";
 import {GoogleMap, Marker, withGoogleMap, withScriptjs} from "react-google-maps";
 import {MarkerClusterer} from "react-google-maps/lib/components/addons/MarkerClusterer";
 import myMapStyle from 'mapStyle.json';
-import clusterStyle from 'clusterStyle.json'
+import clusterStyle from 'clusterStyle.json';
+
 
 const MapWithAMarkerClusterer = compose(
   withProps({
