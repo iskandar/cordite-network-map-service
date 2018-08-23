@@ -19,14 +19,12 @@ import {Nav} from 'components/Nav/Nav'
 import {Table} from 'components/Table/Table';
 import DemoMap from 'components/Map/MyMap';
 import {Metrics} from 'components/Metrics/Metrics';
-import staticNodes from 'staticNodes.json'
-import staticNodes1 from 'staticNodes1.json';
 
 export const Home = (props) => {
   const { nodes, notaries, headersList, sortTable } = props
   return (
     <section className='home-component'>
-      <DemoMap nodes={staticNodes}/>          
+      <DemoMap nodes={nodes}/>          
       <Metrics 
         nodes={nodes}
         notaries={notaries}
