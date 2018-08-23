@@ -81,6 +81,7 @@ const MapWithAMarkerClusterer = compose(
       minimumClusterSize={1}
       onClick={props.onMarkerClustererClick}
       styles={clusterStyle}
+      anch
     >
       {props.markers.map( (marker, index) => (
         <Marker
