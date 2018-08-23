@@ -1,8 +1,8 @@
 [
   {   
+    "height": 20,
+    "textColor": "#FFFFFF",
     "url": "png/ping.png",
-    "height": 30,
-    "text": 20,
     "width": 20
   }
 ]

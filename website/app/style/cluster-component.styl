@@ -1,77 +1,68 @@
 .cluster
   
   &.cluster-component
+    position relative    
     width auto !important
-    z-index 10
+    // z-index 10
 
-    &:after      
-      background-color #36927b !important
-      border-radius 50% !important
-      content "" !important
-      display block !important
-      height 0 !important
-      left -10px
-      padding-bottom 50% !important
-      position relative !important
-      top -50px !important
-      width 50% !important
-      
+    &:after  
+        // -webkit-animation pulse 2s ease-out !important
+        // -moz-animation pulse 2s ease-out !important
+        // animation pulse 2s linear !important
+        // -webkit-animation-iteration-count infinite !important
+        // -moz-animation-iteration-count infinite !important
+        // animation-iteration-count infinite !important    
+        background-color #36927b !important
+        border-radius 50% !important
+        content "" !important
+        display block !important
+        height 0 !important
+        left -5px
+        padding-bottom 150% !important
+        width 150% !important
 
-    img
-      -webkit-animation pulse 2s ease-out !important
-      -moz-animation pulse 2s ease-out !important
-      animation pulse 2s ease-out !important
-      -webkit-animation-iteration-count infinite !important
-      -moz-animation-iteration-count infinite !important
-      animation-iteration-count infinite !important
-      left -38% !important
-      position relative !important      
-      top -38% !important
-      // width 230% !important
-
+    
+    img 
+      left -50% !important
+      position absolute !important
+      top -50% !important      
+      transform translate( 50%, 50%) !important
+      width 20px !important
+      opacity 0 !important
 
     div
-      //background-color #36927b !important
-      //border-radius 50% !important
-      //box-sizing border-box
-      color #eee !important
-      float left !important
-      font-family "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important
-      font-size 12px !important 
-      font-weight 100 !important
-      //height auto !important
-      left -10px !important
-      line-height 1em !important
-      margin-top -0.5em !important
-      //padding-bottom 21%
-      // padding-left 5px
-      // padding-right 5px
-      padding-top 25% !important
-      text-align center !important
-      top -50px !important
-      position relative !important
-      width 50% !important
-      z-index 10 !important
+      line-height 1em
+      margin-top -0.5em
+      padding-top 50%
+      position absolute !important
+      text-align center
+      width  auto !important
+      // z-index 10
+      
+      
+
+      // 
    
     
   @keyframes pulse
+
     0% 
-      transform: scale(0)
-      opacity: 0.0;
+      transform: matrix(0, 0, 0, 0, 0, 0 )
+      opacity: 0.3;
     
     25%
-      transform: scale(0.25)
-      opacity: 0.1;
+      transform: matrix(0.4, 0, 0, 0.4, 0, 0 )
+      opacity: 0.3;
     
     50%
-      transform: scale(0.5)
+      transform: matrix(0.8, 0, 0, 0.8, 0, 0 )
       opacity: 0.3;
     
     75% 
-      transform: scale(0.75)
-      opacity: 0.5;
+      transform: matrix(1.2, 0, 0, 1.2, 0, 0)
+      opacity: 0.3;
     
     100% 
-      transform: scale(1)
-      opacity: 0.0;
-    
+      transform: matrix(1.6, 0, 0, 1.6, 0, 0)
+      opacity: 0.3;
+  
