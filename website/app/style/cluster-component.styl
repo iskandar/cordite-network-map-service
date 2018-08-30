@@ -1,55 +1,61 @@
 .cluster
   
-  &.cluster-component    
-    position relative
-
-    img
-      -webkit-animation pulse 2s ease-out !important
-      -moz-animation pulse 2s ease-out !important
-      animation pulse 2s ease-out !important
-      -webkit-animation-iteration-count infinite !important
-      -moz-animation-iteration-count infinite !important
-      animation-iteration-count infinite !important
-      height 46px !important
-      left 3px !important
-      position absolute !important 
-      top 3px !important
-      z-index 1 !important
+  &.cluster-component
+    
+    img 
+      display none !important
 
     div
-      background-color #36927b !important
-      border-radius 50% !important
-      color #eee !important
+      background-color #36927b
+      border-radius 50%
       font-family "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important
-      font-size 12px !important 
+      font-size 12px !important
       font-weight 100 !important
-      height 15px !important      
-      left 35% !important
-      line-height 16px !important
-      position absolute !important
-      top 35% !important      
-      width 15px !important
-      z-index 10 !important
-   
-    
+
+      &:after  
+        -webkit-animation pulse 2s ease-out !important
+        -moz-animation pulse 2s ease-out !important
+        animation pulse 2s linear !important
+        -webkit-animation-iteration-count infinite !important
+        -moz-animation-iteration-count infinite !important
+        animation-iteration-count infinite !important    
+        background-color #36927b !important
+        border-radius 50% !important
+        content "" !important
+        display block !important
+        height 0 !important
+        padding-bottom 100% !important
+        position absolute !important
+        top 0
+        left 0
+        width 100% !important
+        z-index -5   
+
   @keyframes pulse
+
     0% 
-      transform: scale(0)
-      opacity: 0.0;
-    
-    25%
-      transform: scale(0.25)
-      opacity: 0.1;
-    
-    50%
-      transform: scale(0.5)
-      opacity: 0.3;
-    
-    75% 
-      transform: scale(0.75)
+      transform: matrix(1.0, 0, 0, 1.0, 0, 0 )
       opacity: 0.5;
     
-    100% 
-      transform: scale(1)
-      opacity: 0.0;
+    25%
+      transform: matrix(1.2, 0, 0, 1.2, 0, 0 )
+      opacity: 0.4;
     
+    50%
+      transform: matrix(1.4, 0, 0, 1.4, 0, 0 )
+      opacity: 0.2;
+    
+    75% 
+      transform: matrix(1.6, 0, 0, 1.6, 0, 0)
+      opacity: 0.1;
+
+    90%
+      transform: matrix(1.8, 0, 0, 0, 1.8, 0)
+      opacity: 0.05;
+    
+    100% 
+      transform: matrix(2, 0, 0, 0, 2, 0)
+      opacity: 0.01;
+
+  
+  
