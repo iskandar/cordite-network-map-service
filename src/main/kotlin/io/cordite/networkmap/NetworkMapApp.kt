@@ -42,23 +42,24 @@ open class NetworkMapApp  {
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
       val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
       val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
-
+      val pkixOpt = options.addOption("pkix", "false", "enables certman's pkix validation against JDK default truststore")
       if (args.contains("--help")) {
         options.printOptions()
         return
       }
 
-      val port = portOpt.value.toInt()
-      val dbDirectory = dbDirectoryOpt.value.toFile()
-      val cacheTimeout = Duration.parse("PT${cacheTimeoutOpt.value}")
-      val paramUpdateDelay = Duration.parse("PT${paramUpdateDelayOpt.value}")
-      val networkMapUpdateDelay = Duration.parse("PT${networkMapUpdateDelayOpt.value}")
-      val tls = tlsOpt.value.toBoolean()
-      val certPath = certPathOpt.value
-      val keyPath = keyPathOpt.value
-      val user = InMemoryUser.createUser("System Admin", usernameOpt.value, passwordOpt.value)
-      val enableDoorman = doormanOpt.value.toBoolean()
-      val enableCertman = certmanOpt.value.toBoolean()
+      val port = portOpt.intValue
+      val dbDirectory = dbDirectoryOpt.stringValue.toFile()
+      val cacheTimeout = Duration.parse("PT${cacheTimeoutOpt.stringValue}")
+      val paramUpdateDelay = Duration.parse("PT${paramUpdateDelayOpt.stringValue}")
+      val networkMapUpdateDelay = Duration.parse("PT${networkMapUpdateDelayOpt.stringValue}")
+      val tls = tlsOpt.booleanValue
+      val certPath = certPathOpt.stringValue
+      val keyPath = keyPathOpt.stringValue
+      val user = InMemoryUser.createUser("System Admin", usernameOpt.stringValue, passwordOpt.stringValue)
+      val enableDoorman = doormanOpt.booleanValue
+      val enableCertman = certmanOpt.booleanValue
+      val pkix = pkixOpt.booleanValue
 
       NetworkMapService(
         dbDirectory = dbDirectory,
@@ -70,9 +71,10 @@ open class NetworkMapApp  {
         tls = tls,
         certPath = certPath,
         keyPath = keyPath,
-        hostname = hostNameOpt.value,
+        hostname = hostNameOpt.stringValue,
         enableCertman = enableCertman,
-        enableDoorman = enableDoorman
+        enableDoorman = enableDoorman,
+        enablePKIValidation = pkix
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

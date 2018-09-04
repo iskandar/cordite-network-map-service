@@ -145,9 +145,10 @@ class NetworkMapServiceTest {
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
       tls = false,
+      vertx = vertx,
       enableDoorman = true,
       enableCertman = true,
-      vertx = vertx
+      enablePKIValidation = false
     )
 
     service.start().setHandler(context.asyncAssertSuccess())

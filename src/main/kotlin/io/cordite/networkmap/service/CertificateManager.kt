@@ -49,7 +49,8 @@ import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 class CertificateManager(
   private val vertx: Vertx,
   private val rootX500Name: CordaX500Name,
-  private val storage: CertificateAndKeyPairStorage) {
+  private val storage: CertificateAndKeyPairStorage,
+  private val enablePKIValidation: Boolean) {
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
@@ -92,9 +93,9 @@ class CertificateManager(
     }
   }
 
-  fun generateJKSZipForTLSCertAndSig(context: RoutingContext) {
+  fun certmanGenerate(context: RoutingContext) {
     try {
-      val payload = CertificateRequestPayload.parse(context.bodyAsString)
+      val payload = CertificateRequestPayload.parse(context.bodyAsString, enablePKIValidation)
       payload.verify()
       val x500Name = payload.x500Name
       val stream = generateJKSZipOutputStream(x500Name)
@@ -104,6 +105,7 @@ class CertificateManager(
         .putHeader(CONTENT_DISPOSITION, "attachment; filename=\"keys.zip\"")
         .end(Buffer.buffer(bytes))
     } catch (err: Throwable) {
+      logger.error("certman failed to generate jks files", err)
       context.write(err)
     }
   }

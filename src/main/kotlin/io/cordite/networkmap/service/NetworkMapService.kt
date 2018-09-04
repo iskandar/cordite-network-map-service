@@ -70,7 +70,8 @@ class NetworkMapService(
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
   private val enableDoorman: Boolean = true,
-  private val enableCertman: Boolean = true
+  private val enableCertman: Boolean = true,
+  private val enablePKIValidation: Boolean = false
 ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
@@ -94,7 +95,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, enablePKIValidation)
 
   fun start(): Future<Unit> {
     // N.B. Ordering is important here
@@ -150,7 +151,7 @@ class NetworkMapService(
             if (enableCertman) {
               group("certman") {
                 unprotected {
-                  post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForTLSCertAndSig)
+                  post("$CERTMAN_REST_ROOT/generate", certificateManager::certmanGenerate)
                 }
               }
             }

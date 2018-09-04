@@ -21,9 +21,12 @@ class Options {
     val environmentVariable: String = "NMS_" + name.toUpperCase().replace('.', '_')
     fun width() = name.length
 
-    val value by lazy {
+    val stringValue by lazy {
       (System.getenv(environmentVariable) ?: System.getProperty(name) ?: default)
     }
+
+    val booleanValue by lazy { stringValue.toBoolean() }
+    val intValue by lazy { stringValue.toInt() }
   }
 
   private val options = mutableListOf<Option>()
