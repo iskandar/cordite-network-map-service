@@ -15,6 +15,7 @@
  */
 package io.cordite.networkmap
 
+import io.cordite.networkmap.service.CertmanContext
 import io.cordite.networkmap.service.InMemoryUser
 import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.Options
@@ -45,7 +46,8 @@ open class NetworkMapApp {
       val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
       val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
       val certManpkixOpt = options.addOption("certman.pkix", "false", "enables certman's pkix validation against JDK default truststore")
-      val certmanTruststore = options.addOption("certman.truststore", "", "specified a custom truststore instead of the default JRE cacerts")
+      val certmanTruststoreOpt = options.addOption("certman.truststore", "", "specified a custom truststore instead of the default JRE cacerts")
+      val certmanTruststorePasswordOpt = options.addOption("certman.truststore.password", "", "truststore password")
       val certmanStrictEV = options.addOption("certman.strict.ev", "false", "enables strict constraint for EV certs only in certman")
 
       if (args.contains("--help")) {
@@ -67,10 +69,11 @@ open class NetworkMapApp {
       val enableDoorman = doormanOpt.booleanValue
       val enableCertman = certmanOpt.booleanValue
       val pkix = certManpkixOpt.booleanValue
-      val truststore = File(certmanTruststore.stringValue)
+      val truststore = if (certmanTruststoreOpt.stringValue.isNotEmpty()) File(certmanTruststoreOpt.stringValue) else null
+      val trustStorePassword = if (certmanTruststorePasswordOpt.stringValue.isNotEmpty()) certmanTruststorePasswordOpt.stringValue else null
       val strictEV = certmanStrictEV.booleanValue
 
-      if (!truststore.exists()) {
+      if (truststore != null && !truststore.exists()) {
         println("failed to find truststore ${truststore.path}")
         exitProcess(-1)
       }
@@ -86,11 +89,8 @@ open class NetworkMapApp {
         certPath = certPath,
         keyPath = keyPath,
         hostname = hostNameOpt.stringValue,
-        enableCertman = enableCertman,
         enableDoorman = enableDoorman,
-        certManPKICheck = pkix,
-        certManTruststore = truststore,
-        certManStrictEV = strictEV
+        certManContext = CertmanContext(enableCertman, pkix, truststore, trustStorePassword, strictEV)
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

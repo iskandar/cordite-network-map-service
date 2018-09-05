@@ -22,80 +22,36 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import org.jgroups.util.Base64
-import java.io.ByteArrayInputStream
-import java.security.KeyStore
-import java.security.cert.*
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
+import java.security.cert.CertPathValidator
+import java.security.cert.X509Certificate
 
 
-class CertificateRequestPayload(val certs: List<X509Certificate>, val signature: ByteArray, private val enablePKIValidation: Boolean) {
+class CertificateRequestPayload(
+  private val certs: List<X509Certificate>,
+  private val signature: ByteArray,
+  private val certmanContext: CertmanContext
+) {
   companion object {
     private val log = loggerFor<CertificateRequestPayload>()
-
-    private const val BEGIN_CERTIFICATE_TOKEN = "-----BEGIN CERTIFICATE-----"
-    private const val END_CERTIFICATE_TOKEN = "-----END CERTIFICATE-----"
-
     private val certPathValidator = CertPathValidator.getInstance("PKIX")
-
-    private var pkixParams: PKIXParameters
-    private var certFactory: CertificateFactory
-
-    init {
-      val trustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        .apply { init(null as KeyStore?) }
-        .trustManagers
-        .filter { it is X509TrustManager }
-        .map { it as X509TrustManager }
-        .firstOrNull() ?: throw Exception("could not find the default x509 trust manager")
-
-      val trustAnchors = trustManager.acceptedIssuers.map { TrustAnchor(it, null) }.toSet()
-      pkixParams = PKIXParameters(trustAnchors).apply { isRevocationEnabled = false }
-      certFactory = CertificateFactory.getInstance("X.509")
-    }
-
-    fun parse(body: String, enablePKIValidation: Boolean): CertificateRequestPayload {
-      val parts = body.split(END_CERTIFICATE_TOKEN)
-      if (parts.size < 2) {
-        throw RuntimeException("payload must be a set of certs followed by signature")
-      }
-      val certs = parts.dropLast(1).map { it + END_CERTIFICATE_TOKEN }.map { readCertificate(it) }
-      val signatureText = parts.last()
-      val sig = Base64.decode(signatureText)
-      return CertificateRequestPayload(certs, sig, enablePKIValidation)
-    }
-
-    private fun readCertificate(certText: String): X509Certificate {
-      try {
-        val pem = Base64.decode(certText.replace(BEGIN_CERTIFICATE_TOKEN, "").replace(END_CERTIFICATE_TOKEN, ""))
-        val cert = certFactory.generateCertificate(ByteArrayInputStream(pem)) as X509Certificate
-        cert.checkValidity()
-        return cert
-      } catch (ex: Throwable) {
-        log.error("failed to read certificate", ex)
-        throw ex
-      }
-    }
   }
 
   val x500Name: CordaX500Name by lazy {
-    val cert = certs.first()
     val x500 = X500Name.getInstance(certs.first().subjectX500Principal.encoded)
-    x500.toCordaX500Name()
+    x500.toCordaX500Name(certmanContext.strictEVCerts)
   }
 
   fun verify() {
     certs.forEach { it.checkValidity() }
-    if (enablePKIValidation) {
+    if (certmanContext.enablePKIVerfication) {
       verifyPKIPath()
     }
     verifySignature()
   }
 
   private fun verifyPKIPath() {
-    val certPath = certFactory.generateCertPath(certs)
-    certPathValidator.validate(certPath, pkixParams)
+    val certPath = certmanContext.certFactory.generateCertPath(certs)
+    certPathValidator.validate(certPath, certmanContext.pkixParams)
   }
 
   private fun verifySignature() {
@@ -106,7 +62,7 @@ class CertificateRequestPayload(val certs: List<X509Certificate>, val signature:
   }
 }
 
-fun X500Name.toCordaX500Name(): CordaX500Name {
+fun X500Name.toCordaX500Name(strictEV: Boolean): CordaX500Name {
   val attributesMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = this.rdNs
     .flatMap { it.typesAndValues.asList() }
     .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
@@ -117,13 +73,13 @@ fun X500Name.toCordaX500Name(): CordaX500Name {
 
   val cn = attributesMap[BCStyle.CN]?.toString()
   val ou = attributesMap[BCStyle.OU]?.toString()
-  val o = attributesMap[BCStyle.O]?.toString()
-    ?: "$cn-web"
-  val l = attributesMap[BCStyle.L]?.toString()
-    ?: "Antarctica"
   val st = attributesMap[BCStyle.ST]?.toString()
+  val o = attributesMap[BCStyle.O]?.toString()
+    ?: if (!strictEV) "$cn-web" else throw IllegalArgumentException("X500 name must have an Organisation: ${this}")
+  val l = attributesMap[BCStyle.L]?.toString()
+    ?: if (!strictEV) "Antarctica" else throw IllegalArgumentException("X500 name must have a Location: ${this}")
   val c = attributesMap[BCStyle.C]?.toString()
-    ?: "AQ"
+    ?: if (!strictEV) "AQ" else throw IllegalArgumentException("X500 name must have a Country: ${this}")
 
   return CordaX500Name(cn, ou, o, l, st, c)
 }
