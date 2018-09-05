@@ -232,6 +232,8 @@
             <include>**/*.kt</include>
             <include>**/*.js</include>
             <include>**/*.md</include>
+            <include>**/*.sh</include>
+            <include>**/*.yaml</include>
           </includes>
           <mapping>
             <md>XML_STYLE</md>
