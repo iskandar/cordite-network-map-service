@@ -20,7 +20,9 @@ import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
 import net.corda.core.utilities.loggerFor
+import java.io.File
 import java.time.Duration
+import kotlin.system.exitProcess
 
 open class NetworkMapApp {
   companion object {
@@ -42,7 +44,10 @@ open class NetworkMapApp {
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
       val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
       val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
-      val pkixOpt = options.addOption("certman.pkix", "false", "enables certman's pkix validation against JDK default truststore")
+      val certManpkixOpt = options.addOption("certman.pkix", "false", "enables certman's pkix validation against JDK default truststore")
+      val certmanTruststore = options.addOption("certman.truststore", "", "specified a custom truststore instead of the default JRE cacerts")
+      val certmanStrictEV = options.addOption("certman.strict.ev", "false", "enables strict constraint for EV certs only in certman")
+
       if (args.contains("--help")) {
         options.printHelp()
         return
@@ -61,7 +66,14 @@ open class NetworkMapApp {
       val user = InMemoryUser.createUser("System Admin", usernameOpt.stringValue, passwordOpt.stringValue)
       val enableDoorman = doormanOpt.booleanValue
       val enableCertman = certmanOpt.booleanValue
-      val pkix = pkixOpt.booleanValue
+      val pkix = certManpkixOpt.booleanValue
+      val truststore = File(certmanTruststore.stringValue)
+      val strictEV = certmanStrictEV.booleanValue
+
+      if (!truststore.exists()) {
+        println("failed to find truststore ${truststore.path}")
+        exitProcess(-1)
+      }
 
       NetworkMapService(
         dbDirectory = dbDirectory,
@@ -76,7 +88,9 @@ open class NetworkMapApp {
         hostname = hostNameOpt.stringValue,
         enableCertman = enableCertman,
         enableDoorman = enableDoorman,
-        enablePKIValidation = pkix
+        certManPKICheck = pkix,
+        certManTruststore = truststore,
+        certManStrictEV = strictEV
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

@@ -71,7 +71,9 @@ class NetworkMapService(
   private val hostname: String = "localhost",
   private val enableDoorman: Boolean = true,
   private val enableCertman: Boolean = true,
-  private val enablePKIValidation: Boolean = false
+  private val certManPKICheck: Boolean = false,
+  private val certManTruststore: File? = null,
+  private val certManStrictEV: Boolean = false
 ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
@@ -95,7 +97,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, enablePKIValidation)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, certManPKICheck)
 
   fun start(): Future<Unit> {
     // N.B. Ordering is important here

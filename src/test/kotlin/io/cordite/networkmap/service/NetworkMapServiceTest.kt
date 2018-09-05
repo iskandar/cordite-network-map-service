@@ -148,7 +148,9 @@ class NetworkMapServiceTest {
       vertx = vertx,
       enableDoorman = true,
       enableCertman = true,
-      enablePKIValidation = false
+      certManPKICheck = false,
+      certManTruststore = truststore,
+      certManStrictEV = strictEV
     )
 
     service.start().setHandler(context.asyncAssertSuccess())
