@@ -37,7 +37,7 @@ class Options {
     return option
   }
 
-  fun printOptions() {
+  fun printHelp() {
     val propertyWidth = (options.map { it.width() }.max() ?: 0)
     val envWidth = propertyWidth + 8
     val defaultWidth = (options.map { it.default.length }.max() ?: 0) + 4
@@ -50,5 +50,13 @@ class Options {
       println("| ${it.name.padEnd(propertyWidth)} | ${it.environmentVariable.padEnd(envWidth)} | ${it.default.padEnd(defaultWidth)} | ${it.description.padEnd(descriptionWidth)} |")
     }
     println()
+  }
+
+  fun printOptions() {
+    val propertyWidth = (options.map { it.width() }.max() ?: 0)
+
+    options.toList().sortedBy { it.name }.forEach {
+      println("${it.name.padEnd(propertyWidth)} - ${it.stringValue}")
+    }
   }
 }

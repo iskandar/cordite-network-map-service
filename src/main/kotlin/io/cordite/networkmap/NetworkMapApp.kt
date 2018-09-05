@@ -22,7 +22,7 @@ import io.cordite.networkmap.utils.toFile
 import net.corda.core.utilities.loggerFor
 import java.time.Duration
 
-open class NetworkMapApp  {
+open class NetworkMapApp {
   companion object {
     private val logger = loggerFor<NetworkMapApp>()
 
@@ -33,7 +33,7 @@ open class NetworkMapApp  {
       val dbDirectoryOpt = options.addOption("db", ".db", "database directory for this service")
       val cacheTimeoutOpt = options.addOption("cache.timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")
       val paramUpdateDelayOpt = options.addOption("paramUpdate.delay", "10S", "schedule duration for a parameter update")
-      val networkMapUpdateDelayOpt  = options.addOption("networkMap.delay", "1S", "queue time for the network map to update for addition of nodes")
+      val networkMapUpdateDelayOpt = options.addOption("networkMap.delay", "1S", "queue time for the network map to update for addition of nodes")
       val usernameOpt = options.addOption("username", "sa", "system admin username")
       val passwordOpt = options.addOption("password", "admin", "system admin password")
       val tlsOpt = options.addOption("tls", "true", "whether TLS is enabled or not")
@@ -42,11 +42,13 @@ open class NetworkMapApp  {
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
       val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
       val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
-      val pkixOpt = options.addOption("pkix", "false", "enables certman's pkix validation against JDK default truststore")
+      val pkixOpt = options.addOption("certman.pkix", "false", "enables certman's pkix validation against JDK default truststore")
       if (args.contains("--help")) {
-        options.printOptions()
+        options.printHelp()
         return
       }
+      println("starting networkmap with the following options")
+      options.printOptions()
 
       val port = portOpt.intValue
       val dbDirectory = dbDirectoryOpt.stringValue.toFile()
