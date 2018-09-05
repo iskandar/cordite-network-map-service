@@ -46,7 +46,7 @@ class Options {
     println("\njava properties (pass with -D<propertyname>=<property-value>) and env variables\n")
     println("| Property".padEnd(propertyWidth + 2) + " | Env Variable".padEnd(envWidth + 3) + " | Default".padEnd(defaultWidth + 3) + " | Description".padEnd(descriptionWidth + 3) + " |")
     println("| --------".padEnd(propertyWidth + 2, '-') + " | ------------".padEnd(envWidth + 3, '-') + " | -------".padEnd(defaultWidth + 3, '-') + " | -----------".padEnd(descriptionWidth + 3, '-') + " |")
-    options.forEach {
+    options.toList().sortedBy { it.name }.forEach {
       println("| ${it.name.padEnd(propertyWidth)} | ${it.environmentVariable.padEnd(envWidth)} | ${it.default.padEnd(defaultWidth)} | ${it.description.padEnd(descriptionWidth)} |")
     }
     println()
