@@ -75,8 +75,7 @@ class CordaNodeTest {
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
       tls = false,
-      vertx = vertx
-    )
+      vertx = vertx)
     service.start().setHandler(context.asyncAssertSuccess())
   }
 

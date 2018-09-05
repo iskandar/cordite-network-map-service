@@ -21,21 +21,25 @@ Once the node is running, you will be able to see the UI for accessing network m
 
 ## Command line parameters / Environment Variables
 
-| Property          | Env Variable              | Default     | Description                                                                        |
-| ----------------- | ------------------------- | ----------- | ---------------------------------------------------------------------------------- |
-| port              | NMS_PORT                  | 8080        | web port                                                                           |
-| db                | NMS_DB                    | .db         | database directory for this service                                                |
-| cache.timeout     | NMS_CACHE_TIMEOUT         | 2S          | http cache timeout for this service in ISO 8601 duration format                    |
-| paramUpdate.delay | NMS_PARAMUPDATE_DELAY     | 10S         | schedule duration for a parameter update                                           |
-| networkMap.delay  | NMS_NETWORKMAP_DELAY      | 1S          | queue time for the network map to update for addition of nodes                     |
-| username          | NMS_USERNAME              | sa          | system admin username                                                              |
-| password          | NMS_PASSWORD              | admin       | system admin password                                                              |
-| tls               | NMS_TLS                   | true        | whether TLS is enabled or not                                                      |
-| tls.cert.path     | NMS_TLS_CERT_PATH         |             | path to cert if TLS is turned on                                                   |
-| tls.key.path      | NMS_TLS_KEY_PATH          |             | path to key if TLS turned on                                                       |
-| hostname          | NMS_HOSTNAME              | 0.0.0.0     | interface to bind the service to                                                   |
-| doorman           | NMS_DOORMAN               | true        | enable doorman protocol                                                            |
-| certman           | NMS_CERTMAN               | true        | enable certman protocol so that nodes can authenticate using a signed TLS cert     |
+| Property                    | Env Variable                        | Default     | Description                                                                                |
+| --------------------------- | ----------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| auth-password               | NMS_AUTH_PASSWORD                   | admin       | system admin password                                                                      |
+| auth-username               | NMS_AUTH_USERNAME                   | sa          | system admin username                                                                      |
+| cache-timeout               | NMS_CACHE_TIMEOUT                   | 2S          | http cache timeout for this service in ISO 8601 duration format                            |
+| certman                     | NMS_CERTMAN                         | true        | enable Cordite certman protocol so that nodes can authenticate using a signed TLS cert     |
+| certman-pkix                | NMS_CERTMAN_PKIX                    | false       | enables certman's pkix validation against JDK default truststore                           |
+| certman-strict-ev           | NMS_CERTMAN_STRICT_EV               | false       | enables strict constraint for EV certs only in certman                                     |
+| certman-truststore          | NMS_CERTMAN_TRUSTSTORE              |             | specified a custom truststore instead of the default JRE cacerts                           |
+| certman-truststore-password | NMS_CERTMAN_TRUSTSTORE_PASSWORD     |             | truststore password                                                                        |
+| db                          | NMS_DB                              | .db         | database directory for this service                                                        |
+| doorman                     | NMS_DOORMAN                         | true        | enable Corda doorman protocol                                                              |
+| hostname                    | NMS_HOSTNAME                        | 0.0.0.0     | interface to bind the service to                                                           |
+| network-map-delay           | NMS_NETWORK_MAP_DELAY               | 1S          | queue time for the network map to update for addition of nodes                             |
+| param-update-delay          | NMS_PARAM_UPDATE_DELAY              | 10S         | schedule duration for a parameter update                                                   |
+| port                        | NMS_PORT                            | 8080        | web port                                                                                   |
+| tls                         | NMS_TLS                             | true        | whether TLS is enabled or not                                                              |
+| tls-cert-path               | NMS_TLS_CERT_PATH                   |             | path to cert if TLS is turned on                                                           |
+| tls-key-path                | NMS_TLS_KEY_PATH                    |             | path to key if TLS turned on                                                               |
 
 
 ## Doorman protocol

@@ -49,7 +49,8 @@ import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 class CertificateManager(
   private val vertx: Vertx,
   private val rootX500Name: CordaX500Name,
-  private val storage: CertificateAndKeyPairStorage) {
+  private val storage: CertificateAndKeyPairStorage,
+  certManContext: CertmanContext) {
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
@@ -70,7 +71,7 @@ class CertificateManager(
   }
 
   private val csrResponse = mutableMapOf<String, Optional<X509Certificate>>()
-
+  private val certificateRequestPayloadParser = CertificateRequestPayloadParser(certManContext)
   lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
     private set
   lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
@@ -92,9 +93,9 @@ class CertificateManager(
     }
   }
 
-  fun generateJKSZipForTLSCertAndSig(context: RoutingContext) {
+  fun certmanGenerate(context: RoutingContext) {
     try {
-      val payload = CertificateRequestPayload.parse(context.bodyAsString)
+      val payload = certificateRequestPayloadParser.parse(context.bodyAsString)
       payload.verify()
       val x500Name = payload.x500Name
       val stream = generateJKSZipOutputStream(x500Name)
@@ -104,6 +105,7 @@ class CertificateManager(
         .putHeader(CONTENT_DISPOSITION, "attachment; filename=\"keys.zip\"")
         .end(Buffer.buffer(bytes))
     } catch (err: Throwable) {
+      logger.error("certman failed to generate jks files", err)
       context.write(err)
     }
   }
@@ -114,7 +116,7 @@ class CertificateManager(
     vertx.runOnContext {
       try {
         val nodePublicKey = JcaPEMKeyConverter().getPublicKey(pkcs10Holder.subjectPublicKeyInfo)
-        val name = pkcs10Holder.subject.toCordaX500Name()
+        val name = pkcs10Holder.subject.toCordaX500Name(true)
         val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, CertificateType.NODE_CA)
         csrResponse[id] = Optional.of(certificate)
       } catch (err: Throwable) {

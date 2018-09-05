@@ -15,14 +15,17 @@
  */
 package io.cordite.networkmap
 
+import io.cordite.networkmap.service.CertmanContext
 import io.cordite.networkmap.service.InMemoryUser
 import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
 import net.corda.core.utilities.loggerFor
+import java.io.File
 import java.time.Duration
+import kotlin.system.exitProcess
 
-open class NetworkMapApp  {
+open class NetworkMapApp {
   companion object {
     private val logger = loggerFor<NetworkMapApp>()
 
@@ -31,34 +34,49 @@ open class NetworkMapApp  {
       val options = Options()
       val portOpt = options.addOption("port", "8080", "web port")
       val dbDirectoryOpt = options.addOption("db", ".db", "database directory for this service")
-      val cacheTimeoutOpt = options.addOption("cache.timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")
-      val paramUpdateDelayOpt = options.addOption("paramUpdate.delay", "10S", "schedule duration for a parameter update")
-      val networkMapUpdateDelayOpt  = options.addOption("networkMap.delay", "1S", "queue time for the network map to update for addition of nodes")
-      val usernameOpt = options.addOption("username", "sa", "system admin username")
-      val passwordOpt = options.addOption("password", "admin", "system admin password")
+      val cacheTimeoutOpt = options.addOption("cache-timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")
+      val paramUpdateDelayOpt = options.addOption("param-update-delay", "10S", "schedule duration for a parameter update")
+      val networkMapUpdateDelayOpt = options.addOption("network-map-delay", "1S", "queue time for the network map to update for addition of nodes")
+      val usernameOpt = options.addOption("auth-username", "sa", "system admin username")
+      val passwordOpt = options.addOption("auth-password", "admin", "system admin password")
       val tlsOpt = options.addOption("tls", "true", "whether TLS is enabled or not")
-      val certPathOpt = options.addOption("tls.cert.path", "", "path to cert if TLS is turned on")
-      val keyPathOpt = options.addOption("tls.key.path", "", "path to key if TLS turned on")
+      val certPathOpt = options.addOption("tls-cert-path", "", "path to cert if TLS is turned on")
+      val keyPathOpt = options.addOption("tls-key-path", "", "path to key if TLS turned on")
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
-      val doormanOpt = options.addOption("doorman", "true", "enable doorman protocol")
-      val certmanOpt = options.addOption("certman", "true", "enable certman protocol so that nodes can authenticate using a signed TLS cert")
+      val doormanOpt = options.addOption("doorman", "true", "enable Corda doorman protocol")
+      val certmanOpt = options.addOption("certman", "true", "enable Cordite certman protocol so that nodes can authenticate using a signed TLS cert")
+      val certManpkixOpt = options.addOption("certman-pkix", "false", "enables certman's pkix validation against JDK default truststore")
+      val certmanTruststoreOpt = options.addOption("certman-truststore", "", "specified a custom truststore instead of the default JRE cacerts")
+      val certmanTruststorePasswordOpt = options.addOption("certman-truststore-password", "", "truststore password")
+      val certmanStrictEV = options.addOption("certman-strict-ev", "false", "enables strict constraint for EV certs only in certman")
 
       if (args.contains("--help")) {
-        options.printOptions()
+        options.printHelp()
         return
       }
+      println("starting networkmap with the following options")
+      options.printOptions()
 
-      val port = portOpt.value.toInt()
-      val dbDirectory = dbDirectoryOpt.value.toFile()
-      val cacheTimeout = Duration.parse("PT${cacheTimeoutOpt.value}")
-      val paramUpdateDelay = Duration.parse("PT${paramUpdateDelayOpt.value}")
-      val networkMapUpdateDelay = Duration.parse("PT${networkMapUpdateDelayOpt.value}")
-      val tls = tlsOpt.value.toBoolean()
-      val certPath = certPathOpt.value
-      val keyPath = keyPathOpt.value
-      val user = InMemoryUser.createUser("System Admin", usernameOpt.value, passwordOpt.value)
-      val enableDoorman = doormanOpt.value.toBoolean()
-      val enableCertman = certmanOpt.value.toBoolean()
+      val port = portOpt.intValue
+      val dbDirectory = dbDirectoryOpt.stringValue.toFile()
+      val cacheTimeout = Duration.parse("PT${cacheTimeoutOpt.stringValue}")
+      val paramUpdateDelay = Duration.parse("PT${paramUpdateDelayOpt.stringValue}")
+      val networkMapUpdateDelay = Duration.parse("PT${networkMapUpdateDelayOpt.stringValue}")
+      val tls = tlsOpt.booleanValue
+      val certPath = certPathOpt.stringValue
+      val keyPath = keyPathOpt.stringValue
+      val user = InMemoryUser.createUser("System Admin", usernameOpt.stringValue, passwordOpt.stringValue)
+      val enableDoorman = doormanOpt.booleanValue
+      val enableCertman = certmanOpt.booleanValue
+      val pkix = certManpkixOpt.booleanValue
+      val truststore = if (certmanTruststoreOpt.stringValue.isNotEmpty()) File(certmanTruststoreOpt.stringValue) else null
+      val trustStorePassword = if (certmanTruststorePasswordOpt.stringValue.isNotEmpty()) certmanTruststorePasswordOpt.stringValue else null
+      val strictEV = certmanStrictEV.booleanValue
+
+      if (truststore != null && !truststore.exists()) {
+        println("failed to find truststore ${truststore.path}")
+        exitProcess(-1)
+      }
 
       NetworkMapService(
         dbDirectory = dbDirectory,
@@ -70,9 +88,9 @@ open class NetworkMapApp  {
         tls = tls,
         certPath = certPath,
         keyPath = keyPath,
-        hostname = hostNameOpt.value,
-        enableCertman = enableCertman,
-        enableDoorman = enableDoorman
+        hostname = hostNameOpt.stringValue,
+        enableDoorman = enableDoorman,
+        certManContext = CertmanContext(enableCertman, pkix, truststore, trustStorePassword, strictEV)
       ).start().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

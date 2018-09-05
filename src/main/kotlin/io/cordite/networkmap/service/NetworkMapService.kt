@@ -64,13 +64,13 @@ class NetworkMapService(
   private val cacheTimeout: Duration,
   private val networkParamUpdateDelay: Duration,
   private val networkMapQueuedUpdateDelay: Duration,
-  private val tls: Boolean,
+  private val tls: Boolean = true,
   private val certPath: String = "",
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
   private val enableDoorman: Boolean = true,
-  private val enableCertman: Boolean = true
+  private val certManContext: CertmanContext = CertmanContext(true, false, null, null, false)
 ) {
   companion object {
     private const val NETWORK_MAP_ROOT = "/network-map"
@@ -94,7 +94,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage)
+  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, certManContext)
 
   fun start(): Future<Unit> {
     // N.B. Ordering is important here
@@ -147,10 +147,10 @@ class NetworkMapService(
                 }
               }
             }
-            if (enableCertman) {
+            if (certManContext.enabled) {
               group("certman") {
                 unprotected {
-                  post("$CERTMAN_REST_ROOT/generate", certificateManager::generateJKSZipForTLSCertAndSig)
+                  post("$CERTMAN_REST_ROOT/generate", certificateManager::certmanGenerate)
                 }
               }
             }
@@ -197,7 +197,7 @@ class NetworkMapService(
   )
   fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
-    if (enableDoorman || enableCertman) {
+    if (enableDoorman || certManContext.enabled) {
       // formally check that this node has been registered via our certs
       certificateManager.validateNodeInfoCertificates(signedNodeInfo.verified())
     }
