@@ -76,7 +76,7 @@ class CordaNodeTest {
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
       tls = false,
       vertx = vertx)
-    service.start().setHandler(context.asyncAssertSuccess())
+    service.startup().setHandler(context.asyncAssertSuccess())
   }
 
   @After
@@ -85,7 +85,7 @@ class CordaNodeTest {
   }
 
   @Test
-  fun `runNode`(context: TestContext) {
+  fun `run node`(context: TestContext) {
     // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
     _globalSerializationEnv.set(null)
 

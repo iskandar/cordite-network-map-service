@@ -15,4 +15,5 @@
  */
 package io.cordite.networkmap.utils
 
-val SAMPLE_INPUTS = "test-data/inputs/"
+const val SAMPLE_INPUTS = "test-data/inputs/"
+const val SAMPLE_NODES = "test-data/nodeinfos/"

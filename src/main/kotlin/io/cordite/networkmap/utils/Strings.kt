@@ -15,8 +15,6 @@
  */
 package io.cordite.networkmap.utils
 
-import java.security.MessageDigest
-
 val HEX_CHARS = "0123456789ABCDEF".toCharArray()
 
 fun ByteArray.toHex() : String{
@@ -32,8 +30,3 @@ fun ByteArray.toHex() : String{
   return result.toString()
 }
 
-fun String.toDigest() : String {
-  val md = MessageDigest.getInstance("SHA")
-  md.update(this.toByteArray())
-  return md.digest().toHex()
-}

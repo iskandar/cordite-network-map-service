@@ -25,6 +25,7 @@
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
     <braid.version>3.1.5</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
+    <npm.skip>false</npm.skip>
   </properties>
 
   <repositories>
@@ -172,6 +173,9 @@
             </configuration>
           </execution>
         </executions>
+        <configuration>
+          <skip>${npm.skip}</skip>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>

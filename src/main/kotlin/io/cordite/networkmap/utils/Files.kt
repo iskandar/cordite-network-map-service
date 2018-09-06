@@ -22,10 +22,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
-fun String.toPath() = Paths.get(this)
+fun String.toPath() = Paths.get(this)!!
 fun String.toFile() = File(this)
 
-fun File.getFiles(pattern: String): Sequence<File> = getFiles(pattern.toRegex())
 fun File.getFiles(re: Regex): Sequence<File> {
   return this.walk()
       .filter {
