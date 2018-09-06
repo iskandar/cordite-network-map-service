@@ -137,14 +137,6 @@ class CertificateManager(
     }
   }
 
-  fun createCertificate(
-    name: CordaX500Name,
-    certificateType: CertificateType,
-    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
-  ): CertificateAndKeyPair {
-    return createCertificateAndKeyPair(rootCertificateAndKeyPair, name, certificateType, signatureScheme)
-  }
-
   private fun generateJKSZipOutputStream(x500Name: CordaX500Name): ByteArrayOutputStream {
     val nodeCA = createCertificateAndKeyPair(doormanCertAndKeyPair, x500Name, CertificateType.NODE_CA)
     val nodeIdentity = createCertificateAndKeyPair(nodeCA, x500Name, CertificateType.LEGAL_IDENTITY)
