@@ -28,9 +28,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.days
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.millis
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -131,20 +129,12 @@ class CertificateManager(
   }
 
   fun doormanRetrieveCSRResponse(id: String): Array<X509Certificate> {
-    val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
-    return if (response.isPresent) {
+    val response = csrResponse[id]
+    return if (response != null && response.isPresent) {
       arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
     } else {
       arrayOf()
     }
-  }
-
-  fun createCertificate(
-    name: CordaX500Name,
-    certificateType: CertificateType,
-    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
-  ): CertificateAndKeyPair {
-    return createCertificateAndKeyPair(rootCertificateAndKeyPair, name, certificateType, signatureScheme)
   }
 
   private fun generateJKSZipOutputStream(x500Name: CordaX500Name): ByteArrayOutputStream {
@@ -253,15 +243,6 @@ class CertificateManager(
     val certificate = X509Utilities.createSelfSignedCACertificate(
       subject = name.x500Principal, keyPair = keyPair
     )
-    return CertificateAndKeyPair(certificate, keyPair)
-  }
-
-  fun createSelfSignedTLSCertificateAndKeyPair(name: CordaX500Name, signatureScheme: SignatureScheme = Crypto.RSA_SHA256): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val validityWindow =  Pair(0.millis, 3650.days)
-
-    val window = X509Utilities.getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-    val certificate = X509Utilities.createCertificate(CertificateType.ROOT_CA, name.x500Principal, keyPair, name.x500Principal, keyPair.public, window)
     return CertificateAndKeyPair(certificate, keyPair)
   }
 

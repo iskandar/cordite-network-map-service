@@ -32,6 +32,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
+import java.net.HttpURLConnection
 import java.security.KeyStore
 
 @RunWith(VertxUnitRunner::class)
@@ -176,5 +177,19 @@ class NetworkMapAdminInterfaceTest {
         async.complete()
       }
       .catch(context::fail)
+  }
+
+  @Test
+  fun `that downloading a certificate from the doorman with unknown csr id returns no content`(context: TestContext) {
+    val async = context.async()
+    client.get("/certificate/999")
+      .exceptionHandler {
+        context.fail(it)
+      }
+      .handler {
+        context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, it.statusCode())
+        async.complete()
+      }
+      .end()
   }
 }

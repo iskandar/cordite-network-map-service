@@ -268,7 +268,9 @@
           <execution>
             <id>make-assembly</id>
             <phase>package</phase>
-            <goals> <goal>single</goal> </goals>
+            <goals>
+              <goal>single</goal>
+            </goals>
             <configuration>
               <archive>
                 <manifest>
@@ -285,24 +287,24 @@
         </executions>
       </plugin>
       <plugin>
-         <groupId>org.jacoco</groupId>
-         <artifactId>jacoco-maven-plugin</artifactId>
-         <version>0.7.5.201505241946</version>
-         <executions>
-            <execution>
-               <id>pre-unit-test</id>
-               <goals>
-                  <goal>prepare-agent</goal>
-               </goals>
-            </execution>
-            <execution>
-               <id>post-unit-test</id>
-               <phase>test</phase>
-               <goals>
-                  <goal>report</goal>
-               </goals>
-            </execution>
-         </executions>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.2</version>
+        <executions>
+          <execution>
+            <id>pre-unit-test</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>post-unit-test</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
     </plugins>

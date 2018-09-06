@@ -115,7 +115,6 @@ class NetworkParameterInputsStorage(parentDir: File,
       File(nonValidatingNotariesPath, identity)
     }
     return vertx.fileSystem().deleteFile(file.absolutePath)
-      .mapEmpty()
   }
 
   fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {

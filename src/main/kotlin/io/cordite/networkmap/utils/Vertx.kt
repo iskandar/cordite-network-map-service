@@ -234,9 +234,15 @@ fun FileSystem.readFiles(dirPath: String) : Future<List<Pair<String, Buffer>>> {
     }
 }
 
-fun FileSystem.deleteFile(filePath: String) : Future<Void> {
-  return withFuture {
-    delete(filePath, it.completer())
+fun FileSystem.deleteFile(filePath: String) : Future<Unit> {
+  return withFuture { future ->
+    delete(filePath) {
+      if (it.succeeded()) {
+        future.complete(Unit)
+      } else {
+        future.fail(it.cause())
+      }
+    }
   }
 }
 
