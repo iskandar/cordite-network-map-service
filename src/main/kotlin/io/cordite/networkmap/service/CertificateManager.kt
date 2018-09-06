@@ -131,8 +131,8 @@ class CertificateManager(
   }
 
   fun doormanRetrieveCSRResponse(id: String): Array<X509Certificate> {
-    val response = csrResponse[id] ?: throw RuntimeException("request $id not found")
-    return if (response.isPresent) {
+    val response = csrResponse[id]
+    return if (response != null && response.isPresent) {
       arrayOf(response.get(), doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
     } else {
       arrayOf()
