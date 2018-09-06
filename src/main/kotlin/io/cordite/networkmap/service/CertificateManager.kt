@@ -28,7 +28,9 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
+import net.corda.core.utilities.days
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.millis
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -149,11 +151,10 @@ class CertificateManager(
     val nodeTLS = createCertificateAndKeyPair(nodeCA, x500Name, CertificateType.TLS)
 
     val certificatePath = listOf(nodeCA.certificate, doormanCertAndKeyPair.certificate, rootCertificateAndKeyPair.certificate)
-    val stream = ByteArrayOutputStream().use {
+    return ByteArrayOutputStream().use {
       ZipOutputStream(it).use { writeKeyStores(it, nodeIdentity, certificatePath, nodeTLS) }
       it
     }
-    return stream
   }
 
   private fun ensureRootCertExists(): Future<Unit> {
@@ -250,6 +251,15 @@ class CertificateManager(
     val certificate = X509Utilities.createSelfSignedCACertificate(
       subject = name.x500Principal, keyPair = keyPair
     )
+    return CertificateAndKeyPair(certificate, keyPair)
+  }
+
+  fun createSelfSignedTLSCertificateAndKeyPair(name: CordaX500Name, signatureScheme: SignatureScheme = Crypto.RSA_SHA256): CertificateAndKeyPair {
+    val keyPair = Crypto.generateKeyPair(signatureScheme)
+    val validityWindow =  Pair(0.millis, 3650.days)
+
+    val window = X509Utilities.getCertificateValidityWindow(validityWindow.first, validityWindow.second)
+    val certificate = X509Utilities.createCertificate(CertificateType.ROOT_CA, name.x500Principal, keyPair, name.x500Principal, keyPair.public, window)
     return CertificateAndKeyPair(certificate, keyPair)
   }
 

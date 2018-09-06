@@ -148,11 +148,12 @@ class NetworkMapServiceTest {
       vertx = vertx
   )
 
-    service.start().setHandler(context.asyncAssertSuccess())
+    service.startup().setHandler(context.asyncAssertSuccess())
   }
 
   @After
   fun after(context: TestContext) {
+    service.shutdown()
     vertx.close(context.asyncAssertSuccess())
   }
 

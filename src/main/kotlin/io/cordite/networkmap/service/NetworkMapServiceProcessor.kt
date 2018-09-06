@@ -99,7 +99,7 @@ class NetworkMapServiceProcessor(
       }
   }
 
-  fun close() {
+  fun stop() {
     subscription = subscription?.let {
       if (!it.isUnsubscribed) {
         it.unsubscribe()

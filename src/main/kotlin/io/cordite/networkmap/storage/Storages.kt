@@ -26,7 +26,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
-import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
@@ -73,21 +72,6 @@ class ParametersUpdateStorage(vertx: Vertx, parentDirectory: File, childDirector
   }
 
   override fun deserialize(location: File): Future<ParametersUpdate> {
-    return deserialize(location, vertx)
-  }
-}
-
-class SecureHashStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = DEFAULT_CHILD_DIR)
-  : AbstractSimpleNameValueStore<SecureHash>(File(parentDirectory, childDirectory), vertx) {
-  companion object {
-    const val DEFAULT_CHILD_DIR = "secure-hashes"
-  }
-
-  override fun serialize(value: SecureHash, location: File): Future<Unit> {
-    return serialize(value, location, vertx)
-  }
-
-  override fun deserialize(location: File): Future<SecureHash> {
     return deserialize(location, vertx)
   }
 }
@@ -171,7 +155,6 @@ class CertificateAndKeyPairStorage(
     return vertx.fileSystem().writeFile(resolveJksFile(location).absolutePath, ba).map { Unit }
   }
 
-  fun resolveJksFile(key: String) = resolveJksFile(resolveKey(key))
   private fun resolveJksFile(directory: File) = File(directory, jksFilename)
 }
 

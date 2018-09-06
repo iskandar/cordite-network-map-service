@@ -1,0 +1,57 @@
+package io.cordite.networkmap.utils
+
+import io.bluebank.braid.core.http.failed
+import io.vertx.core.Future
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpClient
+import io.vertx.core.http.HttpMethod
+import io.vertx.core.json.JsonObject
+import javax.ws.rs.core.HttpHeaders
+import javax.ws.rs.core.MediaType
+
+fun HttpClient.futurePost(uri: String, json: JsonObject, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futurePost(uri, json.encode(), *headers)
+}
+
+fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.POST, uri, body, *headers)
+}
+
+fun HttpClient.futurePut(uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.PUT, uri, body, *headers)
+}
+
+fun HttpClient.futureGet(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.GET, uri, "", *headers)
+}
+
+fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.DELETE, uri, "", *headers)
+}
+
+fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+  val result = Future.future<Buffer>()
+  this.request(method, uri)
+    .putHeader(HttpHeaders.CONTENT_LENGTH,  body.length.toString())
+    .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+    .apply {
+      headers.forEach {
+        putHeader(it.first, it.second)
+      }
+    }
+    .exceptionHandler {
+      result.fail(it)
+    }
+    .handler { response ->
+      if (response.failed) {
+        result.fail(response.statusMessage())
+      } else {
+        response.bodyHandler { buffer ->
+          result.complete(buffer)
+        }
+      }
+    }
+    .end(body)
+  return result
+}
+

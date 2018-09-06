@@ -108,7 +108,7 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  fun deleteNotary(identity: String, validating: Boolean) : Future<Unit> {
+  fun deleteNotary(identity: String, validating: Boolean): Future<Unit> {
     val file = if (validating) {
       File(validatingNotariesPath, identity)
     } else {
@@ -143,7 +143,7 @@ class NetworkParameterInputsStorage(parentDir: File,
   @ApiOperation(value = "append to the whitelist")
   fun appendWhitelist(append: String): Future<Unit> {
     return try {
-      val parsed = append.lines().parseToWhitelistPairs()
+      val parsed = append.toWhitelistPairs()
       readWhiteList()
         .map { wl ->
           val flattened = wl.flatMap { item ->
@@ -163,7 +163,7 @@ class NetworkParameterInputsStorage(parentDir: File,
   @ApiOperation(value = "replace the whitelist")
   fun replaceWhitelist(replacement: String): Future<Unit> {
     return try {
-      val cleaned = replacement.lines().parseToWhitelistPairs().distinct().joinToString("\n") { "${it.first}:${it.second}" }
+      val cleaned = replacement.toWhitelistPairs().distinct().joinToString("\n") { "${it.first}:${it.second}" }
       vertx.fileSystem().writeFile(whitelistPath.absolutePath, cleaned.toByteArray())
         .mapEmpty()
     } catch (err: Throwable) {
@@ -249,9 +249,15 @@ class NetworkParameterInputsStorage(parentDir: File,
       else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
     }
   }
+}
+
+fun List<Pair<String, AttachmentId>>.toWhitelistText() : String {
+  return this.joinToString("\n") { it.first + ':' + it.second.toString() }
+}
 
 
-
+fun String.toWhitelistPairs() : List<Pair<String, AttachmentId>> {
+  return this.lines().parseToWhitelistPairs()
 }
 
 fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {

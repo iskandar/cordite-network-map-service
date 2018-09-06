@@ -16,7 +16,6 @@
 package io.cordite.networkmap.service
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.loggerFor
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.cert.CertPathValidator
 import java.security.cert.X509Certificate
@@ -28,7 +27,6 @@ class CertificateRequestPayload(
   private val certmanContext: CertmanContext
 ) {
   companion object {
-    private val log = loggerFor<CertificateRequestPayload>()
     private val certPathValidator = CertPathValidator.getInstance("PKIX")
   }
 

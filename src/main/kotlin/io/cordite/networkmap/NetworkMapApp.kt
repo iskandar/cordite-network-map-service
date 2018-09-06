@@ -91,7 +91,7 @@ open class NetworkMapApp {
         hostname = hostNameOpt.stringValue,
         enableDoorman = enableDoorman,
         certManContext = CertmanContext(enableCertman, pkix, truststore, trustStorePassword, strictEV)
-      ).start().setHandler {
+      ).startup().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())
         } else {

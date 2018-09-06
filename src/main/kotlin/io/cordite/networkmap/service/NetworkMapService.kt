@@ -19,8 +19,6 @@ import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
 import io.bluebank.braid.core.http.HttpServerConfig
-import io.cordite.networkmap.keystore.toJksOptions
-import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
@@ -33,10 +31,10 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.net.JksOptions
+import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
@@ -44,7 +42,6 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateType
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -96,12 +93,17 @@ class NetworkMapService(
   private lateinit var processor: NetworkMapServiceProcessor
   internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, certManContext)
 
-  fun start(): Future<Unit> {
+  fun startup(): Future<Unit> {
     // N.B. Ordering is important here
     return setupStorage()
       .compose { startCertManager() }
       .compose { startProcessor() }
       .compose { startupBraid() }
+  }
+
+  fun shutdown() : Future<Unit> {
+    processor.stop()
+    return Future.succeededFuture()
   }
 
   private fun startupBraid(): Future<Unit> {
@@ -115,7 +117,7 @@ class NetworkMapService(
         .withAuthConstructor(authService::createAuthProvider)
         .withService("admin", adminService)
         .withRootPath(ADMIN_BRAID_ROOT)
-        .withHttpServerOptions(HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls).setKeyStoreOptions(createJksOptions()))
+        .withHttpServerOptions(createHttpServerOptions())
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(SWAGGER_ROOT)
@@ -402,9 +404,11 @@ class NetworkMapService(
     ).mapEmpty()
   }
 
-  private fun createJksOptions(): JksOptions {
+  private fun createHttpServerOptions() : HttpServerOptions {
+    val serverOptions = HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls)
+
     return when {
-      !tls -> JksOptions() // just return a blank option as it won't be used
+      !tls -> serverOptions
       certPath.isNotBlank() && keyPath.isNotBlank() -> {
         logger.info("using cert file $certPath")
         logger.info("using key file $keyPath")
@@ -420,12 +424,15 @@ class NetworkMapService(
           throw RuntimeException(msg)
         }
 
-        CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
+        val jksOptions = CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
+        serverOptions.setKeyStoreOptions(jksOptions)
       }
       else -> {
         logger.info("generating temporary TLS certificates")
-        val inMemoryOnlyPassword = "inmemory"
-        certificateManager.createCertificate(BASE_NAME, CertificateType.TLS, Crypto.ECDSA_SECP256R1_SHA256).toKeyStore(inMemoryOnlyPassword).toJksOptions(inMemoryOnlyPassword)
+        val certificate = SelfSignedCertificate.create()
+        serverOptions
+          .setKeyCertOptions(certificate.keyCertOptions())
+          .setTrustOptions(certificate.trustOptions())
       }
     }
   }
