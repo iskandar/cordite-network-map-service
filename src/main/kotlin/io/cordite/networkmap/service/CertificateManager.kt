@@ -84,9 +84,11 @@ class CertificateManager(
   fun init(): Future<Unit> {
     return ensureRootCertExists()
       .compose { ensureNetworkMapCertExists() }
-      .compose { ensureDoormanCertExists() }.onSuccess {
+      .compose { ensureDoormanCertExists() }
+      .onSuccess {
         doormanCertAndKeyPair = it
-      }.mapEmpty()
+      }
+      .map(Unit)
   }
 
   fun validateNodeInfoCertificates(nodeInfo: NodeInfo) {

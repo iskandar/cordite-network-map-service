@@ -70,8 +70,8 @@ class NetworkMapService(
   private val certManContext: CertmanContext = CertmanContext(true, false, null, null, false)
 ) {
   companion object {
-    private const val NETWORK_MAP_ROOT = "/network-map"
-    private const val ADMIN_REST_ROOT = "/admin/api"
+    internal const val NETWORK_MAP_ROOT = "/network-map"
+    internal const val ADMIN_REST_ROOT = "/admin/api"
     internal const val CERTMAN_REST_ROOT = "/certman/api"
     private const val ADMIN_BRAID_ROOT = "/braid/api"
     private const val SWAGGER_ROOT = "/swagger"

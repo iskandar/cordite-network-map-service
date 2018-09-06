@@ -1,3 +1,18 @@
+/**
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -16,6 +31,8 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.ByteArrayInputStream
+import java.security.KeyStore
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAdminInterfaceTest {
@@ -78,34 +95,33 @@ class NetworkMapAdminInterfaceTest {
     }
   }
 
-
   @Test
   fun `that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist`(context: TestContext) {
     val async = context.async()
     var key = ""
     var whitelist = ""
 
-    client.futurePost("/admin/api/login", JsonObject("user" to "sa", "password" to ""))
+    client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/login", JsonObject("user" to "sa", "password" to ""))
       .onSuccess {
         key = "Bearer $it"
         println(key)
       }
       .compose {
-        client.futureGet("/admin/api/notaries")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/notaries")
       }
       .onSuccess {
         val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
         context.assertEquals(2, notaries.size)
       }
       .compose {
-        client.futureGet("/admin/api/nodes")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/nodes")
       }
       .onSuccess {
         val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
         context.assertEquals(2, nodes.size)
       }
       .compose {
-        client.futureGet("/admin/api/whitelist")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess {
         whitelist = it.toString()
@@ -113,10 +129,10 @@ class NetworkMapAdminInterfaceTest {
         context.assertNotEquals(0, lines.size)
       }
       .compose { // delete the whitelist
-        client.futureDelete("/admin/api/whitelist", "Authorization" to key)
+        client.futureDelete("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", "Authorization" to key)
       }
       .compose { // get the whitelist
-        client.futureGet("/admin/api/whitelist")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess { // check its empty
         context.assertTrue(it.toString().isEmpty())
@@ -124,22 +140,37 @@ class NetworkMapAdminInterfaceTest {
       .compose { // append a set of white list items
         val updated = whitelist.toWhitelistPairs().drop(1)
         val newWhiteList = updated.toWhitelistText()
-        client.futurePut("/admin/api/whitelist", newWhiteList, "Authorization" to key)
+        client.futurePut("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", newWhiteList, "Authorization" to key)
       }
       .compose {
-        client.futureGet("/admin/api/whitelist")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess {
         context.assertEquals(whitelist.toWhitelistPairs().size - 1, it.toString().toWhitelistPairs().size)
       }
       .compose { // set the complete whitelist
-        client.futurePost("/admin/api/whitelist", whitelist, "Authorization" to key)
+        client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", whitelist, "Authorization" to key)
       }
       .compose {
-        client.futureGet("/admin/api/whitelist")
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess {
         context.assertEquals(whitelist.lines().sorted().parseToWhitelistPairs(), it.toString().lines().sorted().parseToWhitelistPairs())
+      }
+      .onSuccess {
+        async.complete()
+      }
+      .catch(context::fail)
+  }
+
+  @Test
+  fun `that we can download the truststore`(context: TestContext) {
+    val async = context.async()
+    client.futureGet("${NetworkMapService.NETWORK_MAP_ROOT}/truststore")
+      .map { buffer ->
+        ByteArrayInputStream(buffer.bytes).use { stream ->
+          KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(stream, CertificateManager.TRUST_STORE_PASSWORD.toCharArray()) }
+        }
       }
       .onSuccess {
         async.complete()
