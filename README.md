@@ -8,9 +8,26 @@
 3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
 4. Transparent filesystem design to simplify maintenance, backup, and testing.
 
-## How to get in touch?
-We use #cordite channel on [Corda slack](https://slack.corda.net/) 
-We informally meet at the [Corda London meetup](https://www.meetup.com/pro/corda/)
+## How do I get in touch?
+  + News is announced on [@We_are_Cordite](https://twitter.com/we_are_cordite)
+  + More information can be found on [Cordite website](https://cordite.foundation)
+  + We use #cordite channel on [Corda slack](https://slack.corda.net/) 
+  + We informally meet at the [Corda London meetup](https://www.meetup.com/pro/corda/)
+
+## What if something does not work?
+We encourage you to raise any issues/bugs you find in Cordite. Please follow the below steps before raising issues:
+   1. Check on the [Issues backlog](https://gitlab.com/cordite/network-map-service/issues) to make sure an issue on the topic has not already been raised
+   2. Post your question on the #cordite channel on [Corda slack](https://slack.corda.net/)
+   3. If none of the above help solve the issue, [raise an issue](https://gitlab.com/cordite/network-map-service/issues/new?issue) following the contributions guide
+
+## How do I contribute?
+We welcome contributions both technical and non-technical with open arms! There's a lot of work to do here. The [Contributing Guide](https://gitlab.com/cordite/network-map-service/blob/master/contributing.md) provides more information on how to contribute.
+
+## Who is behind Cordite?
+Network Map Service is being developed by a group of financial services companies, software vendors and open source contributors. The project is hosted on here on GitLab. 
+
+## What open source license has this been released under?
+All software in this repository is licensed under the Apache License, Version 2.0 (the "License"); you may not use this software except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 
 ## How to use this image
