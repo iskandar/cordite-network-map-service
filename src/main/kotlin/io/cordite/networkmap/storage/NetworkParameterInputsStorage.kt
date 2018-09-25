@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -32,6 +33,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.File
+import javax.ws.rs.core.MediaType
 
 class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
@@ -175,6 +177,36 @@ class NetworkParameterInputsStorage(parentDir: File,
     return try {
       vertx.fileSystem().writeFile(whitelistPath.absolutePath, "".toByteArray()).mapEmpty()
     } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the validating notary to upload its signed NodeInfo object to the network map",
+          consumes = MediaType.MULTIPART_FORM_DATA
+  )
+  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
+    return try {
+      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+      val fileName: String = "${validatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
+      vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
+    } catch (err: Throwable) {
+        log.error("failed to upload validating notary nodeInfo", err)
+        Future.failedFuture(err)
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the non validating notary to upload its signed NodeInfo object to the network map",
+          consumes = MediaType.MULTIPART_FORM_DATA
+  )
+  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
+    return try {
+      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+      val fileName: String = "${nonValidatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
+      vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
+    } catch (err: Throwable) {
+      log.error("failed to upload validating notary nodeInfo", err)
       Future.failedFuture(err)
     }
   }
