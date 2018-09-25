@@ -206,7 +206,7 @@ class NetworkParameterInputsStorage(parentDir: File,
       val fileName: String = "${nonValidatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
       vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
     } catch (err: Throwable) {
-      log.error("failed to upload validating notary nodeInfo", err)
+      log.error("failed to upload non validating notary nodeInfo", err)
       Future.failedFuture(err)
     }
   }
