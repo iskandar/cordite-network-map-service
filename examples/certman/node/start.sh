@@ -100,7 +100,7 @@ fi
 if [[ ! -z "$CORDITE_NOTARY" ]] && [[ "$SETUP" = true ]] ; then
 echo "CORDITE_NOTARY set to ${CORDITE_NOTARY}. Configuring node to be a notary"
 sed -i -e '/^\s*notary\s*{/,/}/d' node.conf
-java -jar corda.jar --just-generate-node-info
+#java -jar corda.jar --just-generate-node-info
 
 if [ `echo $CORDITE_NOTARY | tr [:upper:] [:lower:]` = `echo $VALIDATING | tr [:upper:] [:lower:]` ]
 then 
@@ -126,7 +126,7 @@ notary {
 EOL
 find . -name "nodeInfo-*"|while read fname; do
   fileName=$(echo "$fname" | cut -c 3-)
-  curl --header "Content-Type:application/octet-stream" -X POST --data-binary @$fileName http://localhost:8080/admin/api/notaries/validating/nodeInfo
+  curl --header "Content-Type:application/octet-stream" -X POST --data-binary @$fileName http://localhost:8080/admin/api/notaries/nonvalidating/nodeInfo
 done
 else
     echo "not expected"    
