@@ -28,6 +28,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
@@ -183,7 +184,7 @@ class NetworkParameterInputsStorage(parentDir: File,
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the validating notary to upload its signed NodeInfo object to the network map",
-          consumes = MediaType.MULTIPART_FORM_DATA
+          consumes = MediaType.APPLICATION_OCTET_STREAM
   )
   fun postValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
     return try {
@@ -191,14 +192,14 @@ class NetworkParameterInputsStorage(parentDir: File,
       val fileName: String = "${validatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
       vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
     } catch (err: Throwable) {
-        log.error("failed to upload validating notary nodeInfo", err)
-        Future.failedFuture(err)
+      log.error("failed to upload  validating notary nodeInfo", err)
+      Future.failedFuture(err)
     }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the non validating notary to upload its signed NodeInfo object to the network map",
-          consumes = MediaType.MULTIPART_FORM_DATA
+          consumes = MediaType.APPLICATION_OCTET_STREAM
   )
   fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
     return try {
