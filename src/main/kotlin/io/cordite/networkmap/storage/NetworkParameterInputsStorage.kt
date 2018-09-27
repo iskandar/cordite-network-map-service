@@ -15,7 +15,10 @@
  */
 package io.cordite.networkmap.storage
 
+import io.cordite.networkmap.exception.InvalidNodeInfo
+import io.cordite.networkmap.exception.InvalidNumberOfNodeInfo
 import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -35,6 +38,10 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.File
 import javax.ws.rs.core.MediaType
+import java.io.IOException
+import java.net.URLDecoder
+import javax.ws.rs.core.HttpHeaders
+
 
 class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
@@ -186,14 +193,44 @@ class NetworkParameterInputsStorage(parentDir: File,
   @ApiOperation(value = "For the validating notary to upload its signed NodeInfo object to the network map",
           consumes = MediaType.APPLICATION_OCTET_STREAM
   )
-  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
+  fun postValidatingNotaryNodeInfo(context: RoutingContext){
     return try {
-      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
-      val fileName: String = "${validatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
-      vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
-    } catch (err: Throwable) {
-      log.error("failed to upload  validating notary nodeInfo", err)
-      Future.failedFuture(err)
+      val files = context.fileUploads()
+      when (files.size){
+        1 -> {
+          files.forEach({ file ->
+            val uploadedFile = vertx.fileSystem().readFileBlocking(file.uploadedFileName())
+            val uploadedFileName = URLDecoder.decode(file.fileName(), "UTF-8")
+            try{
+              val signedNodeInfo = uploadedFile.bytes.deserializeOnContext<SignedNodeInfo>()
+              if (signedNodeInfo != null) {
+                val filePath: String = "${validatingNotariesPath.absolutePath}/$uploadedFileName"
+                vertx.fileSystem().writeFile(filePath, uploadedFile.bytes).map { Unit }.onSuccess {
+                  context.response().setStatusCode(200).end()
+                }
+              }
+            } catch (e: Exception){
+               throw InvalidNodeInfo()
+            }
+
+          })
+        }
+        else -> throw InvalidNumberOfNodeInfo()
+      }
+    } catch (err: InvalidNumberOfNodeInfo) {
+      val message = "Failed to upload  validating notary nodeInfo. Expected only one nodeInfo file. Got more than one"
+      log.error(message, err)
+      context.response().setStatusCode(400).end(message)
+    }
+    catch (err: InvalidNodeInfo) {
+      val message = "Failed to upload  validating notary nodeInfo. Expected valid nodeInfo file"
+      log.error(message, err)
+      context.response().setStatusCode(400).end(message)
+    }
+    catch (err: Throwable) {
+      val message = "failed to upload  validating notary nodeInfo"
+      log.error(message, err)
+      context.response().setStatusCode(500).end(message)
     }
   }
 
@@ -201,16 +238,47 @@ class NetworkParameterInputsStorage(parentDir: File,
   @ApiOperation(value = "For the non validating notary to upload its signed NodeInfo object to the network map",
           consumes = MediaType.APPLICATION_OCTET_STREAM
   )
-  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<Unit>{
+  fun postNonValidatingNotaryNodeInfo(context: RoutingContext){
     return try {
-      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
-      val fileName: String = "${nonValidatingNotariesPath.absolutePath}/nodeinfo-${signedNodeInfo.raw.hash}"
-      vertx.fileSystem().writeFile(fileName, nodeInfo.bytes).map { Unit }
-    } catch (err: Throwable) {
-      log.error("failed to upload non validating notary nodeInfo", err)
-      Future.failedFuture(err)
+      val files = context.fileUploads()
+      when (files.size){
+        1 -> {
+          files.forEach({ file ->
+            val uploadedFile = vertx.fileSystem().readFileBlocking(file.uploadedFileName())
+            val uploadedFileName = URLDecoder.decode(file.fileName(), "UTF-8")
+            try{
+              val signedNodeInfo = uploadedFile.bytes.deserializeOnContext<SignedNodeInfo>()
+              if (signedNodeInfo != null) {
+                val filePath: String = "${nonValidatingNotariesPath.absolutePath}/$uploadedFileName"
+                vertx.fileSystem().writeFile(filePath, uploadedFile.bytes).map { Unit }.onSuccess {
+                  context.response().setStatusCode(200).end()
+                }
+              }
+            } catch (e: Exception){
+              throw InvalidNodeInfo()
+            }
+
+          })
+        }
+        else -> throw InvalidNumberOfNodeInfo()
+      }
+    } catch (err: InvalidNumberOfNodeInfo) {
+      val message = "Failed to upload non-validating notary nodeInfo. Expected only one nodeInfo file. Got more than one"
+      log.error(message, err)
+      context.response().setStatusCode(400).end(message)
+    }
+    catch (err: InvalidNodeInfo) {
+      val message = "Failed to upload non-validating notary nodeInfo. Expected valid nodeInfo file"
+      log.error(message, err)
+      context.response().setStatusCode(400).end(message)
+    }
+    catch (err: Throwable) {
+      val message = "failed to upload non-validating notary nodeInfo"
+      log.error(message, err)
+      context.response().setStatusCode(500).end(message)
     }
   }
+
 
   fun readNotaries(): Future<List<Pair<String, NotaryInfo>>> {
     val validating = readNodeInfos(validatingNotariesPath)

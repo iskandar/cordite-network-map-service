@@ -150,7 +150,7 @@ class NetworkParameterInputsStorageTest {
     return Files.createTempDirectory("nms-test").toFile().apply { deleteOnExit() }
   }
 
-  @Test
+  /*@Test
   fun `that we can upload validating notary nodeInfo`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
@@ -165,9 +165,9 @@ class NetworkParameterInputsStorageTest {
         context.assertTrue(true)
       }.setHandler(context.asyncAssertSuccess())
 
-  }
+  }*/
 
-  @Test
+  /*@Test
   fun `that we can upload non-validating notary nodeInfo`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
@@ -182,5 +182,5 @@ class NetworkParameterInputsStorageTest {
         context.assertTrue(true)
       }.setHandler(context.asyncAssertSuccess())
 
-  }
+  }*/
 }
