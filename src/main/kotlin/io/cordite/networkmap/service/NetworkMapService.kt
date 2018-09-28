@@ -66,8 +66,14 @@ class NetworkMapService(
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
-  private val enableDoorman: Boolean = true,
-  private val certManContext: CertmanContext = CertmanContext(true, false, null, null, false)
+  private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
+    root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
+    doorManEnabled = true,
+    certManEnabled = true,
+    certManPKIVerficationEnabled = false,
+    certManRootCAsTrustStoreFile = null,
+    certManRootCAsTrustStorePassword = null,
+    certManStrictEVCerts = false)
 ) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"
@@ -75,7 +81,6 @@ class NetworkMapService(
     internal const val CERTMAN_REST_ROOT = "/certman/api"
     private const val ADMIN_BRAID_ROOT = "/braid/api"
     private const val SWAGGER_ROOT = "/swagger"
-    val BASE_NAME = CordaX500Name("<replace me>", "Cordite Foundation Network", "Cordite Foundation", "London", "London", "GB")
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -91,7 +96,7 @@ class NetworkMapService(
   private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
   private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, BASE_NAME, certificateAndKeyPairStorage, certManContext)
+  internal val certificateManager = CertificateManager(vertx, certificateAndKeyPairStorage, certificateManagerConfig)
 
   fun startup(): Future<Unit> {
     // N.B. Ordering is important here
@@ -101,7 +106,7 @@ class NetworkMapService(
       .compose { startupBraid() }
   }
 
-  fun shutdown() : Future<Unit> {
+  fun shutdown(): Future<Unit> {
     processor.stop()
     return Future.succeededFuture()
   }
@@ -141,7 +146,7 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
               }
             }
-            if (enableDoorman) {
+            if (certificateManagerConfig.doorManEnabled) {
               group("doorman") {
                 unprotected {
                   post("/certificate", thisService::postCSR)
@@ -149,7 +154,7 @@ class NetworkMapService(
                 }
               }
             }
-            if (certManContext.enabled) {
+            if (certificateManagerConfig.certManEnabled) {
               group("certman") {
                 unprotected {
                   post("$CERTMAN_REST_ROOT/generate", certificateManager::certmanGenerate)
@@ -199,7 +204,7 @@ class NetworkMapService(
   )
   fun postNodeInfo(nodeInfo: Buffer): Future<Unit> {
     val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
-    if (enableDoorman || certManContext.enabled) {
+    if (!certificateManagerConfig.devMode) {
       // formally check that this node has been registered via our certs
       certificateManager.validateNodeInfoCertificates(signedNodeInfo.verified())
     }
@@ -376,9 +381,10 @@ class NetworkMapService(
     }
   }
 
-  private fun startCertManager() : Future<Unit> {
+  private fun startCertManager(): Future<Unit> {
     return certificateManager.init()
   }
+
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
       vertx,
@@ -404,7 +410,7 @@ class NetworkMapService(
     ).mapEmpty()
   }
 
-  private fun createHttpServerOptions() : HttpServerOptions {
+  private fun createHttpServerOptions(): HttpServerOptions {
     val serverOptions = HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls)
 
     return when {

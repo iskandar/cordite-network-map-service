@@ -19,7 +19,7 @@ build:maven:
   script:
     - mvn $MAVEN_CLI_OPTS clean license:check package
     - cat target/site/jacoco/index.html
-    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+#    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
   tags:
     - docker
   cache:

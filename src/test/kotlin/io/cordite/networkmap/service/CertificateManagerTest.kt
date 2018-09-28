@@ -48,11 +48,17 @@ class CertificateManagerTest {
   fun validateNodeInfoCertificates(context: TestContext) {
     val caCertAndKeyPair = createRootCACertAndKeyPair()
     val trustStoreFile = createRootTrustStore(caCertAndKeyPair)
-    val certmanContext = CertmanContext(true, true, trustStoreFile, KEYSTORE_PASSWORD, false)
+    val certificateManagerConfig = CertificateManagerConfig(
+      doorManEnabled = true,
+      certManEnabled = true,
+      certManPKIVerficationEnabled = true,
+      certManRootCAsTrustStoreFile = trustStoreFile,
+      certManRootCAsTrustStorePassword = KEYSTORE_PASSWORD,
+      certManStrictEVCerts = false)
     val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
     keyStoreDirectory.deleteOnExit()
     val store = CertificateAndKeyPairStorage(vertx, keyStoreDirectory)
-    val certManager = CertificateManager(vertx, NetworkMapService.BASE_NAME, store, certmanContext)
+    val certManager = CertificateManager(vertx, store, certificateManagerConfig)
     val async = context.async()
     certManager.init()
       .onSuccess {
@@ -73,8 +79,7 @@ class CertificateManagerTest {
 
   private fun createRootCACertAndKeyPair(): CertificateAndKeyPair {
     val caKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-    val caCert = X509Utilities.createSelfSignedCACertificate(NetworkMapService.BASE_NAME.x500Principal, caKeyPair)
-    val caCertAndKeyPair = CertificateAndKeyPair(caCert, caKeyPair)
-    return caCertAndKeyPair
+    val caCert = X509Utilities.createSelfSignedCACertificate(CertificateManagerConfig.DEFAULT_ROOT_NAME.x500Principal, caKeyPair)
+    return CertificateAndKeyPair(caCert, caKeyPair)
   }
 }

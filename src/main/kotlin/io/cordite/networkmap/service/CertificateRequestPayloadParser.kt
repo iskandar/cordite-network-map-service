@@ -26,7 +26,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-class CertificateRequestPayloadParser(private val certManContext: CertmanContext) {
+class CertificateRequestPayloadParser(private val certManContext: CertificateManagerConfig) {
   companion object {
     private val log = loggerFor<CertificateRequestPayloadParser>()
     private const val BEGIN_CERTIFICATE_TOKEN = "-----BEGIN CERTIFICATE-----"
