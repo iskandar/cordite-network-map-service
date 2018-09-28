@@ -150,37 +150,24 @@ class NetworkParameterInputsStorageTest {
     return Files.createTempDirectory("nms-test").toFile().apply { deleteOnExit() }
   }
 
+
   /*@Test
   fun `that we can upload validating notary nodeInfo`(context: TestContext) {
-    val tempDir = createTempDirectory()
-    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
-    val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
-    System.out.println("Path:${nodeInfoPath.absolutePath}")
-    vertx.fileSystem().readFile(nodeInfoPath.absolutePath)
-      .map {
-        nmis.postValidatingNotaryNodeInfo(it)
-      }
-      .onSuccess {
-        NetworkParameterInputsStorage.log.info("uploaded validating notary nodeInfo")
-        context.assertTrue(true)
-      }.setHandler(context.asyncAssertSuccess())
+    TODO("Yet to work on the test case")
+  }
 
-  }*/
-
-  /*@Test
+  @Test
   fun `that we can upload non-validating notary nodeInfo`(context: TestContext) {
-    val tempDir = createTempDirectory()
-    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
-    val nodeInfoPath= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
-    System.out.println("Path:${nodeInfoPath.absolutePath}")
-    vertx.fileSystem().readFile(nodeInfoPath.absolutePath)
-      .map {
-        nmis.postNonValidatingNotaryNodeInfo(it)
-      }
-      .onSuccess {
-        NetworkParameterInputsStorage.log.info("uploaded non validating notary nodeInfo")
-        context.assertTrue(true)
-      }.setHandler(context.asyncAssertSuccess())
+    TODO("Yet to work on the test case")
+  }
 
+  @Test
+  fun `that we cant upload multiple notary nodeInfo`(context: TestContext) {
+    TODO("Yet to work on the test case")
+  }
+
+  @Test
+  fun `that we cant upload invalid notary nodeInfo`(context: TestContext) {
+    TODO("Yet to work on the test case")
   }*/
 }

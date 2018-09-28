@@ -289,6 +289,7 @@ class NetworkParameterInputsStorage(parentDir: File,
               NON_VALIDATING_NOTARY -> "${nonValidatingNotariesPath.absolutePath}/$uploadedFileName"
               else -> throw Exception()
             }
+            TODO("Check whether the notary info already exists in nms. If so, throw duplicate exception")
             vertx.fileSystem().writeFile(filePath, uploadedFile.bytes).map { Unit }.onSuccess {
               context.response().setStatusCode(200).end()
             }
