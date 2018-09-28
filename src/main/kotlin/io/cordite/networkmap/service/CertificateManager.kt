@@ -29,6 +29,7 @@ import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -42,15 +43,15 @@ import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.security.auth.x500.X500Principal
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
 import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 
 
 class CertificateManager(
   private val vertx: Vertx,
-  private val rootX500Name: CordaX500Name,
   private val storage: CertificateAndKeyPairStorage,
-  certManContext: CertmanContext) {
+  private val config: CertificateManagerConfig) {
 
   companion object {
     private val logger = loggerFor<CertificateManager>()
@@ -63,15 +64,25 @@ class CertificateManager(
     private const val SIG_ALGORITHM = "SHA256withRSA"
     private const val SIG_PROVIDER = "BC"
     private const val ROOT_COMMON_NAME = "Root CA"
-    private const val NETWORK_MAP_COMMON_NAME = "Network Map"
+    internal const val NETWORK_MAP_COMMON_NAME = "Network Map"
     private const val DOORMAN_COMMON_NAME = "Doorman"
     internal fun createSignature(): Signature {
       return Signature.getInstance(SIG_ALGORITHM, SIG_PROVIDER)
     }
+
+    fun createSelfSignedCertificateAndKeyPair(name: CordaX500Name,
+                                              signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256): CertificateAndKeyPair {
+      val keyPair = Crypto.generateKeyPair(signatureScheme)
+      val certificate = X509Utilities.createSelfSignedCACertificate(
+        subject = name.x500Principal, keyPair = keyPair
+      )
+      return CertificateAndKeyPair(certificate, keyPair)
+    }
+
   }
 
   private val csrResponse = mutableMapOf<String, Optional<X509Certificate>>()
-  private val certificateRequestPayloadParser = CertificateRequestPayloadParser(certManContext)
+  private val certificateRequestPayloadParser = CertificateRequestPayloadParser(config)
   lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
     private set
   lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
@@ -82,9 +93,15 @@ class CertificateManager(
   fun init(): Future<Unit> {
     return ensureRootCertExists()
       .compose { ensureNetworkMapCertExists() }
-      .compose { ensureDoormanCertExists() }
-      .onSuccess {
-        doormanCertAndKeyPair = it
+      .compose {
+        if (config.doorManEnabled) {
+          ensureDoormanCertExists()
+            .onSuccess {
+              doormanCertAndKeyPair = it
+            }
+        } else {
+          succeededFuture()
+        }
       }
       .map(Unit)
   }
@@ -155,16 +172,24 @@ class CertificateManager(
       .onSuccess { logger.info("root certificate found") }
       .recover {
         // we couldn't find the cert - so generate one
-        logger.warn("failed to find root certificate. generating a new cert")
-        val cert = createSelfSignedCertificateAndKeyPair(rootX500Name.copy(commonName = ROOT_COMMON_NAME))
+        logger.warn("didn't find our root certificate")
+
+        val cert = if (config.devMode) {
+          DEV_ROOT_CA
+        } else {
+          createSelfSignedCertificateAndKeyPair(CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = ROOT_COMMON_NAME))
+        }
+
         storage.put(ROOT_CERT_KEY, cert)
           // but because we're creating a new root key, delete the old networkmap and doorman keys
           .compose {
             logger.info("clearing network-map cert")
-            storage.delete(NETWORK_MAP_CERT_KEY) }.recover { succeededFuture() }
+            storage.delete(NETWORK_MAP_CERT_KEY)
+          }.recover { succeededFuture() }
           .compose {
             logger.info("clearing doorman cert")
-            storage.delete(DOORMAN_CERT_KEY) }.recover { succeededFuture() }
+            storage.delete(DOORMAN_CERT_KEY)
+          }.recover { succeededFuture() }
           .map { cert }
       }
       .onSuccess { rootCertificateAndKeyPair = it }
@@ -172,12 +197,21 @@ class CertificateManager(
   }
 
   private fun ensureNetworkMapCertExists(): Future<Unit> {
-    return ensureCertExists(
-      "network-map",
-      NETWORK_MAP_CERT_KEY,
-      rootX500Name.copy(commonName = NETWORK_MAP_COMMON_NAME),
-      CertificateType.NETWORK_MAP,
-      rootCertificateAndKeyPair)
+    return storage.get(NETWORK_MAP_CERT_KEY)
+      .onSuccess { logger.info("networkmap certificate found") }
+      .recover {
+        // we couldn't find the cert - so generate one
+        logger.warn("didn't find networkmap certificate")
+        val cert =
+          createCertificateAndKeyPair(
+            rootCertificateAndKeyPair,
+            config.networkMapPrincipal(),
+            CertificateType.NETWORK_MAP,
+            Crypto.ECDSA_SECP256R1_SHA256
+          )
+
+        storage.put(NETWORK_MAP_CERT_KEY, cert).map { cert }
+      }
       .onSuccess { networkMapCertAndKeyPair = it }
       .mapEmpty()
   }
@@ -186,7 +220,7 @@ class CertificateManager(
     return ensureCertExists(
       "doorman",
       DOORMAN_CERT_KEY,
-      rootX500Name.copy(commonName = DOORMAN_COMMON_NAME),
+      CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = DOORMAN_COMMON_NAME),
       CertificateType.INTERMEDIATE_CA,
       rootCertificateAndKeyPair
     )
@@ -217,8 +251,26 @@ class CertificateManager(
     certificateType: CertificateType,
     signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
   ): CertificateAndKeyPair {
+    return createCertificate(rootCa, name.x500Principal, certificateType, signatureScheme)
+  }
+
+  private fun createCertificateAndKeyPair(
+    rootCa: CertificateAndKeyPair,
+    name: X500Principal,
+    certificateType: CertificateType,
+    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
+  ): CertificateAndKeyPair {
+    return createCertificate(rootCa, name, certificateType, signatureScheme)
+  }
+
+  private fun createCertificate(
+    rootCa: CertificateAndKeyPair,
+    name: X500Principal,
+    certificateType: CertificateType,
+    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
+  ): CertificateAndKeyPair {
     val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val certificate = createCertificate(rootCa, name, keyPair.public, certificateType)
+    val certificate = X509Utilities.createCertificate(certificateType, rootCa.certificate, rootCa.keyPair, name, keyPair.public)
     return CertificateAndKeyPair(certificate, keyPair)
   }
 
@@ -235,15 +287,6 @@ class CertificateManager(
       subject = name.x500Principal,
       subjectPublicKey = publicKey
     )
-  }
-
-  private fun createSelfSignedCertificateAndKeyPair(name: CordaX500Name,
-                                                    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256): CertificateAndKeyPair {
-    val keyPair = Crypto.generateKeyPair(signatureScheme)
-    val certificate = X509Utilities.createSelfSignedCACertificate(
-      subject = name.x500Principal, keyPair = keyPair
-    )
-    return CertificateAndKeyPair(certificate, keyPair)
   }
 
   private fun writeKeyStores(it: ZipOutputStream, nodeIdentity: CertificateAndKeyPair, certificatePath: List<X509Certificate>, nodeTLS: CertificateAndKeyPair) {
