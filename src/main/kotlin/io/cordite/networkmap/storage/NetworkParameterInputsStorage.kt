@@ -278,8 +278,7 @@ class NetworkParameterInputsStorage(parentDir: File,
     return try {
       val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
       val nodeHash = signedNodeInfo.verified().legalIdentities[0].name.serialize().hash
-      var filePath:String = ""
-      filePath = when(notaryType){
+      val filePath = when(notaryType){
         VALIDATING_NOTARY -> "${validatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
         NON_VALIDATING_NOTARY -> "${nonValidatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
         else -> throw Exception()
