@@ -23,9 +23,7 @@ import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -291,7 +289,7 @@ class NetworkParameterInputsStorage(parentDir: File,
       throw err
     }
     catch (err: Throwable) {
-      val message = "failed to upload $notaryType nodeInfo"
+      val message = "Failed to upload $notaryType nodeInfo"
       log.error(message, err)
       throw err
     }
