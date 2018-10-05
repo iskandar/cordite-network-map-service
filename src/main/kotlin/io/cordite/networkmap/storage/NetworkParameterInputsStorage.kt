@@ -22,16 +22,20 @@ import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.File
+import javax.ws.rs.core.MediaType
+
 
 class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
@@ -46,6 +50,8 @@ class NetworkParameterInputsStorage(parentDir: File,
     const val DEFAULT_DIR_NAME = "inputs"
     const val DEFAULT_DIR_VALIDATING_NOTARIES = "validating-notaries"
     const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
+    const val VALIDATING_NOTARY = "validating-notary"
+    const val NON_VALIDATING_NOTARY = "non-validating-notary"
   }
 
   internal val directory = File(parentDir, childDir)
@@ -179,6 +185,23 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the validating notary to upload its signed NodeInfo object to the network map",
+          consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer) {
+    postNotaryNodeInfo(nodeInfo, VALIDATING_NOTARY)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "For the non validating notary to upload its signed NodeInfo object to the network map",
+          consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer){
+    postNotaryNodeInfo(nodeInfo, NON_VALIDATING_NOTARY)
+  }
+
+
   fun readNotaries(): Future<List<Pair<String, NotaryInfo>>> {
     val validating = readNodeInfos(validatingNotariesPath)
       .compose { nodeInfos ->
@@ -246,6 +269,29 @@ class NetworkParameterInputsStorage(parentDir: File,
     // cluster and is shared by all the other members. This is the notary identity.
       2 -> legalIdentities[1]
       else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
+    }
+  }
+
+  private fun postNotaryNodeInfo(nodeInfo: Buffer, notaryType: String): Future<Unit> {
+    return try {
+      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
+      val nodeHash = signedNodeInfo.verified().legalIdentities[0].name.serialize().hash
+      val filePath = when(notaryType){
+        VALIDATING_NOTARY -> "${validatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
+        NON_VALIDATING_NOTARY -> "${nonValidatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
+        else -> throw Exception()
+      }
+      vertx.fileSystem().writeFile(filePath, nodeInfo.bytes).map { Unit }
+    }
+    catch (err: UnsupportedOperationException) {
+      val message = "Failed to upload $notaryType nodeInfo. Expected valid nodeInfo file"
+      log.error(message, err)
+      throw err
+    }
+    catch (err: Throwable) {
+      val message = "Failed to upload $notaryType nodeInfo"
+      log.error(message, err)
+      throw err
     }
   }
 }

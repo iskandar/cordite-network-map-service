@@ -27,6 +27,7 @@ import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.swagger.models.Contact
+import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -167,6 +168,8 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
+                post("$ADMIN_REST_ROOT/notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
                 router { route("/*").handler(staticHandler) }
               }
               protected {
