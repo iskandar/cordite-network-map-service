@@ -93,16 +93,7 @@ class CertificateManager(
   fun init(): Future<Unit> {
     return ensureRootCertExists()
       .compose { ensureNetworkMapCertExists() }
-      .compose {
-        if (config.doorManEnabled) {
-          ensureDoormanCertExists()
-            .onSuccess {
-              doormanCertAndKeyPair = it
-            }
-        } else {
-          succeededFuture()
-        }
-      }
+      .compose { ensureDoormanCertExists().onSuccess { doormanCertAndKeyPair = it } }
       .map(Unit)
   }
 
