@@ -63,6 +63,7 @@ class NetworkMapServiceTest {
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
     val NETWORK_MAP_QUEUE_DELAY = 1.seconds
+    val WEB_ROOT = ""
     val TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
       "MIIDoDCCAogCCQDHFxXNfHiwizANBgkqhkiG9w0BAQsFADCBkTELMAkGA1UEBhMC\n" +
       "R0IxDzANBgNVBAgMBkxvbmRvbjEPMA0GA1UEBwwGTG9uZG9uMREwDwYDVQQKDAhC\n" +
@@ -146,6 +147,7 @@ class NetworkMapServiceTest {
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
       tls = false,
       vertx = vertx,
+      webRoot = WEB_ROOT,
       certificateManagerConfig = CertificateManagerConfig(
           root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
           doorManEnabled = false,
@@ -255,7 +257,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
 
-    client.post("${NetworkMapService.CERTMAN_REST_ROOT}/generate")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOTx}/generate")
       .putHeader(HttpHeaders.CONTENT_LENGTH, payload.length.toString())
       .exceptionHandler {
         context.fail(it)
@@ -327,7 +329,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
     // invoke the api
-    client.post("${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating/nodeInfo")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/notaries/validating/nodeInfo")
       .exceptionHandler {
         context.fail(it)
       }
@@ -350,7 +352,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
     // invoke the api
-    client.post("${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating/nodeInfo")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/notaries/nonValidating/nodeInfo")
       .exceptionHandler {
         context.fail(it)
       }

@@ -70,6 +70,7 @@ class NetworkMapAdminInterfaceTest {
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
         hostname = "127.0.0.1",
+        webRoot = NetworkMapServiceTest.WEB_ROOT,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
         networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
         networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
@@ -102,27 +103,27 @@ class NetworkMapAdminInterfaceTest {
     var key = ""
     var whitelist = ""
 
-    client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/login", JsonObject("user" to "sa", "password" to ""))
+    client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/login", JsonObject("user" to "sa", "password" to ""))
       .onSuccess {
         key = "Bearer $it"
         println(key)
       }
       .compose {
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/notaries")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/notaries")
       }
       .onSuccess {
         val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
         context.assertEquals(2, notaries.size)
       }
       .compose {
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/nodes")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/nodes")
       }
       .onSuccess {
         val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
         context.assertEquals(2, nodes.size)
       }
       .compose {
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist")
       }
       .onSuccess {
         whitelist = it.toString()
@@ -130,10 +131,10 @@ class NetworkMapAdminInterfaceTest {
         context.assertNotEquals(0, lines.size)
       }
       .compose { // delete the whitelist
-        client.futureDelete("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", "Authorization" to key)
+        client.futureDelete("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist", "Authorization" to key)
       }
       .compose { // get the whitelist
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist")
       }
       .onSuccess { // check its empty
         context.assertTrue(it.toString().isEmpty())
@@ -141,19 +142,19 @@ class NetworkMapAdminInterfaceTest {
       .compose { // append a set of white list items
         val updated = whitelist.toWhitelistPairs().drop(1)
         val newWhiteList = updated.toWhitelistText()
-        client.futurePut("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", newWhiteList, "Authorization" to key)
+        client.futurePut("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist", newWhiteList, "Authorization" to key)
       }
       .compose {
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist")
       }
       .onSuccess {
         context.assertEquals(whitelist.toWhitelistPairs().size - 1, it.toString().toWhitelistPairs().size)
       }
       .compose { // set the complete whitelist
-        client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/whitelist", whitelist, "Authorization" to key)
+        client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist", whitelist, "Authorization" to key)
       }
       .compose {
-        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
+        client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/whitelist")
       }
       .onSuccess {
         context.assertEquals(whitelist.lines().sorted().parseToWhitelistPairs(), it.toString().lines().sorted().parseToWhitelistPairs())
@@ -167,7 +168,7 @@ class NetworkMapAdminInterfaceTest {
   @Test
   fun `that we can download the truststore`(context: TestContext) {
     val async = context.async()
-    client.futureGet("${NetworkMapService.NETWORK_MAP_ROOT}/truststore")
+    client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.NETWORK_MAP_ROOTx}/truststore")
       .map { buffer ->
         ByteArrayInputStream(buffer.bytes).use { stream ->
           KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(stream, CertificateManager.TRUST_STORE_PASSWORD.toCharArray()) }

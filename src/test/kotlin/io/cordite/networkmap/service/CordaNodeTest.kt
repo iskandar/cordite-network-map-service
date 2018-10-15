@@ -45,6 +45,7 @@ class CordaNodeTest {
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 1.millis
     val NETWORK_MAP_QUEUE_DELAY = 1.millis
+    val DEFAULT_NETWORK_MAP_ROOT = ""
     init {
       SerializationTestEnvironment.init()
     }
@@ -53,6 +54,7 @@ class CordaNodeTest {
   private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()
   private val port = getFreePort()
+  private val webRoot = DEFAULT_NETWORK_MAP_ROOT
 
   private lateinit var service: NetworkMapService
 
@@ -74,6 +76,7 @@ class CordaNodeTest {
       cacheTimeout = CACHE_TIMEOUT,
       networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
+      webRoot = DEFAULT_NETWORK_MAP_ROOT,
       tls = false,
       vertx = vertx)
     service.startup().setHandler(context.asyncAssertSuccess())
@@ -119,6 +122,6 @@ class CordaNodeTest {
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    return NetworkMapClient(URL("http://localhost:$port"), rootCert)
+    return NetworkMapClient(URL("http://localhost:$port$webRoot"), rootCert)
   }
 }

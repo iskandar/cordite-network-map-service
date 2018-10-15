@@ -82,6 +82,7 @@ open class NetworkMapApp {
       } else {
         CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(rootX509Name.stringValue))
       }
+      val webRoot = webRootOpt.stringValue
 
       if (truststore != null && !truststore.exists()) {
         println("failed to find truststore ${truststore.path}")
@@ -99,6 +100,7 @@ open class NetworkMapApp {
         certPath = certPath,
         keyPath = keyPath,
         hostname = hostNameOpt.stringValue,
+        webRoot = webRoot,
         certificateManagerConfig = CertificateManagerConfig(
           root = root,
           doorManEnabled = enableDoorman,
@@ -107,8 +109,7 @@ open class NetworkMapApp {
           certManRootCAsTrustStoreFile = truststore,
           certManRootCAsTrustStorePassword = trustStorePassword,
           certManStrictEVCerts = strictEV
-        ),
-      webRoot
+        )
       ).startup().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())
