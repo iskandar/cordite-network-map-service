@@ -29,6 +29,7 @@ import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -208,32 +209,23 @@ class CertificateManager(
   }
 
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {
-    return ensureCertExists(
-      "doorman",
-      DOORMAN_CERT_KEY,
-      CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = DOORMAN_COMMON_NAME),
-      CertificateType.INTERMEDIATE_CA,
-      rootCertificateAndKeyPair
-    )
-  }
+    logger.info("checking for ${"doorman"} certificate")
+    return storage.get(DOORMAN_CERT_KEY)
+        .onSuccess { logger.info("${"doorman"} certificate found") }
+        .recover {
+          // we couldn't find the cert - so generate one
+          logger.warn("failed to find ${"doorman"} certificate for this NMS. generating a new cert")
+          val cert = if (config.devMode) {
+            logger.info("in dev mode so using the dev intermediate cert for doorman")
+            DEV_INTERMEDIATE_CA
+          } else {
+            createCertificateAndKeyPair(rootCertificateAndKeyPair,
+                CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = DOORMAN_COMMON_NAME),
+                CertificateType.INTERMEDIATE_CA)
+          }
 
-  private fun ensureCertExists(
-    description: String,
-    certName: String,
-    name: CordaX500Name,
-    certificateType: CertificateType,
-    rootCa: CertificateAndKeyPair,
-    signatureScheme: SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
-  ): Future<CertificateAndKeyPair> {
-    logger.info("checking for $description certificate")
-    return storage.get(certName)
-      .onSuccess { logger.info("$description certificate found") }
-      .recover {
-        // we couldn't find the cert - so generate one
-        logger.warn("failed to find $description certificate for this NMS. generating a new cert")
-        val cert = createCertificateAndKeyPair(rootCa, name, certificateType, signatureScheme)
-        storage.put(certName, cert).map { cert }
-      }
+          storage.put(DOORMAN_CERT_KEY, cert).map { cert }
+        }
   }
 
   internal fun createCertificateAndKeyPair(

@@ -81,7 +81,11 @@ openssl dgst -sha256 -sign domain.key domain.crt | base64 | cat domain.crt - | c
 
 This essentially signs the certificate with your private key and sends _only_ the certificate and signature to the network-map. 
 If the certificate passes validation it, the request returns a zip file of the keystores required by the node. 
-These should be stored in the `<node-directory>/certificates`.  
+These should be stored in the `<node-directory>/certificates`.
+
+## Releasing NMS
+
+To release NMS you just need to tag it.  It is then released to docker hub.
 
 ## License
 View [license information](https://gitlab.com/cordite/cordite/blob/master/LICENSE) for the software contained in this image.
