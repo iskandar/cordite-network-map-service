@@ -66,6 +66,7 @@ class NetworkMapService(
   private val certPath: String = "",
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
+  private val string: webRoot,
   private val hostname: String = "localhost",
   private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
     root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
