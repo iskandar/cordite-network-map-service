@@ -53,7 +53,7 @@ open class NetworkMapApp {
       val certmanTruststorePasswordOpt = options.addOption("certman-truststore-password", "", "truststore password")
       val certmanStrictEV = options.addOption("certman-strict-ev", "false", "enables strict constraint for EV certs only in certman")
       val rootX509Name = options.addOption("root-ca-name", "CN=\"<replace me>\", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB", "the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca")
-      val webRootOpt = options.addOption("web-root","/", "for remapping the root url for all requests")
+      val webRootOpt = options.addOption("web-root","", "for remapping the root url for all requests")
 
       if (args.contains("--help")) {
         options.printHelp()
@@ -83,9 +83,7 @@ open class NetworkMapApp {
         CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(rootX509Name.stringValue))
       }
       var webRoot = webRootOpt.stringValue
-
-      if (! webRoot.endsWith("/")) logger.warn("web-root should really be terminated with a trailing '/' or strange things may happen. ")
-      if (! webRoot.startsWith("/")) webRoot = "/" + webRoot
+      if (webRoot.isNotEmpty() && ! webRoot.endsWith("/")) webRoot = webRoot + "/"
 
       if (truststore != null && !truststore.exists()) {
         println("failed to find truststore ${truststore.path}")
