@@ -127,7 +127,11 @@ class NetworkMapService(
       val thisService = this
       val staticHandler = StaticHandler.create("website/public").setCachingEnabled(false)
       val result = Future.future<Unit>()
-      val templateEngine = ResourceMvelTemplateEngine(false, mapOf("location" to root), "website/public/")
+      val templateEngine = ResourceMvelTemplateEngine(
+        cachingEnabled = true,
+        properties =  mapOf("location" to root),
+        rootPath = "website/public/"
+      )
       BraidConfig()
         .withVertx(vertx)
         .withPort(port)

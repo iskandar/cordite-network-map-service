@@ -7,6 +7,12 @@ import org.mvel2.templates.TemplateRuntime
 import org.mvel2.util.StringAppender
 import javax.ws.rs.core.HttpHeaders
 
+/**
+ * vertx-web comes with a number of template engines
+ * Unfortunately, these always process files from the filesystem,
+ * rather than being capable to process resource files, like StaticHandler.
+ * This class allows the processing of resource files
+ */
 class ResourceMvelTemplateEngine(
   val cachingEnabled: Boolean,
   private val properties: Map<String, String>,
@@ -15,7 +21,7 @@ class ResourceMvelTemplateEngine(
 ) {
   val cache = mutableMapOf<String, String>()
 
-  fun resolvePath(path: String) : String {
+  private fun resolvePath(path: String) : String {
     return if (cachingEnabled) {
       cache.computeIfAbsent(path, this::resolvePathUncached)
     } else {
