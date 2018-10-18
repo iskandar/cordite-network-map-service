@@ -67,6 +67,7 @@ class NetworkMapWithTLSCertTest {
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       hostname = "127.0.0.1",
+      webRoot = NetworkMapServiceTest.WEB_ROOT,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
       networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
