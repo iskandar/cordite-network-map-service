@@ -25,9 +25,9 @@ import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.swagger.annotations.ApiOperation
 import io.swagger.models.Contact
-import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -52,6 +52,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
@@ -67,7 +68,7 @@ class NetworkMapService(
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
-  private val webRoot: String = "",
+  webRoot: String = "/",
   private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
     root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
     doorManEnabled = true,
@@ -78,11 +79,11 @@ class NetworkMapService(
     certManStrictEVCerts = false)
 ) {
   companion object {
-    internal const val NETWORK_MAP_ROOTx = "/network-map"
-    internal const val ADMIN_REST_ROOTx = "/admin/api"
-    internal const val CERTMAN_REST_ROOTx = "/certman/api"
-    private const val ADMIN_BRAID_ROOTx = "/braid/api"
-    private const val SWAGGER_ROOTx = "/swagger"
+    internal const val NETWORK_MAP_ROOT = "/network-map"
+    internal const val ADMIN_REST_ROOT = "/admin/api"
+    internal const val CERTMAN_REST_ROOT = "/certman/api"
+    private const val ADMIN_BRAID_ROOT = "/braid/api"
+    private const val SWAGGER_ROOT = "/swagger"
     private val logger = loggerFor<NetworkMapService>()
 
     init {
@@ -90,11 +91,13 @@ class NetworkMapService(
     }
   }
 
-  val networkMapRoot: String get() = webRoot + NETWORK_MAP_ROOTx
-  val adminRestRoot: String get() = webRoot + ADMIN_REST_ROOTx
-  val certmanRestRoot: String get() = webRoot + CERTMAN_REST_ROOTx
-  val adminBraidRoot: String get() = webRoot + ADMIN_BRAID_ROOTx
-  val swaggerRoot: String get() = webRoot + SWAGGER_ROOTx
+  private val root = webRoot.dropLastWhile { it == '/' }
+
+  private val networkMapRoot = root + NETWORK_MAP_ROOT
+  private val adminRestRoot = root + ADMIN_REST_ROOT
+  private val certmanRestRoot = root + CERTMAN_REST_ROOT
+  private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
+  private val swaggerRoot: String = root + SWAGGER_ROOT
 
   internal val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
   private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
@@ -124,6 +127,7 @@ class NetworkMapService(
       val thisService = this
       val staticHandler = StaticHandler.create("website/public").setCachingEnabled(false)
       val result = Future.future<Unit>()
+      val templateEngine = ResourceMvelTemplateEngine(false, mapOf("location" to root), "website/public/")
       BraidConfig()
         .withVertx(vertx)
         .withPort(port)
@@ -134,7 +138,7 @@ class NetworkMapService(
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(swaggerRoot)
-          .withApiPath("/"+webRoot) // a little different because we need to mount the network map on '/network-map'
+          .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
           .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
           .withDescription("""|<h4><a href="/">Cordite Networkmap Service</a></h4>
             |<b>Please note:</b> The protected parts of this API require JWT authentication.
@@ -145,46 +149,60 @@ class NetworkMapService(
           .withPaths {
             group("network map") {
               unprotected {
-                get(networkMapRoot, thisService::getNetworkMap)
-                post("/${networkMapRoot}publish", thisService::postNodeInfo)
-                post("/${networkMapRoot}ack-parameters", thisService::postAckNetworkParameters)
-                get("/${networkMapRoot}node-info/:hash", thisService::getNodeInfo)
-                get("/${networkMapRoot}network-parameters/:hash", thisService::getNetworkParameter)
-                get("/${networkMapRoot}my-hostname", thisService::getMyHostname)
-                get("/${networkMapRoot}truststore", thisService::getNetworkTrustStore)
+                get("$networkMapRoot", thisService::getNetworkMap)
+                post("$networkMapRoot/publish", thisService::postNodeInfo)
+                post("$networkMapRoot/ack-parameters", thisService::postAckNetworkParameters)
+                get("$networkMapRoot/node-info/:hash", thisService::getNodeInfo)
+                get("$networkMapRoot/network-parameters/:hash", thisService::getNetworkParameter)
+                get("$networkMapRoot/my-hostname", thisService::getMyHostname)
+                get("$networkMapRoot/truststore", thisService::getNetworkTrustStore)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
               group("doorman") {
                 unprotected {
-                  post("/${networkMapRoot}certificate", thisService::postCSR)
-                  get("/${networkMapRoot}certificate/:id", thisService::retrieveCSRResult)
+                  post("${root}/certificate", thisService::postCSR)
+                  get("${root}/certificate/:id", thisService::retrieveCSRResult)
                 }
               }
             }
             if (certificateManagerConfig.certManEnabled) {
               group("certman") {
                 unprotected {
-                  post("/${certmanRestRoot}generate", certificateManager::certmanGenerate)
+                  post("$certmanRestRoot/generate", certificateManager::certmanGenerate)
                 }
               }
             }
             group("admin") {
               unprotected {
-                post("/${networkMapRoot}login", authService::login)
-                get("/${networkMapRoot}whitelist", inputsStorage::serveWhitelist)
-                get("/${networkMapRoot}notaries", thisService::serveNotaries)
-                get("/${networkMapRoot}nodes", thisService::serveNodes)
-                post("/${networkMapRoot}notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
-                post("/${networkMapRoot}notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
-                router { route("/*").handler(staticHandler) }
+                post("$adminRestRoot/login", authService::login)
+                get("$adminRestRoot/whitelist", inputsStorage::serveWhitelist)
+                get("$adminRestRoot/notaries", thisService::serveNotaries)
+                get("$adminRestRoot/nodes", thisService::serveNodes)
+                post("$adminRestRoot/notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
+                post("$adminRestRoot/notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
+                router {
+                  route("$root/").handler { context ->
+                    if (context.request().path() == root) {
+                      context.response().putHeader(HttpHeaders.LOCATION, "$root/").setStatusCode(HttpResponseStatus.MOVED_PERMANENTLY.code()).end()
+                    } else {
+                      context.next()
+                    }
+                  }
+                  route("$root/*").handler { context ->
+                    templateEngine.handler(context, root)
+                  }
+                  route("$root/*").handler {
+                    staticHandler.handle(it)
+                  }
+                }
               }
               protected {
-                put("/${networkMapRoot}whitelist", inputsStorage::appendWhitelist)
-                post("/${networkMapRoot}whitelist", inputsStorage::replaceWhitelist)
-                delete("/${networkMapRoot}whitelist", inputsStorage::clearWhitelist)
-                delete("/${networkMapRoot}notaries", thisService::deleteNotary)
-                delete("/${networkMapRoot}nodes/:nodeKey", thisService::deleteNode)
+                put("$adminRestRoot/whitelist", inputsStorage::appendWhitelist)
+                post("$adminRestRoot/whitelist", inputsStorage::replaceWhitelist)
+                delete("$adminRestRoot/whitelist", inputsStorage::clearWhitelist)
+                delete("$adminRestRoot/notaries", thisService::deleteNotary)
+                delete("$adminRestRoot/nodes/:nodeKey", thisService::deleteNode)
               }
             }
           }

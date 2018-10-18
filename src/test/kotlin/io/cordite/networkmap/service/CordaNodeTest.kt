@@ -45,7 +45,7 @@ class CordaNodeTest {
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 1.millis
     val NETWORK_MAP_QUEUE_DELAY = 1.millis
-    val DEFAULT_NETWORK_MAP_ROOT = ""
+    const val DEFAULT_NETWORK_MAP_ROOT = "/"
     init {
       SerializationTestEnvironment.init()
     }
@@ -94,7 +94,7 @@ class CordaNodeTest {
 
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
-    driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port"), {
+    driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), {
       // TODO: register notaries
     }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())

@@ -63,7 +63,7 @@ class NetworkMapServiceTest {
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
     val NETWORK_MAP_QUEUE_DELAY = 1.seconds
-    val WEB_ROOT = ""
+    val WEB_ROOT = "/root"
     val TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
       "MIIDoDCCAogCCQDHFxXNfHiwizANBgkqhkiG9w0BAQsFADCBkTELMAkGA1UEBhMC\n" +
       "R0IxDzANBgNVBAgMBkxvbmRvbjEPMA0GA1UEBwwGTG9uZG9uMREwDwYDVQQKDAhC\n" +
@@ -257,7 +257,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
 
-    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOTx}/generate")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOT}/generate")
       .putHeader(HttpHeaders.CONTENT_LENGTH, payload.length.toString())
       .exceptionHandler {
         context.fail(it)
@@ -287,7 +287,7 @@ class NetworkMapServiceTest {
 
 
   private fun createNetworkMapClient(): NetworkMapClient {
-    return NetworkMapClient(URL("http://localhost:$port"), service.certificateManager.rootCertificateAndKeyPair.certificate)
+    return NetworkMapClient(URL("http://localhost:$port$WEB_ROOT"), service.certificateManager.rootCertificateAndKeyPair.certificate)
   }
 
   private fun createTempDir(): File {
@@ -329,7 +329,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
     // invoke the api
-    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/notaries/validating/nodeInfo")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating/nodeInfo")
       .exceptionHandler {
         context.fail(it)
       }
@@ -352,7 +352,7 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
     // invoke the api
-    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOTx}/notaries/nonValidating/nodeInfo")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating/nodeInfo")
       .exceptionHandler {
         context.fail(it)
       }

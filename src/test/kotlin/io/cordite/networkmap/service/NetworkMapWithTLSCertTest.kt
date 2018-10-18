@@ -97,7 +97,7 @@ class NetworkMapWithTLSCertTest {
   @Test
   fun `that we can retrieve notaries`(context: TestContext) {
     val async = context.async()
-    client.futureGet("/admin/api/notaries")
+    client.futureGet("${NetworkMapServiceTest.WEB_ROOT}/admin/api/notaries")
       .onSuccess {
         val decoded = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
         context.assertNotEquals(0, decoded.size)
