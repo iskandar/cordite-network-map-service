@@ -93,9 +93,6 @@ class NetworkMapService(
 
   private val root = webRoot.dropLastWhile { it == '/' }
 
-  private val networkMapRoot = root + NETWORK_MAP_ROOT
-  private val adminRestRoot = root + ADMIN_REST_ROOT
-  private val certmanRestRoot = root + CERTMAN_REST_ROOT
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
@@ -142,7 +139,7 @@ class NetworkMapService(
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
           .withSwaggerPath(swaggerRoot)
-          .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
+          .withApiPath("$root/") // a little different because we need to mount the network map on '/network-map'
           .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
           .withDescription("""|<h4><a href="/">Cordite Networkmap Service</a></h4>
             |<b>Please note:</b> The protected parts of this API require JWT authentication.
@@ -153,60 +150,60 @@ class NetworkMapService(
           .withPaths {
             group("network map") {
               unprotected {
-                get("$networkMapRoot", thisService::getNetworkMap)
-                post("$networkMapRoot/publish", thisService::postNodeInfo)
-                post("$networkMapRoot/ack-parameters", thisService::postAckNetworkParameters)
-                get("$networkMapRoot/node-info/:hash", thisService::getNodeInfo)
-                get("$networkMapRoot/network-parameters/:hash", thisService::getNetworkParameter)
-                get("$networkMapRoot/my-hostname", thisService::getMyHostname)
-                get("$networkMapRoot/truststore", thisService::getNetworkTrustStore)
+                get(NETWORK_MAP_ROOT, thisService::getNetworkMap)
+                post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
+                get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
+                get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
+                get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
+                get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
               group("doorman") {
                 unprotected {
-                  post("$root/certificate", thisService::postCSR)
-                  get("$root/certificate/:id", thisService::retrieveCSRResult)
+                  post("/certificate", thisService::postCSR)
+                  get("/certificate/:id", thisService::retrieveCSRResult)
                 }
               }
             }
             if (certificateManagerConfig.certManEnabled) {
               group("certman") {
                 unprotected {
-                  post("$certmanRestRoot/generate", certificateManager::certmanGenerate)
+                  post("$CERTMAN_REST_ROOT/generate", certificateManager::certmanGenerate)
                 }
               }
             }
             group("admin") {
               unprotected {
-                post("$adminRestRoot/login", authService::login)
-                get("$adminRestRoot/whitelist", inputsStorage::serveWhitelist)
-                get("$adminRestRoot/notaries", thisService::serveNotaries)
-                get("$adminRestRoot/nodes", thisService::serveNodes)
-                post("$adminRestRoot/notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
-                post("$adminRestRoot/notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/login", authService::login)
+                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
+                post("$ADMIN_REST_ROOT/notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
                 router {
-                  route("$root/").handler { context ->
+                  route("/").handler { context ->
                     if (context.request().path() == root) {
                       context.response().putHeader(HttpHeaders.LOCATION, "$root/").setStatusCode(HttpResponseStatus.MOVED_PERMANENTLY.code()).end()
                     } else {
                       context.next()
                     }
                   }
-                  route("$root/*").handler { context ->
+                  route("/*").handler { context ->
                     templateEngine.handler(context, root)
                   }
-                  route("$root/*").handler {
+                  route("/*").handler {
                     staticHandler.handle(it)
                   }
                 }
               }
               protected {
-                put("$adminRestRoot/whitelist", inputsStorage::appendWhitelist)
-                post("$adminRestRoot/whitelist", inputsStorage::replaceWhitelist)
-                delete("$adminRestRoot/whitelist", inputsStorage::clearWhitelist)
-                delete("$adminRestRoot/notaries", thisService::deleteNotary)
-                delete("$adminRestRoot/nodes/:nodeKey", thisService::deleteNode)
+                put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
+                post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
+                delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
+                delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
+                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
               }
             }
           }
