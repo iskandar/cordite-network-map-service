@@ -32,6 +32,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.net.HttpURLConnection
 import java.security.KeyStore
 
@@ -112,14 +113,31 @@ class NetworkMapAdminInterfaceTest {
       }
       .onSuccess {
         val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
-        context.assertEquals(2, notaries.size)
+        context.assertEquals(2, notaries.size, "notaries should be correct count")
       }
       .compose {
         client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/nodes")
       }
       .onSuccess {
         val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
-        context.assertEquals(2, nodes.size)
+        context.assertEquals(2, nodes.size, "nodes should be correct count")
+      }
+      .compose {
+        val nodeInfo1= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
+        val payload = vertx.fileSystem().readFileBlocking(nodeInfo1.absolutePath)
+        client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating", payload, "Authorization" to key)
+      }
+      .compose {
+        val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
+        val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
+        client.futurePost("${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating", payload, "Authorization" to key)
+      }
+      .compose {
+        client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/notaries")
+      }
+      .onSuccess {
+        val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
+        context.assertEquals(2, notaries.size, "notaries should be correct count after update")
       }
       .compose {
         client.futureGet("${NetworkMapService.ADMIN_REST_ROOT}/whitelist")

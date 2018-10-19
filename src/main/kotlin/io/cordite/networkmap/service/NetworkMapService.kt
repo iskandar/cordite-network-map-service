@@ -27,7 +27,6 @@ import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.swagger.models.Contact
-import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -168,16 +167,17 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
-                post("$ADMIN_REST_ROOT/notaries/validating/nodeInfo", inputsStorage::postValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/notaries/nonValidating/nodeInfo", inputsStorage::postNonValidatingNotaryNodeInfo)
                 router { route("/*").handler(staticHandler) }
               }
               protected {
                 put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
                 post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
                 delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
-                delete("$ADMIN_REST_ROOT/notaries", thisService::deleteNotary)
+                delete("$ADMIN_REST_ROOT/notaries/validating", thisService::deleteValidatingNotary)
+                delete("$ADMIN_REST_ROOT/notaries/nonValidating", thisService::deleteNonValidatingNotary)
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
+                post("$ADMIN_REST_ROOT/notaries/validating", inputsStorage::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating", inputsStorage::postNonValidatingNotaryNodeInfo)
               }
             }
           }
@@ -286,9 +286,15 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a notary")
-  fun deleteNotary(simpleNotary: SimpleNotaryInfo): Future<Unit> {
-    return inputsStorage.deleteNotary(simpleNotary.nodeKey, simpleNotary.notaryInfo.validating)
+  @ApiOperation(value = "delete a validating notary with the node key")
+  fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
+    return inputsStorage.deleteNotary(nodeKey, true)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a non-validating notary with the node key")
+  fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
+    return inputsStorage.deleteNotary(nodeKey, false)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

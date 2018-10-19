@@ -318,52 +318,6 @@ class NetworkMapServiceTest {
       legalIdentity.keyPair.private.sign(serialised.bytes)
     }
   }
-
-  @Test
-  fun `that we can submit a validating node info`(context: TestContext) {
-    // prepare the payload
-    val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
-    val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
-    val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
-    val async = context.async()
-    // invoke the api
-    client.post("${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating/nodeInfo")
-      .exceptionHandler {
-        context.fail(it)
-      }
-      .handler { it ->
-        if (it.isOkay()) {
-          context.assertTrue(true)
-        } else {
-          context.fail("failed with ${it.statusMessage()}")
-        }
-        async.complete()
-      }
-      .end(payload)
-  }
-
-  @Test
-  fun `that we can submit a non-validating node info`(context: TestContext) {
-    // prepare the payload
-    val nodeInfoPath= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
-    val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
-    val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
-    val async = context.async()
-    // invoke the api
-    client.post("${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating/nodeInfo")
-      .exceptionHandler {
-        context.fail(it)
-      }
-      .handler { it ->
-        if (it.isOkay()) {
-          context.assertTrue(true)
-        } else {
-          context.fail("failed with ${it.statusMessage()}")
-        }
-        async.complete()
-      }
-      .end(payload)
-  }
 }
 
 private fun HttpClientResponse.isOkay(): Boolean {

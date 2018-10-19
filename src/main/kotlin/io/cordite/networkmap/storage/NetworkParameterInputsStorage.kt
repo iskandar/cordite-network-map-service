@@ -186,19 +186,29 @@ class NetworkParameterInputsStorage(parentDir: File,
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "For the validating notary to upload its signed NodeInfo object to the network map",
-          consumes = MediaType.APPLICATION_OCTET_STREAM
+  @ApiOperation(value = """For the validating notary to upload its signed NodeInfo object to the network map.
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/validating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
   )
-  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer) {
-    postNotaryNodeInfo(nodeInfo, VALIDATING_NOTARY)
+  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer) : Future<String> {
+    return postNotaryNodeInfo(nodeInfo, VALIDATING_NOTARY)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "For the non validating notary to upload its signed NodeInfo object to the network map",
-          consumes = MediaType.APPLICATION_OCTET_STREAM
+  @ApiOperation(value = """For the non validating notary to upload its signed NodeInfo object to the network map",
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/nonValidating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
   )
-  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer){
-    postNotaryNodeInfo(nodeInfo, NON_VALIDATING_NOTARY)
+  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer) : Future<String> {
+    return postNotaryNodeInfo(nodeInfo, NON_VALIDATING_NOTARY)
   }
 
 
@@ -272,23 +282,21 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  private fun postNotaryNodeInfo(nodeInfo: Buffer, notaryType: String): Future<Unit> {
+  private fun postNotaryNodeInfo(nodeInfo: Buffer, notaryType: String): Future<String> {
     return try {
       val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
       val nodeHash = signedNodeInfo.verified().legalIdentities[0].name.serialize().hash
-      val filePath = when(notaryType){
+      val filePath = when (notaryType) {
         VALIDATING_NOTARY -> "${validatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
         NON_VALIDATING_NOTARY -> "${nonValidatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
         else -> throw Exception()
       }
-      vertx.fileSystem().writeFile(filePath, nodeInfo.bytes).map { Unit }
-    }
-    catch (err: UnsupportedOperationException) {
+      vertx.fileSystem().writeFile(filePath, nodeInfo.bytes).map { "OK" }
+    } catch (err: UnsupportedOperationException) {
       val message = "Failed to upload $notaryType nodeInfo. Expected valid nodeInfo file"
       log.error(message, err)
       throw err
-    }
-    catch (err: Throwable) {
+    } catch (err: Throwable) {
       val message = "Failed to upload $notaryType nodeInfo"
       log.error(message, err)
       throw err
@@ -296,12 +304,12 @@ class NetworkParameterInputsStorage(parentDir: File,
   }
 }
 
-fun List<Pair<String, AttachmentId>>.toWhitelistText() : String {
+fun List<Pair<String, AttachmentId>>.toWhitelistText(): String {
   return this.joinToString("\n") { it.first + ':' + it.second.toString() }
 }
 
 
-fun String.toWhitelistPairs() : List<Pair<String, AttachmentId>> {
+fun String.toWhitelistPairs(): List<Pair<String, AttachmentId>> {
   return this.lines().parseToWhitelistPairs()
 }
 
