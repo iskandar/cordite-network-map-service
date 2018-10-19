@@ -165,8 +165,8 @@ class NetworkMapService(
             if (certificateManagerConfig.doorManEnabled) {
               group("doorman") {
                 unprotected {
-                  post("${root}/certificate", thisService::postCSR)
-                  get("${root}/certificate/:id", thisService::retrieveCSRResult)
+                  post("$root/certificate", thisService::postCSR)
+                  get("$root/certificate/:id", thisService::retrieveCSRResult)
                 }
               }
             }
