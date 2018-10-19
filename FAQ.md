@@ -14,7 +14,7 @@ Notably it requires formal certificates from any of the existing well-know root 
 Therefore to enable TLS, you will need:
 
 * A DV certificate from any of the major CAs. You can get a free one from [Let's Encrypt](https://letsencrypt.org/)
-* You need to be running your NMS on a server with the hostname referenced by the certificate
+* You need to be running your NMS on a server with the hostname referenced by the certificate. It's not recommended to try this on a dev laptop/workstation.
 
 Then you will need to configure the NMS to use your certificate and private key. 
 The following are instructions for doing this using both Docker as well as the java command line.
