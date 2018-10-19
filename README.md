@@ -8,6 +8,10 @@
 3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
 4. Transparent filesystem design to simplify maintenance, backup, and testing.
 
+## FAQ
+
+See [here](faq.md)
+
 ## How do I get in touch?
   + News is announced on [@We_are_Cordite](https://twitter.com/we_are_cordite)
   + More information can be found on [Cordite website](https://cordite.foundation)
