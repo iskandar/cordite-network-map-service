@@ -24,7 +24,12 @@ The following are instructions for doing this using both Docker as well as the j
 Assuming you have a directory on your host called with path `/opt/my-certs`, containing your certificate `tls.crt` and private key `tls.key`.
 
 ```
-docker run -p 8080:8080 -e NMS_TLS=true -e NMS_TLS_CERT_PATH=/opt/certs/tls.crt -e NMS_TLS_KEY_PATH=/opt/certs/tls.key -v /opt/my-certs:/opt/certs cordite/network-map
+docker run -p 8080:8080 \
+    -e NMS_TLS=true \
+    -e NMS_TLS_CERT_PATH=/opt/certs/tls.crt \
+    -e NMS_TLS_KEY_PATH=/opt/certs/tls.key \
+    -v /opt/my-certs:/opt/certs \
+    cordite/network-map
 ```
 
 #### Using TLS certificates when running the NMS jar using Java
@@ -33,6 +38,10 @@ Again, assuming the same certificate and key paths, you can pass these in using
 Java system properties e.g.
 
 ```
-java -Dtls=true -Dtls-cert-path=/opt/my-certs/tls.crt -Dtls-key-path=/opt/my-certs/tls.key -jar target/network-map-service.jar
+java \
+-Dtls=true \
+-Dtls-cert-path=/opt/my-certs/tls.crt \
+-Dtls-key-path=/opt/my-certs/tls.key \
+-jar target/network-map-service.jar
 ```
 
