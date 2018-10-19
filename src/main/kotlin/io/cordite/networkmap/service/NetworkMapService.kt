@@ -25,6 +25,7 @@ import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.swagger.annotations.ApiOperation
 import io.swagger.models.Contact
 import io.vertx.core.Future
@@ -51,6 +52,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
@@ -66,6 +68,7 @@ class NetworkMapService(
   private val keyPath: String = "",
   private val vertx: Vertx = Vertx.vertx(),
   private val hostname: String = "localhost",
+  webRoot: String = "/",
   private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
     root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
     doorManEnabled = true,
@@ -87,6 +90,11 @@ class NetworkMapService(
       SerializationEnvironment.init()
     }
   }
+
+  private val root = webRoot.dropLastWhile { it == '/' }
+
+  private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
+  private val swaggerRoot: String = root + SWAGGER_ROOT
 
   internal val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
   private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
@@ -116,17 +124,22 @@ class NetworkMapService(
       val thisService = this
       val staticHandler = StaticHandler.create("website/public").setCachingEnabled(false)
       val result = Future.future<Unit>()
+      val templateEngine = ResourceMvelTemplateEngine(
+        cachingEnabled = true,
+        properties =  mapOf("location" to root),
+        rootPath = "website/public/"
+      )
       BraidConfig()
         .withVertx(vertx)
         .withPort(port)
         .withAuthConstructor(authService::createAuthProvider)
         .withService("admin", adminService)
-        .withRootPath(ADMIN_BRAID_ROOT)
+        .withRootPath(adminBraidRoot)
         .withHttpServerOptions(createHttpServerOptions())
         .withRestConfig(RestConfig("Cordite Network Map Service")
           .withAuthSchema(AuthSchema.Token)
-          .withSwaggerPath(SWAGGER_ROOT)
-          .withApiPath("/") // a little different because we need to mount the network map on '/network-map'
+          .withSwaggerPath(swaggerRoot)
+          .withApiPath("$root/") // a little different because we need to mount the network map on '/network-map'
           .withContact(Contact().url("https://cordite.foundation").name("Cordite Foundation"))
           .withDescription("""|<h4><a href="/">Cordite Networkmap Service</a></h4>
             |<b>Please note:</b> The protected parts of this API require JWT authentication.
@@ -167,7 +180,21 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
-                router { route("/*").handler(staticHandler) }
+                router {
+                  route("/").handler { context ->
+                    if (context.request().path() == root) {
+                      context.response().putHeader(HttpHeaders.LOCATION, "$root/").setStatusCode(HttpResponseStatus.MOVED_PERMANENTLY.code()).end()
+                    } else {
+                      context.next()
+                    }
+                  }
+                  route("/*").handler { context ->
+                    templateEngine.handler(context, root)
+                  }
+                  route("/*").handler {
+                    staticHandler.handle(it)
+                  }
+                }
               }
               protected {
                 put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)

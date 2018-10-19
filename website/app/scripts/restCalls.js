@@ -13,9 +13,9 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-import { checkToken } from 'scripts/jwtProcess';
-const url = window.location.protocol + "//" + window.location.host;
-// const url = 'https://network-map-edge.cordite.foundation/'
+import {checkToken} from 'scripts/jwtProcess';
+
+const url = document.baseURI;
 
 export async function login(loginData){
   const response = await fetch(`${url}/admin/api/login`, {

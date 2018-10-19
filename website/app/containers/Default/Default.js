@@ -17,7 +17,7 @@ import React from 'react'
 import {Page} from 'containers/Page/Page';
 import {Nav} from 'components/Nav/Nav';
 import {Sidebar} from 'components/Sidebar/Sidebar';
-import {getNodes, getNotaries, getBraidAPI, login} from 'scripts/restCalls';
+import {getBraidAPI, getNodes, getNotaries, login} from 'scripts/restCalls';
 import {isNotary, mutateNodes, sortNodes,} from 'scripts/processData';
 import {headersList} from 'scripts/headersList'
 import navOptions from 'navOptions.json';
@@ -63,8 +63,8 @@ export default class Default extends React.Component {
 
     switch (btnType.toLowerCase()) {
       case 'swagger':
-        window.location = "/swagger/"
-        break
+        window.location = document.baseURI + "swagger/";
+        break;
       case 'dashboard':
         this.setState({page: 'home'});
         break;

@@ -53,6 +53,7 @@ open class NetworkMapApp {
       val certmanTruststorePasswordOpt = options.addOption("certman-truststore-password", "", "truststore password")
       val certmanStrictEV = options.addOption("certman-strict-ev", "false", "enables strict constraint for EV certs only in certman")
       val rootX509Name = options.addOption("root-ca-name", "CN=\"<replace me>\", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB", "the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca")
+      val webRootOpt = options.addOption("web-root","/", "for remapping the root url for all requests")
 
       if (args.contains("--help")) {
         options.printHelp()
@@ -98,6 +99,7 @@ open class NetworkMapApp {
         certPath = certPath,
         keyPath = keyPath,
         hostname = hostNameOpt.stringValue,
+        webRoot = webRootOpt.stringValue,
         certificateManagerConfig = CertificateManagerConfig(
           root = root,
           doorManEnabled = enableDoorman,

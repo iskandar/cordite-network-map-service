@@ -67,6 +67,7 @@ class NetworkMapWithTLSCertTest {
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       hostname = "127.0.0.1",
+      webRoot = NetworkMapServiceTest.WEB_ROOT,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
       networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
@@ -96,7 +97,7 @@ class NetworkMapWithTLSCertTest {
   @Test
   fun `that we can retrieve notaries`(context: TestContext) {
     val async = context.async()
-    client.futureGet("/admin/api/notaries")
+    client.futureGet("${NetworkMapServiceTest.WEB_ROOT}/admin/api/notaries")
       .onSuccess {
         val decoded = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
         context.assertNotEquals(0, decoded.size)
