@@ -1,4 +1,4 @@
-# Network Map Service Wiki
+# Network Map Service FAQ
 
 ## Contents
 
