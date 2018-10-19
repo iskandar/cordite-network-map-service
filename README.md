@@ -10,7 +10,7 @@
 
 ## FAQ
 
-See [here](faq.md)
+See [here](FAQ.md)
 
 ## How do I get in touch?
   + News is announced on [@We_are_Cordite](https://twitter.com/we_are_cordite)
