@@ -1,5 +1,5 @@
 ## Supported tags and respective Dockerfile links
-* `v0.3.0`, `latest` - latest stable release
+* `v0.3.3`, `latest` - latest stable release
 * `edge` - latest master build, unstable
 
 ## Design Criteria
@@ -7,6 +7,10 @@
 2. Completely stateless - capable of running in load-balanced clusters.
 3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
 4. Transparent filesystem design to simplify maintenance, backup, and testing.
+
+## FAQ
+
+See [here](FAQ.md)
 
 ## How do I get in touch?
   + News is announced on [@We_are_Cordite](https://twitter.com/we_are_cordite)

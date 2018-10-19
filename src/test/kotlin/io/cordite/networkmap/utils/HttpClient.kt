@@ -32,8 +32,20 @@ fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String
   return futureRequest(HttpMethod.POST, uri, body, *headers)
 }
 
+fun HttpClient.futurePost(uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.POST, uri, body, *headers)
+}
+
 fun HttpClient.futurePut(uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
   return futureRequest(HttpMethod.PUT, uri, body, *headers)
+}
+
+fun HttpClient.futurePut(uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.PUT, uri, body, *headers)
+}
+
+fun HttpClient.futurePut(uri: String, body: JsonObject, vararg headers: Pair<String, String>) : Future<Buffer> {
+  return futureRequest(HttpMethod.PUT, uri, body.encode(), *headers)
 }
 
 fun HttpClient.futureGet(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
@@ -43,6 +55,33 @@ fun HttpClient.futureGet(uri: String, vararg headers: Pair<String, String>) : Fu
 fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
   return futureRequest(HttpMethod.DELETE, uri, "", *headers)
 }
+
+fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+  val result = Future.future<Buffer>()
+  this.request(method, uri)
+    .putHeader(HttpHeaders.CONTENT_LENGTH,  body.length().toString())
+    .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+    .apply {
+      headers.forEach {
+        putHeader(it.first, it.second)
+      }
+    }
+    .exceptionHandler {
+      result.fail(it)
+    }
+    .handler { response ->
+      if (response.failed) {
+        result.fail(response.statusMessage())
+      } else {
+        response.bodyHandler { buffer ->
+          result.complete(buffer)
+        }
+      }
+    }
+    .end(body)
+  return result
+}
+
 
 fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
   val result = Future.future<Buffer>()
