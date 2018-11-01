@@ -9,11 +9,18 @@
 4. Transparent filesystem design to simplify maintenance, backup, and testing
 
 ## Current known limitations
-1. The network admin API has performance issues for large networks
+1. While the network map protocol is performant, the network admin API becomes slow after about ~50 nodes
 2. If a node publishes a `nodeInfo` to the network map, then regenerates the `nodeInfo` and publishes the second version, both versions will be present in the network map at once
-3. A scheduled network parameter update cannot include multiple changes
+3. There is no way to stage network parameter changes. The service watches for changes to the inputs for whitelists, 
+   and notaries. If no further changes are detected after a time window defined by the environment/property config 
+   `network-map-delay`, those changes are immediately scheduled for the next network map parameters update
 4. There is no integration with typical enterprise auth service/four-eyes sign off processes for network parameter updates
 5. There is no hardware security module (HSM) integration for protecting the keys of the network map
+
+
+There isn't a means to stage a set of changes. The service basically watches for changes to the inputs for whitelists, 
+and notaries. If no further changes are detected after a time window defined by the environment/property config 
+network-map-delay then those changes get immediately scheduled for the next networkmap parameters update.
 
 ## FAQ
 
@@ -53,7 +60,7 @@ Once the node is running, you will be able to see the UI for accessing network m
 You can configure the service using `-e` environment variables. See the section for 
 [command line parameters](#command-line-parameters).
 
-### Locally
+### Using Java
 
 Use `mvn install` to create the network map jar file in `target/network-map-service.jar`. This is a fat, self-executing 
 jar. To start it use:
@@ -114,7 +121,7 @@ This essentially signs the certificate with your private key and sends _only_ th
 If the certificate passes validation, the request returns a zip file of the keystores required by the node. 
 These should be stored in the `<node-directory>/certificates`.
 
-## How do I add a node to a local network?
+## How do I add a node to a network run using Java?
   + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
     + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
       be able to join the network
