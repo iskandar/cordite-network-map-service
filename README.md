@@ -40,7 +40,9 @@ Network Map Service is being developed by a group of financial services companie
 ## What open source license has this been released under?
 All software in this repository is licensed under the Apache License, Version 2.0 (the "License"); you may not use this software except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-## How to start the network map service using Docker
+## How do I start the network map service?
+
+### Using Docker
 
 ```  
 $ docker run -p 8080:8080 cordite/network-map
@@ -51,7 +53,7 @@ Once the node is running, you will be able to see the UI for accessing network m
 You can configure the service using `-e` environment variables. See the section for 
 [command line parameters](#command-line-parameters).
 
-## How to start the network map service locally
+### Locally
 
 Use `mvn install` to create the network map jar file in `target/network-map-service.jar`. This is a fat, self-executing 
 jar. To start it use:
@@ -64,19 +66,6 @@ Once the node is running, you will be able to see the UI for accessing network m
 
 You can configure the service using `-D` system properties. See the section for 
 [command line parameters](#command-line-parameters).
-
-## How to add a node to a local network
-  + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
-    + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
-      be able to join the network
-  + Create a Corda node
-  + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
-    `compatibilityZoneURL="http://localhost:8080"`
-  + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
-    folder under `certificates/`
-  + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
-  + Start the node using `java -jar corda.jar`
-  + Visit the network map UI at `https://localhost:8080` to see the node
 
 ## Command line parameters
 
@@ -124,6 +113,19 @@ openssl dgst -sha256 -sign domain.key domain.crt | base64 | cat domain.crt - | c
 This essentially signs the certificate with your private key and sends _only_ the certificate and signature to the network-map. 
 If the certificate passes validation, the request returns a zip file of the keystores required by the node. 
 These should be stored in the `<node-directory>/certificates`.
+
+## How do I add a node to a local network?
+  + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
+    + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
+      be able to join the network
+  + Create a Corda node
+  + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
+    `compatibilityZoneURL="http://localhost:8080"`
+  + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
+    folder under `certificates/`
+  + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
+  + Start the node using `java -jar corda.jar`
+  + Visit the network map UI at `https://localhost:8080` to see the node
 
 ## Releasing NMS
 
