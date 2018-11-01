@@ -2,11 +2,18 @@
 * `v0.3.3`, `latest` - latest stable release
 * `edge` - latest master build, unstable
 
-## Design Criteria
+## Design criteria
 1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise.
 2. Completely stateless - capable of running in load-balanced clusters.
 3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
 4. Transparent filesystem design to simplify maintenance, backup, and testing.
+
+## Current known limitations
+1. The network admin API has performance issues for large networks.
+2. If a node publishes a `nodeInfo` to the network map, then regenerates the `nodeInfo` and publishes the second version, both versions will be present in the network map at once.
+3. A scheduled network parameter update cannot include multiple changes.
+4. There is no integration with typical enterprise auth service/four-eyes sign off processes for network parameter updates.
+5. There is no hardware security module (HSM) integration for protecting the keys of the network map.
 
 ## FAQ
 
@@ -27,14 +34,13 @@ We encourage you to raise any issues/bugs you find in Cordite. Please follow the
 ## How do I contribute?
 We welcome contributions both technical and non-technical with open arms! There's a lot of work to do here. The [Contributing Guide](https://gitlab.com/cordite/network-map-service/blob/master/contributing.md) provides more information on how to contribute.
 
-## Who is behind Cordite?
+## Who is behind the Network Map Service?
 Network Map Service is being developed by a group of financial services companies, software vendors and open source contributors. The project is hosted on here on GitLab. 
 
 ## What open source license has this been released under?
 All software in this repository is licensed under the Apache License, Version 2.0 (the "License"); you may not use this software except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-
-## How to start the service using Docker
+## How to start the network map service using Docker
 
 ```  
 $ docker run -p 8080:8080 cordite/network-map
@@ -42,11 +48,13 @@ $ docker run -p 8080:8080 cordite/network-map
 
 Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
 
-You can configure the service using `-e` environment variables. See the section for [command line parameters](#command-line-parameters).
+You can configure the service using `-e` environment variables. See the section for 
+[command line parameters](#command-line-parameters).
 
-## How to start the service using Java
+## How to start the network map service locally
 
-The build will generate a jar file in `target/network-map-service.jar`. This is a fat, self-executing jar. To start it use:
+Use `mvn install` to create the network map jar file in `target/network-map-service.jar`. This is a fat, self-executing 
+jar. To start it use:
 
 ```
 $ java -jar target/network-map-service.jar
@@ -54,7 +62,20 @@ $ java -jar target/network-map-service.jar
 
 Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
 
-You can configure the service using `-D` system properties or environment variables. See the section for [command line parameters](#command-line-parameters).
+You can configure the service using `-D` system properties. See the section for 
+[command line parameters](#command-line-parameters).
+
+## How to add a node to a local network
+  + Start the Network Map Service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`).
+    + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
+      be able to join the network.
+  + Create a Corda node.
+  + Add the following line to the node's `node.conf` file: `compatibilityZoneURL="http://localhost:8080"`.
+  + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
+    folder under `certificates/`.
+  + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
+  + Start the node using `java -jar corda.jar`.
+  + If you visit `https://localhost:8080`, you will see the node.
 
 ## Command line parameters
 
