@@ -3,17 +3,17 @@
 * `edge` - latest master build, unstable
 
 ## Design criteria
-1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise.
-2. Completely stateless - capable of running in load-balanced clusters.
-3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server.
-4. Transparent filesystem design to simplify maintenance, backup, and testing.
+1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise
+2. Completely stateless - capable of running in load-balanced clusters
+3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server
+4. Transparent filesystem design to simplify maintenance, backup, and testing
 
 ## Current known limitations
-1. The network admin API has performance issues for large networks.
-2. If a node publishes a `nodeInfo` to the network map, then regenerates the `nodeInfo` and publishes the second version, both versions will be present in the network map at once.
-3. A scheduled network parameter update cannot include multiple changes.
-4. There is no integration with typical enterprise auth service/four-eyes sign off processes for network parameter updates.
-5. There is no hardware security module (HSM) integration for protecting the keys of the network map.
+1. The network admin API has performance issues for large networks
+2. If a node publishes a `nodeInfo` to the network map, then regenerates the `nodeInfo` and publishes the second version, both versions will be present in the network map at once
+3. A scheduled network parameter update cannot include multiple changes
+4. There is no integration with typical enterprise auth service/four-eyes sign off processes for network parameter updates
+5. There is no hardware security module (HSM) integration for protecting the keys of the network map
 
 ## FAQ
 
@@ -66,16 +66,17 @@ You can configure the service using `-D` system properties. See the section for
 [command line parameters](#command-line-parameters).
 
 ## How to add a node to a local network
-  + Start the Network Map Service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`).
+  + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
     + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
-      be able to join the network.
-  + Create a Corda node.
-  + Add the following line to the node's `node.conf` file: `compatibilityZoneURL="http://localhost:8080"`.
+      be able to join the network
+  + Create a Corda node
+  + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
+    `compatibilityZoneURL="http://localhost:8080"`
   + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
-    folder under `certificates/`.
+    folder under `certificates/`
   + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
-  + Start the node using `java -jar corda.jar`.
-  + If you visit `https://localhost:8080`, you will see the node.
+  + Start the node using `java -jar corda.jar`
+  + Visit the network map UI at `https://localhost:8080` to see the node
 
 ## Command line parameters
 
@@ -106,9 +107,9 @@ This network map supports the Corda doorman protocol. This facility can be disab
 
 ### Retrieving the NetworkMap `network-map-truststore.jks`
 
-If you wish to use the doorman protocol to register a node as per defined by [Corda](https://docs.corda.net/permissioning.html#connecting-to-a-compatibility-zone) you will need the network's `network-map-truststore.jks`.
+If you wish to use the doorman protocol to register a node as per [Corda](https://docs.corda.net/permissioning.html#connecting-to-a-compatibility-zone) you will need the network's `network-map-truststore.jks`.
 
-You can do this using the url `<network-map-url>/network-map/truststore`
+You can do this using the url `<network-map-url>/network-map/truststore`.
 
 ## Certman protocol
 
@@ -121,7 +122,7 @@ openssl dgst -sha256 -sign domain.key domain.crt | base64 | cat domain.crt - | c
 ```
 
 This essentially signs the certificate with your private key and sends _only_ the certificate and signature to the network-map. 
-If the certificate passes validation it, the request returns a zip file of the keystores required by the node. 
+If the certificate passes validation, the request returns a zip file of the keystores required by the node. 
 These should be stored in the `<node-directory>/certificates`.
 
 ## Releasing NMS
