@@ -40,8 +40,10 @@ All software in this repository is licensed under the Apache License, Version 2.
 $ docker run -p 8080:8080 cordite/network-map
 ```
 
-Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`
-You can configure the node using `-e` environment variables. See the section for [command line parameters](#command-line-parameters)
+Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
+
+You can configure the service using `-e` environment variables. See the section for [command line parameters](#command-line-parameters).
+
 ## How to start the service using Java
 
 The build will generate a jar file in `target/network-map-service.jar`. This is a fat, self-executing jar. To start it use:
@@ -50,9 +52,9 @@ The build will generate a jar file in `target/network-map-service.jar`. This is 
 $ java -jar target/network-map-service.jar
 ```
 
-Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`
+Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
 
-You can configure it using `-D` system properties or environment variables. See the section for [command line parameters](#command-line-parameters)
+You can configure the service using `-D` system properties or environment variables. See the section for [command line parameters](#command-line-parameters).
 
 ## Command line parameters
 
