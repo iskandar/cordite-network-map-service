@@ -5,7 +5,7 @@
 ## Design criteria and Features
 1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise
 2. A nominal implementation of the Doorman protocol
-3. A new protocol, _Certman_, for registration with client-provided certificates
+3. A new protocol, [_Certman_](#certman-protocol), for registration with client-provided certificates
 4. Completely stateless - capable of running in load-balanced clusters
 5. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server
 6. Transparent filesystem design to simplify maintenance, backup, and testing
