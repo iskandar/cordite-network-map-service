@@ -2,25 +2,19 @@
 * `v0.3.3`, `latest` - latest stable release
 * `edge` - latest master build, unstable
 
-## Design criteria
+## Design criteria and Features
 1. Meet the requirements of the [Corda Network Map Service protocol](https://docs.corda.net/network-map.html), both documented and otherwise
-2. Completely stateless - capable of running in load-balanced clusters
-3. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server
-4. Transparent filesystem design to simplify maintenance, backup, and testing
+2. A nominal implementation of the Doorman protocol
+3. A new protocol, _Certman_, for registration with client-provided certificates.
+4. Completely stateless - capable of running in load-balanced clusters
+5. Efficient use of I/O to serve 5000+ concurrent read requests per second from a modest server
+6. Transparent filesystem design to simplify maintenance, backup, and testing
 
-## Current known limitations
-1. While the network map protocol is performant, the network admin API becomes slow after about ~50 nodes
-2. If a node publishes a `nodeInfo` to the network map, then regenerates the `nodeInfo` and publishes the second version, both versions will be present in the network map at once
-3. There is no way to stage network parameter changes. The service watches for changes to the inputs for whitelists, 
-   and notaries. If no further changes are detected after a time window defined by the environment/property config 
-   `network-map-delay`, those changes are immediately scheduled for the next network map parameters update
-4. There is no integration with typical enterprise auth service/four-eyes sign off processes for network parameter updates
-5. There is no hardware security module (HSM) integration for protecting the keys of the network map
+## Backlog of Features, Improvements, and Optimisations
 
+See our issues board for what this networkmap can't do as yet:
 
-There isn't a means to stage a set of changes. The service basically watches for changes to the inputs for whitelists, 
-and notaries. If no further changes are detected after a time window defined by the environment/property config 
-network-map-delay then those changes get immediately scheduled for the next networkmap parameters update.
+https://gitlab.com/cordite/network-map-service/boards
 
 ## FAQ
 
