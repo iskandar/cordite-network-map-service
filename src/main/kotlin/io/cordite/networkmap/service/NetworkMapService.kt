@@ -388,7 +388,7 @@ class NetworkMapService(
     try {
       context.response().apply {
         putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"network-truststore.jks\"")
+        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"network-root-truststore.jks\"")
         end(Buffer.buffer(certificateManager.generateTrustStoreByteArray()))
       }
     } catch (err: Throwable) {
