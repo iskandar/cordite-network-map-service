@@ -24,9 +24,11 @@ import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
@@ -35,6 +37,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
@@ -121,6 +124,18 @@ class CertificateManager(
     }
   }
 
+  private fun PKCS10CertificationRequest.getCertRole(): CertRole {
+      val firstAttributeValue = getAttributes(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE)).firstOrNull()?.attrValues?.firstOrNull()
+      // Default cert role to Node_CA for backward compatibility.
+      val encoded = firstAttributeValue?.toASN1Primitive()?.encoded ?: return CertRole.NODE_CA
+      return CertRole.getInstance(encoded)
+  }
+
+  private fun certTypeFor(role: CertRole) : CertificateType = when (role) {
+    CertRole.SERVICE_IDENTITY -> CertificateType.SERVICE_IDENTITY
+    else -> CertificateType.NODE_CA
+  }
+
   fun doormanProcessCSR(pkcs10Holder: PKCS10CertificationRequest): Future<String> {
     val id = UUID.randomUUID().toString()
     csrResponse[id] = Optional.empty()
@@ -128,7 +143,7 @@ class CertificateManager(
       try {
         val nodePublicKey = JcaPEMKeyConverter().getPublicKey(pkcs10Holder.subjectPublicKeyInfo)
         val name = pkcs10Holder.subject.toCordaX500Name(true)
-        val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, CertificateType.NODE_CA)
+        val certificate = createCertificate(doormanCertAndKeyPair, name, nodePublicKey, certTypeFor(pkcs10Holder.getCertRole()))
         csrResponse[id] = Optional.of(certificate)
       } catch (err: Throwable) {
         logger.error("failed to create certificate for CSR", err)
