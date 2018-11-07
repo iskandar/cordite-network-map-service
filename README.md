@@ -1,3 +1,25 @@
+## Contents
+
+- [Supported tags and respective Dockerfile links](#supported-tags-and-respective-dockerfile-links)
+- [Design criteria and Features](#design-criteria-and-features)
+- [Backlog of Features, Improvements, and Optimisations](#backlog-of-features--improvements--and-optimisations)
+- [FAQ](#faq)
+- [How do I get in touch?](#how-do-i-get-in-touch-)
+- [What if something does not work?](#what-if-something-does-not-work-)
+- [How do I contribute?](#how-do-i-contribute-)
+- [Who is behind the Network Map Service?](#who-is-behind-the-network-map-service-)
+- [What open source license has this been released under?](#what-open-source-license-has-this-been-released-under-)
+- [How do I start the network map service?](#how-do-i-start-the-network-map-service-)
+  * [Using Docker](#using-docker)
+  * [Using Java](#using-java)
+- [Command line parameters](#command-line-parameters)
+- [Doorman protocol](#doorman-protocol)
+  * [Retrieving the NetworkMap `network-map-truststore.jks`](#retrieving-the-networkmap--network-map-truststorejks-)
+- [Certman protocol](#certman-protocol)
+- [How do I add a node to a network run using Java?](#how-do-i-add-a-node-to-a-network-run-using-java-)
+- [Releasing NMS](#releasing-nms)
+- [License](#license)
+
 ## Supported tags and respective Dockerfile links
 * `v0.3.3`, `latest` - latest stable release
 * `edge` - latest master build, unstable
