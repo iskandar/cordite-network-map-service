@@ -19,6 +19,7 @@ import io.cordite.networkmap.service.CertificateManager
 import io.cordite.networkmap.service.CertificateManagerConfig
 import io.cordite.networkmap.service.InMemoryUser
 import io.cordite.networkmap.service.NetworkMapService
+import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.Options
 import io.cordite.networkmap.utils.toFile
 import net.corda.core.identity.CordaX500Name
@@ -34,6 +35,7 @@ open class NetworkMapApp {
 
     @JvmStatic
     fun main(args: Array<String>) {
+      LogInitialiser.init()
       val options = Options()
       val portOpt = options.addOption("port", "8080", "web port")
       val dbDirectoryOpt = options.addOption("db", ".db", "database directory for this service")
