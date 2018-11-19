@@ -8,3 +8,4 @@ build
 
 # OS or editor files
 .vscode
+logs/**
