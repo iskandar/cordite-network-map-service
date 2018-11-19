@@ -35,7 +35,6 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.internal.TestNodeInfoBuilder
 import org.apache.commons.io.FileUtils
 import org.junit.After
 import org.junit.Before
@@ -43,6 +42,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.CertificateFactory
@@ -57,6 +57,7 @@ import kotlin.test.*
 class NetworkMapServiceTest {
   companion object {
     init {
+      LogInitialiser.init()
       SerializationTestEnvironment.init()
     }
 
@@ -200,14 +201,11 @@ class NetworkMapServiceTest {
     assertEquals(sni.signed.raw.hash, nhs[0])
   }
 
-  @Test(expected = NullPointerException::class)
+  @Test
   fun `that we cannot register the same node name with a different key`(context: TestContext) {
     val nmc = createNetworkMapClient()
 
-    val sni1 = TestNodeInfoBuilder().let {
-      it.addIdentity(ALICE_NAME)
-      it.buildWithSigned()
-    }
+    val sni1 = createAliceSignedNodeInfo()
     nmc.publish(sni1.signed)
     Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
     val nm = nmc.getNetworkMap().payload
@@ -215,15 +213,20 @@ class NetworkMapServiceTest {
     context.assertEquals(1, nhs.size)
     assertEquals(sni1.signed.raw.hash, nhs[0])
 
-    val sni2 = TestNodeInfoBuilder().let {
-      it.addIdentity(ALICE_NAME)
-      it.buildWithSigned()
-    }
+    val sni2 = createAliceSignedNodeInfo()
 
     val pk1 = sni1.nodeInfo.legalIdentities.first().owningKey
     val pk2 = sni2.nodeInfo.legalIdentities.first().owningKey
     assertNotEquals(pk1, pk2)
-    nmc.publish(sni2.signed) // <-- will throw a meaningless NPE see https://github.com/corda/corda/issues/3442
+    try {
+      nmc.publish(sni2.signed)
+      throw RuntimeException("should have throw IOException complaining that the node has been registered before")
+    } catch(err: Throwable) {
+      if (err !is IOException) {
+        throw err
+      }
+      assertEquals("Response Code 500: node failed to registered because the following names have already been registered with different public keys O=Alice Corp, L=Madrid, C=ES", err.message)
+    }
   }
 
 

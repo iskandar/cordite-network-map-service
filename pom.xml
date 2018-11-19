@@ -17,13 +17,13 @@
     <junit.version>4.12</junit.version>
     <vertx.version>3.5.1</vertx.version>
     <corda.version>3.2-corda</corda.version>
-    <logback.version>1.2.3</logback.version>
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     <jar.name>network-map-service</jar.name>
+    <log4j.version>2.11.1</log4j.version>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
-    <braid.version>3.1.5</braid.version>
+    <braid.version>3.2.6</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
   </properties>
@@ -69,11 +69,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
       <version>${vertx.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
     </dependency>
     <dependency>
       <groupId>net.corda</groupId>
@@ -122,6 +117,22 @@
       <artifactId>vertx-web-templ-mvel</artifactId>
       <version>${vertx.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+
   </dependencies>
 
   <build>
