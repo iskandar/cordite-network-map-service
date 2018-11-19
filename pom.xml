@@ -30,8 +30,8 @@
 
   <repositories>
     <repository>
-      <id>bluebank nexus</id>
-      <url>http://bluebank-nexus.uksouth.cloudapp.azure.com/repository/maven-public/</url>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
     </repository>
   </repositories>
 
