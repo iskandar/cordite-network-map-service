@@ -33,6 +33,10 @@
       <id>sonatype-snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
     </repository>
+    <repository>
+      <id>corda-dependencies</id>
+      <url>http://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies</url>
+    </repository>
   </repositories>
 
   <licenses>
