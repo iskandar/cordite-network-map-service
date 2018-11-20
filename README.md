@@ -63,29 +63,9 @@ Network Map Service is being developed by a group of financial services companie
 ## What open source license has this been released under?
 All software in this repository is licensed under the Apache License, Version 2.0 (the "License"); you may not use this software except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-## How do I start the network map service?
+## How do I start a simple network on my local workstation or laptop?
 
-### Using Docker
-
-```  
-$ docker run -p 8080:8080 cordite/network-map
-```
-
-Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
-
-You can configure the service using `-e` environment variables. See the section for 
-[command line parameters](#command-line-parameters).
-
-### Using Java
-
-Use `mvn install` to create the network map jar file in `target/network-map-service.jar`. This is a fat, self-executing 
-jar. To start it use:
-
-```
-$ java -jar target/network-map-service.jar
-```
-
-Once the node is running, you will be able to see the UI for accessing network map at `https://localhost:8080`.
+See the detailed instructions in the [FAQ](FAQ.md#1-show-me-how-to-set-up-a-simple-network)
 
 You can configure the service using `-D` system properties. See the section for 
 [command line parameters](#command-line-parameters).
