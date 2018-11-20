@@ -16,7 +16,7 @@
 package io.cordite.networkmap.utils
 
 
-class Options {
+open class Options {
   data class Option(val name: String, val default: String, val description: String = "") {
     val environmentVariable: String = "NMS_" + name.toUpperCase().replace('-', '_')
     fun width() = name.length
