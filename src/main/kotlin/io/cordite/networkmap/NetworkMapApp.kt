@@ -44,7 +44,7 @@ open class NetworkMapApp {
       val networkMapUpdateDelayOpt = options.addOption("network-map-delay", "1S", "queue time for the network map to update for addition of nodes")
       val usernameOpt = options.addOption("auth-username", "sa", "system admin username")
       val passwordOpt = options.addOption("auth-password", "admin", "system admin password")
-      val tlsOpt = options.addOption("tls", "true", "whether TLS is enabled or not")
+      val tlsOpt = options.addOption("tls", "false", "whether TLS is enabled or not")
       val certPathOpt = options.addOption("tls-cert-path", "", "path to cert if TLS is turned on")
       val keyPathOpt = options.addOption("tls-key-path", "", "path to key if TLS turned on")
       val hostNameOpt = options.addOption("hostname", "0.0.0.0", "interface to bind the service to")
