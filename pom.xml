@@ -26,6 +26,7 @@
     <braid.version>3.2.6</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
+    <logback.version>1.2.3</logback.version>
   </properties>
 
   <repositories>
@@ -74,6 +75,16 @@
       <groupId>net.corda</groupId>
       <artifactId>corda-node-api</artifactId>
       <version>${corda.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-slf4j-impl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-web</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>net.corda</groupId>
@@ -95,6 +106,12 @@
       <groupId>net.corda</groupId>
       <artifactId>corda-node</artifactId>
       <version>${corda.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-slf4j-impl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>net.corda</groupId>
@@ -118,21 +135,15 @@
       <version>${vertx.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>${log4j.version}</version>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>${logback.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>${log4j.version}</version>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-
   </dependencies>
 
   <build>
@@ -177,10 +188,7 @@
                 <exec executable="npm" failonerror="true">
                   <arg value="install"/>
                   <arg value="-g"/>
-                  <arg value="brunch"/>
-                </exec>
-                <exec executable="npm" failonerror="true" dir="website">
-                  <arg value="install"/>
+                  <arg value="brunch@2.10.17"/>
                 </exec>
                 <exec executable="brunch" failonerror="true" dir="website">
                   <arg value="build"/>
