@@ -261,4 +261,10 @@ inline fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
   return result
 }
 
+fun <T> Future<T>.completeFrom(value: T?, err: Throwable?) {
+  return when {
+    err != null -> fail(err)
+    else -> complete(value)
+  }
+}
 

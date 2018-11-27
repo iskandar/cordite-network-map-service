@@ -15,13 +15,12 @@
  */
 package io.cordite.networkmap.storage
 
+import com.mongodb.async.client.MongoClient
 import io.cordite.networkmap.keystore.toKeyStore
-import io.cordite.networkmap.utils.readFile
-import io.cordite.networkmap.utils.writeFile
+import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
-import io.vertx.core.Future.failedFuture
-import io.vertx.core.Future.future
+import io.vertx.core.Future.*
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
@@ -31,6 +30,11 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import org.bson.codecs.pojo.annotations.BsonId
+import org.litote.kmongo.async.deleteOne
+import org.litote.kmongo.async.distinct
+import org.litote.kmongo.async.getCollection
+import org.litote.kmongo.eq
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -184,4 +188,45 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
         .sendFile(resolveKey(key).absolutePath)
     }
   }
+}
+
+class MongoTextStorage(private val mongoClient: MongoClient) : Storage<String> {
+  private val collection = mongoClient.getDatabase("nms").getCollection<IdValue>("etc")
+
+  override fun clear(): Future<Unit> = collection.drop().mapEmpty<Unit>()
+
+  override fun put(key: String, value: String) = collection.insertOne(IdValue(key, value))
+
+  override fun get(key: String): Future<String> = collection.findOneById(key).map { it.value }
+
+  override fun getOrNull(key: String) : Future<String?> = collection.findOneById(key).map { it.value }.recover { succeededFuture(null) }
+
+  override fun getOrDefault(key: String, default: String) : Future<String> = collection.findOneById(key).map { it.value }.recover { succeededFuture(default) }
+
+  override fun getKeys() = collection.distinct<String>("_id").toList()
+
+  override fun getAll(): Future<Map<String, String>> = collection.find().map { it.id to it.value }.toList().map { it.toMap() }
+
+  override fun delete(key: String): Future<Unit> {
+    val result = Future.future<Unit>()
+    collection.deleteOne(key) { it, err ->
+      when (err) {
+        null -> result.complete()
+        else -> result.fail(err)
+      }
+    }
+    return result
+  }
+
+  override fun exists(key: String): Future<Boolean> {
+    val result = Future.future<IdValue>()
+    collection.find(IdValue::id eq key).first(singleCallback(result))
+    return result.map { true }.recover { succeededFuture(false) }
+  }
+
+  override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
+    this.get(key).onSuccess { routingContext.end(it) }.catch { routingContext.end(it) }
+  }
+
+  data class IdValue(@BsonId val id: String, val value: String)
 }

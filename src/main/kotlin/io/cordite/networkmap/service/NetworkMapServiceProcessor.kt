@@ -15,6 +15,7 @@
  */
 package io.cordite.networkmap.service
 
+import com.mongodb.async.client.MongoClient
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
@@ -41,6 +42,7 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 
+@Suppress("DEPRECATION")
 /**
  * Event processor for the network map
  * This consumes networkparameter inputs changes; and nodeinfo updates
@@ -55,7 +57,8 @@ class NetworkMapServiceProcessor(
   private val networkParamsStorage: SignedNetworkParametersStorage,
   private val certificateManager: CertificateManager,
   private val networkParameterUpdateDelay: Duration,
-  private val networkMapQueueDelay: Duration
+  private val networkMapQueueDelay: Duration,
+  private val mongoClient: MongoClient
 ) {
   companion object {
     private val logger = loggerFor<NetworkMapServiceProcessor>()

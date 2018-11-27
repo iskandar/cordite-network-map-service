@@ -13,8 +13,11 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package io.cordite.networkmap.service
 
+import com.mongodb.async.client.MongoClient
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
@@ -76,7 +79,8 @@ class NetworkMapService(
     certManPKIVerficationEnabled = false,
     certManRootCAsTrustStoreFile = null,
     certManRootCAsTrustStorePassword = null,
-    certManStrictEVCerts = false)
+    certManStrictEVCerts = false),
+  val mongoClient: MongoClient
 ) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"

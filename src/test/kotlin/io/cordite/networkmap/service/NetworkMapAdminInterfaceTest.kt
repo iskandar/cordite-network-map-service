@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.cordite.networkmap.storage.MongoStorage
 import io.cordite.networkmap.storage.parseToWhitelistPairs
 import io.cordite.networkmap.storage.toWhitelistPairs
 import io.cordite.networkmap.storage.toWhitelistText
@@ -32,6 +33,7 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.litote.kmongo.async.KMongo
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -69,16 +71,18 @@ class NetworkMapAdminInterfaceTest {
       setupDefaultInputFiles(dbDirectory)
       setupDefaultNodes(dbDirectory)
 
+      val mongoClient = KMongo.createClient(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "password"))
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
-        hostname = "127.0.0.1",
-        webRoot = NetworkMapServiceTest.WEB_ROOT,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
         networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
         networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
         tls = true,
-        vertx = vertx
+        vertx = vertx,
+        hostname = "127.0.0.1",
+        webRoot = NetworkMapServiceTest.WEB_ROOT,
+        mongoClient = mongoClient
       )
 
       service.startup().setHandler(context.asyncAssertSuccess())

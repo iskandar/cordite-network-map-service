@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.cordite.networkmap.storage.MongoStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
@@ -27,6 +28,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.litote.kmongo.async.KMongo
 import java.io.File
 
 @RunWith(VertxUnitRunner::class)
@@ -62,19 +64,21 @@ class NetworkMapWithTLSCertTest {
 
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
     val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
+    val mongoClient = KMongo.createClient(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "password"))
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
-      hostname = "127.0.0.1",
-      webRoot = NetworkMapServiceTest.WEB_ROOT,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
       networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
       tls = true,
       certPath = certPath,
       keyPath = keyPath,
-      vertx = vertx
+      vertx = vertx,
+      hostname = "127.0.0.1",
+      webRoot = NetworkMapServiceTest.WEB_ROOT,
+      mongoClient = mongoClient
     )
 
     service.startup().setHandler(context.asyncAssertSuccess())
