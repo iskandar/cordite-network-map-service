@@ -138,12 +138,20 @@ export const sortNodes = (sortValue, nodeArray, notaryMap) => {
   else sortObject.sortCiteria = sortKey;
 
   nodeArray.sort((a, b) => {
-    let aValue = a[sortKey].toString();
-    let bValue = b[sortKey].toString();
+    let aValue = getProperty(a, sortKey, "");
+    let bValue = getProperty(b, sortKey, "");
     return aValue.localeCompare(bValue);
   });
   
   return nodeArray;
+}
+
+function getProperty(obj, propertyName, defaultValue) {
+  if (obj.hasOwnProperty(obj, propertyName) && obj[propertyName]) {
+    return obj[propertyName];
+  } else {
+    return defaultValue;
+  }
 }
 
 Array.prototype.equals = function (array) {
