@@ -29,8 +29,8 @@ class NMSOptions : Options() {
   private val webRootOpt = addOption("web-root","/", "for remapping the root url for all requests")
   private val mongoHostOpt = addOption("mongo-host", "embed", "hostname for mongodb server. If set to `embed` will start its own mongo instance")
   private val mongoPortOpt = addOption("mongo-port", "27017", "port for mongodb server")
-  private val mongoUserOpt = addOption("mongo-user", "mongo", "user for connecting to mongodb")
-  private val mongoPasswordOpt = addOption("monog-password", "mongo", "password for connecting to mongodb")
+  private val mongoUserOpt = addOption("mongo-user", "sa", "user for connecting to mongodb")
+  private val mongoPasswordOpt = addOption("monog-password", "admin", "password for connecting to mongodb")
 
   val port get() = portOpt.intValue
   val dbDirectory get() = dbDirectoryOpt.stringValue.toFile()

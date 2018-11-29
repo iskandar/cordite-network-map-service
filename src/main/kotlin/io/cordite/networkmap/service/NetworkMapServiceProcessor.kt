@@ -13,6 +13,8 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package io.cordite.networkmap.service
 
 import com.mongodb.async.client.MongoClient
@@ -50,7 +52,7 @@ import java.time.Instant
  */
 class NetworkMapServiceProcessor(
   private val vertx: Vertx,
-  dbDirectory: File,
+  private val dbDirectory: File,
   private val inputs: NetworkParameterInputsStorage,
   private val nodeInfoStorage: SignedNodeInfoStorage,
   private val networkMapStorage: SignedNetworkMapStorage,
@@ -83,7 +85,7 @@ class NetworkMapServiceProcessor(
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
   private var subscription: Subscription? = null
   private var networkMapRebuildTimerId: Long? = null
-  private val textStorage: TextStorage = TextStorage(vertx, dbDirectory)
+  private val textStorage: MongoTextStorage = MongoTextStorage(mongoClient)
   private val parametersUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
   private lateinit var certs: CertificateAndKeyPair
 
@@ -353,8 +355,8 @@ class NetworkMapServiceProcessor(
 
   private fun setupStorage(): Future<Unit> {
     return all(
-      textStorage.makeDirs(),
-      parametersUpdateStorage.makeDirs()
+      parametersUpdateStorage.makeDirs(),
+      textStorage.migrate(TextStorage(vertx, dbDirectory))
     ).mapEmpty()
   }
 }

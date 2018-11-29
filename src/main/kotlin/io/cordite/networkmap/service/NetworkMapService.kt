@@ -435,7 +435,8 @@ class NetworkMapService(
       signedNetworkParametersStorage,
       certificateManager,
       networkParamUpdateDelay,
-      networkMapQueuedUpdateDelay
+      networkMapQueuedUpdateDelay,
+      mongoClient
     )
     return processor.start()
   }

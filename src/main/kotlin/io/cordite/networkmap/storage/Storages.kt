@@ -13,9 +13,12 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package io.cordite.networkmap.storage
 
 import com.mongodb.async.client.MongoClient
+import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -149,10 +152,10 @@ class CertificateAndKeyPairStorage(
       }
   }
 
-  override fun serialize(value: CertificateAndKeyPair, location: File) : Future<Unit> {
+  override fun serialize(value: CertificateAndKeyPair, location: File): Future<Unit> {
     location.mkdirs()
     val ks = value.toKeyStore(password)
-    val ba = with (ByteArrayOutputStream()) {
+    val ba = with(ByteArrayOutputStream()) {
       ks.store(this, parray)
       this.toByteArray()
     }
@@ -167,6 +170,10 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
 
   companion object {
     const val DEFAULT_CHILD_DIR = "etc"
+  }
+
+  init {
+    makeDirs()
   }
 
   override fun deserialize(location: File): Future<String> {
@@ -190,8 +197,15 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
   }
 }
 
-class MongoTextStorage(private val mongoClient: MongoClient) : Storage<String> {
-  private val collection = mongoClient.getDatabase("nms").getCollection<IdValue>("etc")
+@Suppress("DEPRECATION")
+class MongoTextStorage(mongoClient: MongoClient,
+                       database: String = MongoStorage.DEFAULT_DATABASE,
+                       collection: String = "etc") : Storage<String> {
+  companion object {
+    private val log = loggerFor<MongoTextStorage>()
+  }
+
+  private val collection = mongoClient.getDatabase(database).getCollection<IdValue>(collection)
 
   override fun clear(): Future<Unit> = collection.drop().mapEmpty<Unit>()
 
@@ -199,9 +213,9 @@ class MongoTextStorage(private val mongoClient: MongoClient) : Storage<String> {
 
   override fun get(key: String): Future<String> = collection.findOneById(key).map { it.value }
 
-  override fun getOrNull(key: String) : Future<String?> = collection.findOneById(key).map { it.value }.recover { succeededFuture(null) }
+  override fun getOrNull(key: String): Future<String?> = collection.findOneById(key).map { it.value }.recover { succeededFuture(null) }
 
-  override fun getOrDefault(key: String, default: String) : Future<String> = collection.findOneById(key).map { it.value }.recover { succeededFuture(default) }
+  override fun getOrDefault(key: String, default: String): Future<String> = collection.findOneById(key).map { it.value }.recover { succeededFuture(default) }
 
   override fun getKeys() = collection.distinct<String>("_id").toList()
 
@@ -209,7 +223,7 @@ class MongoTextStorage(private val mongoClient: MongoClient) : Storage<String> {
 
   override fun delete(key: String): Future<Unit> {
     val result = Future.future<Unit>()
-    collection.deleteOne(key) { it, err ->
+    collection.deleteOne(key) { _, err ->
       when (err) {
         null -> result.complete()
         else -> result.fail(err)
@@ -226,6 +240,28 @@ class MongoTextStorage(private val mongoClient: MongoClient) : Storage<String> {
 
   override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
     this.get(key).onSuccess { routingContext.end(it) }.catch { routingContext.end(it) }
+  }
+
+  fun migrate(textStorage: TextStorage): Future<Unit> {
+    return textStorage.getAll()
+      .map { it.map { IdValue(it.key, it.value) } }
+      .compose {
+        if (it.isEmpty()) {
+          log.info("text storage is empty; no migration required")
+          succeededFuture<Unit>()
+        } else {
+          log.info("migrating text storage to mongodb")
+          it.map {
+            log.info("migrating $it")
+            collection.replaceOne(it)
+          }.all()
+            .compose {
+              log.info("clearing file-base text storage")
+              textStorage.clear()
+            }
+            .onSuccess { log.info("text storage migration done") }
+        }
+      }
   }
 
   data class IdValue(@BsonId val id: String, val value: String)

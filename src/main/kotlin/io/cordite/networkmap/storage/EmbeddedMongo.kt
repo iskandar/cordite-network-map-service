@@ -5,7 +5,8 @@ import de.flapdoodle.embed.mongo.MongoShellStarter
 import de.flapdoodle.embed.mongo.MongodStarter
 import de.flapdoodle.embed.mongo.config.*
 import de.flapdoodle.embed.mongo.config.Storage
-import de.flapdoodle.embed.mongo.distribution.Version
+import de.flapdoodle.embed.mongo.distribution.Feature
+import de.flapdoodle.embed.mongo.distribution.IFeatureAwareVersion
 import de.flapdoodle.embed.process.config.io.ProcessOutput
 import de.flapdoodle.embed.process.io.IStreamProcessor
 import de.flapdoodle.embed.process.io.LogWatchStreamProcessor
@@ -37,9 +38,16 @@ class EmbeddedMongo private constructor(
       return EmbeddedMongo(dbDirectory, username, password, true)
         .apply { setupShutdownHook() }
         .also {
-          log.info("mongo database started on ${it.connectionString}")
+          log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
         }
     }
+  }
+
+  private object version : IFeatureAwareVersion {
+    private val features = EnumSet.of(Feature.SYNC_DELAY, Feature.STORAGE_ENGINE, Feature.ONLY_64BIT, Feature.NO_CHUNKSIZE_ARG, Feature.MONGOS_CONFIGDB_SET_STYLE, Feature.NO_HTTP_INTERFACE_ARG, Feature.ONLY_WITH_SSL, Feature.ONLY_WINDOWS_2008_SERVER, Feature.NO_SOLARIS_SUPPORT, Feature.NO_BIND_IP_TO_LOCALHOST)
+    override fun getFeatures(): EnumSet<Feature> = features
+    override fun asInDownloadPath() = "4.0.4"
+    override fun enabled(feature: Feature?) = features.contains(feature)
   }
 
   private val bindIP = "localhost"
@@ -47,7 +55,7 @@ class EmbeddedMongo private constructor(
   private val location = File(dbDirectory).also { it.mkdirs() }
   private val replication = Storage(location.absolutePath, null, 0)
   private val mongodConfig = MongodConfigBuilder()
-    .version(Version.Main.PRODUCTION)
+    .version(version)
     .net(Net(bindIP, port, Network.localhostIsIPv6()))
     .replication(replication)
     .cmdOptions(MongoCmdOptionsBuilder()
