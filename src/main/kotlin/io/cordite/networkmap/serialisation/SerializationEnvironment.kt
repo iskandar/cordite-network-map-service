@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import java.security.PublicKey
 
-@Suppress("DEPRECATION")
 class SerializationEnvironment {
   companion object {
     private val log = loggerFor<SerializationEnvironment>()

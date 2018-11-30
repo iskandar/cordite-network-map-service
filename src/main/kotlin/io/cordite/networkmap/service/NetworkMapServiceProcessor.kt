@@ -17,8 +17,9 @@
 
 package io.cordite.networkmap.service
 
-import com.mongodb.async.client.MongoClient
+import com.mongodb.reactivestreams.client.MongoClient
 import io.cordite.networkmap.storage.*
+import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
@@ -44,7 +45,6 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 
-@Suppress("DEPRECATION")
 /**
  * Event processor for the network map
  * This consumes networkparameter inputs changes; and nodeinfo updates

@@ -2,18 +2,24 @@ package io.cordite.networkmap.storage
 
 import de.flapdoodle.embed.mongo.Command
 import de.flapdoodle.embed.mongo.MongoShellStarter
+import de.flapdoodle.embed.mongo.MongodExecutable
 import de.flapdoodle.embed.mongo.MongodStarter
 import de.flapdoodle.embed.mongo.config.*
 import de.flapdoodle.embed.mongo.config.Storage
 import de.flapdoodle.embed.mongo.distribution.Feature
 import de.flapdoodle.embed.mongo.distribution.IFeatureAwareVersion
 import de.flapdoodle.embed.process.config.io.ProcessOutput
+import de.flapdoodle.embed.process.distribution.BitSize
+import de.flapdoodle.embed.process.distribution.Distribution
+import de.flapdoodle.embed.process.distribution.Platform
+import de.flapdoodle.embed.process.extract.ImmutableExtractedFileSet
 import de.flapdoodle.embed.process.io.IStreamProcessor
 import de.flapdoodle.embed.process.io.LogWatchStreamProcessor
 import de.flapdoodle.embed.process.io.NamedOutputStreamProcessor
 import de.flapdoodle.embed.process.io.Processors.console
 import de.flapdoodle.embed.process.io.Processors.namedConsole
 import de.flapdoodle.embed.process.runtime.Network
+import de.flapdoodle.embed.process.store.StaticArtifactStore
 import io.bluebank.braid.core.logging.loggerFor
 import java.io.*
 import java.util.*
@@ -23,19 +29,20 @@ class EmbeddedMongo private constructor(
   dbDirectory: String,
   private val user: String,
   private val password: String,
+  private val mongodLocation: String, // empty string if none available
   private val enableAuth: Boolean
 ) : Closeable {
   companion object {
     const val INIT_TIMEOUT_MS = 30000L
     const val USER_ADDED_TOKEN = "Successfully added user"
     private val log = loggerFor<EmbeddedMongo>()
-    fun create(dbDirectory: String, username: String, password: String): EmbeddedMongo {
+    fun create(dbDirectory: String, username: String, password: String, mongodLocation: String): EmbeddedMongo {
       // start it up and add the admin user
-      EmbeddedMongo(dbDirectory, username, password, false).use {
+      EmbeddedMongo(dbDirectory, username, password, mongodLocation, false).use {
         it.addAdmin()
         // implicit shutdown
       }
-      return EmbeddedMongo(dbDirectory, username, password, true)
+      return EmbeddedMongo(dbDirectory, username, password, mongodLocation, true)
         .apply { setupShutdownHook() }
         .also {
           log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
@@ -43,7 +50,7 @@ class EmbeddedMongo private constructor(
     }
   }
 
-  private object version : IFeatureAwareVersion {
+  private object RequiredVersion : IFeatureAwareVersion {
     private val features = EnumSet.of(Feature.SYNC_DELAY, Feature.STORAGE_ENGINE, Feature.ONLY_64BIT, Feature.NO_CHUNKSIZE_ARG, Feature.MONGOS_CONFIGDB_SET_STYLE, Feature.NO_HTTP_INTERFACE_ARG, Feature.ONLY_WITH_SSL, Feature.ONLY_WINDOWS_2008_SERVER, Feature.NO_SOLARIS_SUPPORT, Feature.NO_BIND_IP_TO_LOCALHOST)
     override fun getFeatures(): EnumSet<Feature> = features
     override fun asInDownloadPath() = "4.0.4"
@@ -54,8 +61,15 @@ class EmbeddedMongo private constructor(
   private val port = Network.getFreeServerPort()
   private val location = File(dbDirectory).also { it.mkdirs() }
   private val replication = Storage(location.absolutePath, null, 0)
+  private val executable : MongodExecutable
+  val connectionString
+    get() = when (enableAuth) {
+      true -> "mongodb://$user:$password@$bindIP:$port"
+      false -> "mongodb://$bindIP:$port"
+    }
+
   private val mongodConfig = MongodConfigBuilder()
-    .version(version)
+    .version(RequiredVersion)
     .net(Net(bindIP, port, Network.localhostIsIPv6()))
     .replication(replication)
     .cmdOptions(MongoCmdOptionsBuilder()
@@ -68,15 +82,23 @@ class EmbeddedMongo private constructor(
       .build())
     .build()
 
-  private val executable = MongodStarter.getDefaultInstance().prepare(mongodConfig)
-  val connectionString
-    get() = when (enableAuth) {
-      true -> "mongodb://$user:$password@$bindIP:$port"
-      false -> "mongodb://$bindIP:$port"
-    }
-
-
   init {
+    val runtimeConfig = RuntimeConfigBuilder().defaults(Command.MongoD)
+      .apply {
+        if (mongodLocation.isNotBlank()) {
+          val execFile = File(mongodLocation).absoluteFile
+          if (execFile.exists()) {
+            throw FileNotFoundException("could not locate mongod executable $mongodLocation")
+          }
+          val fileSet = ImmutableExtractedFileSet.builder(execFile.parentFile).baseDirIsGenerated(false).executable(execFile).build()
+          val distribution = Distribution(RequiredVersion, Platform.detect(), BitSize.detect())
+          val store = StaticArtifactStore(mutableMapOf(distribution to fileSet))
+          artifactStore(store)
+        }
+      }
+      .build()
+    val starter = MongodStarter.getInstance(runtimeConfig)
+    executable = starter.prepare(mongodConfig)
     executable.start()
   }
 

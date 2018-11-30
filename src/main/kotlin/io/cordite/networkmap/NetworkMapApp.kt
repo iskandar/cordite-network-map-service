@@ -17,7 +17,7 @@ package io.cordite.networkmap
 
 import io.cordite.networkmap.service.CertificateManagerConfig
 import io.cordite.networkmap.service.NetworkMapService
-import io.cordite.networkmap.storage.MongoStorage
+import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
 import net.corda.core.utilities.loggerFor

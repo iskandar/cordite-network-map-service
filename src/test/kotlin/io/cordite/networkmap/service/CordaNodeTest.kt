@@ -15,7 +15,8 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.MongoStorage
+import com.mongodb.reactivestreams.client.MongoClients
+import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.SerializationTestEnvironment
 import io.cordite.networkmap.utils.driverWithCompatZone
 import io.cordite.networkmap.utils.getFreePort
@@ -37,7 +38,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.litote.kmongo.async.KMongo
 import java.net.URL
 import java.security.cert.X509Certificate
 
@@ -71,7 +71,7 @@ class CordaNodeTest {
     println("port   : $port")
 
 //    setupDefaultInputFiles(dbDirectory)
-    val mongoClient = KMongo.createClient(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "user"))
+    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "user"))
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,

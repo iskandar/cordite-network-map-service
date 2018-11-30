@@ -15,8 +15,9 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.MongoStorage
+import com.mongodb.reactivestreams.client.MongoClients
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
@@ -41,7 +42,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.litote.kmongo.async.KMongo
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
@@ -142,7 +142,7 @@ class NetworkMapServiceTest {
 
     setupDefaultInputFiles(dbDirectory)
 
-    val mongoClient = KMongo.createClient(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "password"))
+    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "sa", "admin"))
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,

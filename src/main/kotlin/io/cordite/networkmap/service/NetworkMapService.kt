@@ -17,7 +17,7 @@
 
 package io.cordite.networkmap.service
 
-import com.mongodb.async.client.MongoClient
+import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig

@@ -30,7 +30,8 @@ class NMSOptions : Options() {
   private val mongoHostOpt = addOption("mongo-host", "embed", "hostname for mongodb server. If set to `embed` will start its own mongo instance")
   private val mongoPortOpt = addOption("mongo-port", "27017", "port for mongodb server")
   private val mongoUserOpt = addOption("mongo-user", "sa", "user for connecting to mongodb")
-  private val mongoPasswordOpt = addOption("monog-password", "admin", "password for connecting to mongodb")
+  private val mongoPasswordOpt = addOption("mongo-password", "admin", "password for connecting to mongodb")
+  private val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
 
   val port get() = portOpt.intValue
   val dbDirectory get() = dbDirectoryOpt.stringValue.toFile()
@@ -58,4 +59,5 @@ class NMSOptions : Options() {
   val mongoPort get() = mongoPortOpt.intValue
   val mongoUser get() = mongoUserOpt.stringValue
   val mongoPassword get() = mongoPasswordOpt.stringValue
+  val mongodLocation get() = mongodLocationOpt.stringValue
 }
