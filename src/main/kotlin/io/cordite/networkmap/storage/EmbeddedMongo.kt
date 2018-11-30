@@ -64,6 +64,7 @@ class EmbeddedMongo private constructor(
     }
   }
 
+//  private val RequiredVersion = PRODUCTION
   private object RequiredVersion : IFeatureAwareVersion {
     private val features = EnumSet.of(Feature.SYNC_DELAY, Feature.STORAGE_ENGINE, Feature.ONLY_64BIT, Feature.NO_CHUNKSIZE_ARG, Feature.MONGOS_CONFIGDB_SET_STYLE, Feature.NO_HTTP_INTERFACE_ARG, Feature.ONLY_WITH_SSL, Feature.ONLY_WINDOWS_2008_SERVER, Feature.NO_SOLARIS_SUPPORT, Feature.NO_BIND_IP_TO_LOCALHOST)
     override fun getFeatures(): EnumSet<Feature> = features
