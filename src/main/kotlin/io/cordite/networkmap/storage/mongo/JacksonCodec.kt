@@ -23,7 +23,6 @@ internal class JacksonCodec<T>(private val bsonObjectMapper: ObjectMapper,
     } catch (e: IOException) {
       throw UncheckedIOException(e)
     }
-
   }
 
   override fun encode(writer: BsonWriter?, value: T, encoderContext: EncoderContext?) {

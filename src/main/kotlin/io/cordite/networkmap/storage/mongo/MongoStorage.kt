@@ -5,6 +5,7 @@ import com.mongodb.client.model.Filters
 import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoCollection
+import com.mongodb.reactivestreams.client.MongoDatabase
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.utils.NMSOptions
@@ -46,9 +47,10 @@ object MongoStorage {
 
 }
 
-inline fun <reified T : Any> MongoClient.getTypeCollection(db: String, collection: String) : MongoCollection<T> {
-  return this.getDatabase(db).withCodecRegistry(MongoStorage.codecRegistry).getCollection(collection, T::class.java)
+inline fun <reified T : Any> MongoDatabase.getCollection(collection: String) : MongoCollection<T> {
+  return this.withCodecRegistry(MongoStorage.codecRegistry).getCollection(collection, T::class.java)
 }
+
 
 fun <T> Publisher<T>.toFuture() : Future<T> {
   val subscriber = SubscriberOnFuture<T>()
