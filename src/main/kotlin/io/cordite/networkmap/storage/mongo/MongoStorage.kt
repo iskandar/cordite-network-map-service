@@ -1,7 +1,6 @@
 
 package io.cordite.networkmap.storage.mongo
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.mongodb.client.model.Filters
 import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.MongoClients
@@ -102,9 +101,9 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
 }
 
 infix fun <R> KProperty<R>.eq(key: R): Bson {
-  val jsonProperty = this.javaField!!.getDeclaredAnnotation(JsonProperty::class.java)
-  return when (jsonProperty) {
+  val a = this.javaField!!.getDeclaredAnnotation(BsonId::class.java)
+  return when (a) {
     null -> this.name
-    else -> jsonProperty.value
+    else -> "_id"
   }.let { Filters.eq(it, key) }
 }

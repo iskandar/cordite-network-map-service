@@ -1,6 +1,5 @@
 package io.cordite.networkmap.storage.mongo
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.core.logging.loggerFor
@@ -61,5 +60,5 @@ class MongoTextStorage(mongoClient: MongoClient,
       }
   }
 
-  data class KeyValue(@field:JsonProperty("_id") val key: String, val value: String)
+  data class KeyValue(@BsonId val key: String, val value: String)
 }
