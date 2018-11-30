@@ -27,10 +27,7 @@ class NMSOptions : Options() {
   private val certmanStrictEV = addOption("certman-strict-ev", "false", "enables strict constraint for EV certs only in certman")
   private val rootX509Name = addOption("root-ca-name", "CN=\"<replace me>\", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB", "the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca")
   private val webRootOpt = addOption("web-root","/", "for remapping the root url for all requests")
-  private val mongoHostOpt = addOption("mongo-host", "embed", "hostname for mongodb server. If set to `embed` will start its own mongo instance")
-  private val mongoPortOpt = addOption("mongo-port", "27017", "port for mongodb server")
-  private val mongoUserOpt = addOption("mongo-user", "sa", "user for connecting to mongodb")
-  private val mongoPasswordOpt = addOption("mongo-password", "admin", "password for connecting to mongodb")
+  private val mongoConnectionOpt = addOption("mongo-connection-string", "embed", "MongoDB connection string. If set to `embed` will start its own mongo instance")
   private val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
 
   val port get() = portOpt.intValue
@@ -55,9 +52,6 @@ class NMSOptions : Options() {
     CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(rootX509Name.stringValue))
   }
   val webRoot get() = webRootOpt.stringValue
-  val mongoHost get() = mongoHostOpt.stringValue
-  val mongoPort get() = mongoPortOpt.intValue
-  val mongoUser get() = mongoUserOpt.stringValue
-  val mongoPassword get() = mongoPasswordOpt.stringValue
+  val mongoConnectionString get() = mongoConnectionOpt.stringValue
   val mongodLocation get() = mongodLocationOpt.stringValue
 }

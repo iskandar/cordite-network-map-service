@@ -64,7 +64,7 @@ class NetworkMapWithTLSCertTest {
 
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
     val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
-    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "password"))
+    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),

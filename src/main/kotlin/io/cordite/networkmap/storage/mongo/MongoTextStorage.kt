@@ -4,6 +4,7 @@ import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.TextStorage
+import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future

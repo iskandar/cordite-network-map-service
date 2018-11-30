@@ -1,4 +1,4 @@
-package io.cordite.networkmap.storage.mongo
+package io.cordite.networkmap.storage.mongo.serlalisation
 
 import com.fasterxml.jackson.annotation.JacksonAnnotationsInside
 import com.fasterxml.jackson.annotation.JsonProperty

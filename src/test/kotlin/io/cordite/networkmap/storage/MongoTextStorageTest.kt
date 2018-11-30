@@ -23,7 +23,7 @@ class MongoTextStorageTest {
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "sa", "admin"))
+      mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
     }
 
     @JvmStatic

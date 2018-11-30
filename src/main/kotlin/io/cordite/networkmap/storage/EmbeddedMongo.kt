@@ -27,22 +27,22 @@ import java.util.*
 
 class EmbeddedMongo private constructor(
   dbDirectory: String,
-  private val user: String,
-  private val password: String,
   private val mongodLocation: String, // empty string if none available
   private val enableAuth: Boolean
 ) : Closeable {
   companion object {
     const val INIT_TIMEOUT_MS = 30000L
     const val USER_ADDED_TOKEN = "Successfully added user"
+    const val MONGO_USER = "mongo"
+    const val MONGO_PASSWORD = "mongo"
     private val log = loggerFor<EmbeddedMongo>()
-    fun create(dbDirectory: String, username: String, password: String, mongodLocation: String): EmbeddedMongo {
+    fun create(dbDirectory: String, mongodLocation: String): EmbeddedMongo {
       // start it up and add the admin user
-      EmbeddedMongo(dbDirectory, username, password, mongodLocation, false).use {
+      EmbeddedMongo(dbDirectory, mongodLocation, false).use {
         it.addAdmin()
         // implicit shutdown
       }
-      return EmbeddedMongo(dbDirectory, username, password, mongodLocation, true)
+      return EmbeddedMongo(dbDirectory, mongodLocation, true)
         .apply { setupShutdownHook() }
         .also {
           log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
@@ -64,7 +64,7 @@ class EmbeddedMongo private constructor(
   private val executable : MongodExecutable
   val connectionString
     get() = when (enableAuth) {
-      true -> "mongodb://$user:$password@$bindIP:$port"
+      true -> "mongodb://$MONGO_USER:$MONGO_PASSWORD@$bindIP:$port"
       false -> "mongodb://$bindIP:$port"
     }
 
@@ -165,8 +165,8 @@ class EmbeddedMongo private constructor(
   private fun addAdmin() {
     val script = """
       db.createUser({
-        "user": "$user",
-        "pwd": "$password",
+        "user": "$MONGO_USER",
+        "pwd": "$MONGO_PASSWORD",
         "roles": [ { "role": "userAdminAnyDatabase", "db": "admin" }, "readWriteAnyDatabase" ]
       })
     """.trimIndent()

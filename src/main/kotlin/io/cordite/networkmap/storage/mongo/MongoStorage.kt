@@ -8,6 +8,9 @@ import com.mongodb.reactivestreams.client.MongoCollection
 import com.mongodb.reactivestreams.client.MongoDatabase
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.EmbeddedMongo
+import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
+import io.cordite.networkmap.storage.mongo.serlalisation.JacksonCodecProvider
+import io.cordite.networkmap.storage.mongo.serlalisation.ObjectMapperFactory
 import io.cordite.networkmap.utils.NMSOptions
 import io.vertx.core.Future
 import org.bson.codecs.configuration.CodecRegistries
@@ -26,10 +29,10 @@ object MongoStorage {
     CodecRegistries.fromProviders(JacksonCodecProvider(ObjectMapperFactory.mapper)))!!
 
   fun connect(nmsOptions: NMSOptions): MongoClient {
-    val connectionString = if (nmsOptions.mongoHost == "embed") {
+    val connectionString = if (nmsOptions.mongoConnectionString == "embed") {
       startEmbeddedDatabase(nmsOptions)
     } else {
-      "mongodb://${nmsOptions.mongoUser}:${nmsOptions.mongoPassword}@${nmsOptions.mongoHost}:${nmsOptions.mongoPort}"
+      nmsOptions.mongoConnectionString
     }
 
     return MongoClients.create(connectionString)
@@ -37,12 +40,12 @@ object MongoStorage {
 
   private fun startEmbeddedDatabase(nmsOptions: NMSOptions): String {
     return with(nmsOptions) {
-      startEmbeddedDatabase(dbDirectory, mongoUser, mongoPassword, mongodLocation)
+      startEmbeddedDatabase(dbDirectory, mongodLocation)
     }
   }
 
-  fun startEmbeddedDatabase(dbDirectory: File, mongoUser: String, mongoPassword: String, mongodLocation: String = ""): String {
-    return EmbeddedMongo.create(File(dbDirectory, "mongo").absolutePath, mongoUser, mongoPassword, mongodLocation).connectionString
+  fun startEmbeddedDatabase(dbDirectory: File, mongodLocation: String = ""): String {
+    return EmbeddedMongo.create(File(dbDirectory, "mongo").absolutePath, mongodLocation).connectionString
   }
 
 }

@@ -71,7 +71,7 @@ class NetworkMapAdminInterfaceTest {
       setupDefaultInputFiles(dbDirectory)
       setupDefaultNodes(dbDirectory)
 
-      val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "admin", "password"))
+      val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,

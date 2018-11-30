@@ -142,7 +142,7 @@ class NetworkMapServiceTest {
 
     setupDefaultInputFiles(dbDirectory)
 
-    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory, "sa", "admin"))
+    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,

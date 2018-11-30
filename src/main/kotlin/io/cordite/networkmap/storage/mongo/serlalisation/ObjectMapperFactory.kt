@@ -1,4 +1,4 @@
-package io.cordite.networkmap.storage.mongo
+package io.cordite.networkmap.storage.mongo.serlalisation
 
 
 import com.fasterxml.jackson.databind.ObjectMapper
