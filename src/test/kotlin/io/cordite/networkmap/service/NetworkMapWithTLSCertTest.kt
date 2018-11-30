@@ -17,6 +17,7 @@ package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.mongodb.reactivestreams.client.MongoClients
+import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
@@ -46,8 +47,11 @@ class NetworkMapWithTLSCertTest {
   private lateinit var service: NetworkMapService
   private lateinit var client: HttpClient
 
+  private lateinit var mongodb: EmbeddedMongo
+
   @Before
   fun before(context: TestContext) {
+    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
     vertx = Vertx.vertx()
 
     val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
@@ -64,7 +68,7 @@ class NetworkMapWithTLSCertTest {
 
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
     val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
-    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
+    val mongoClient = MongoClients.create(mongodb.connectionString)
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
@@ -95,7 +99,12 @@ class NetworkMapWithTLSCertTest {
   fun after(context: TestContext) {
     client.close()
     service.shutdown()
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      mongodb.close()
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test

@@ -120,6 +120,7 @@ class NetworkMapService(
 
   fun shutdown(): Future<Unit> {
     processor.stop()
+    mongoClient.close()
     return Future.succeededFuture()
   }
 

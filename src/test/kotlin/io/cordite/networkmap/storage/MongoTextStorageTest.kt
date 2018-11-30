@@ -35,16 +35,20 @@ class MongoTextStorageTest {
 
     private lateinit var mongoClient: MongoClient
 
+    private lateinit var mongodb: EmbeddedMongo
+
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
+      mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
+      mongoClient = MongoClients.create(mongodb.connectionString)
     }
 
     @JvmStatic
     @AfterClass
     fun afterClass() {
       mongoClient.close()
+      mongodb.close()
     }
   }
 

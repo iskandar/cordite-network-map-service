@@ -17,6 +17,7 @@ package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.mongodb.reactivestreams.client.MongoClients
+import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.storage.parseToWhitelistPairs
 import io.cordite.networkmap.storage.toWhitelistPairs
@@ -53,16 +54,18 @@ class NetworkMapAdminInterfaceTest {
     private lateinit var service: NetworkMapService
     private lateinit var client: HttpClient
 
+    private lateinit var mongodb: EmbeddedMongo
+
     @JvmStatic
     @BeforeClass
     fun before(context: TestContext) {
+      mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
       vertx = Vertx.vertx()
 
       val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
       val async = context.async()
       fRead.setHandler { async.complete() }
       async.await()
-
 
       val path = dbDirectory.absolutePath
       println("db path: $path")
@@ -71,7 +74,7 @@ class NetworkMapAdminInterfaceTest {
       setupDefaultInputFiles(dbDirectory)
       setupDefaultNodes(dbDirectory)
 
-      val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
+      val mongoClient = MongoClients.create(mongodb.connectionString)
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
@@ -100,7 +103,12 @@ class NetworkMapAdminInterfaceTest {
     fun after(context: TestContext) {
       client.close()
       service.shutdown()
-      vertx.close(context.asyncAssertSuccess())
+      val async = context.async()
+      vertx.close {
+        mongodb.close()
+        context.assertTrue(it.succeeded())
+        async.complete()
+      }
     }
   }
 

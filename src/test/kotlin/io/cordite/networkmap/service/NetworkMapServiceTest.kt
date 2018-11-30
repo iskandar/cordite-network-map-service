@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.mongodb.reactivestreams.client.MongoClients
+import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.*
@@ -126,8 +127,11 @@ class NetworkMapServiceTest {
 
   private lateinit var service: NetworkMapService
 
+  private lateinit var mongodb: EmbeddedMongo
+
   @Before
   fun before(context: TestContext) {
+    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
     vertx = Vertx.vertx()
 
     val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
@@ -142,7 +146,7 @@ class NetworkMapServiceTest {
 
     setupDefaultInputFiles(dbDirectory)
 
-    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
+    val mongoClient = MongoClients.create(mongodb.connectionString)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
@@ -169,7 +173,12 @@ class NetworkMapServiceTest {
   @After
   fun after(context: TestContext) {
     service.shutdown()
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      mongodb.close()
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test

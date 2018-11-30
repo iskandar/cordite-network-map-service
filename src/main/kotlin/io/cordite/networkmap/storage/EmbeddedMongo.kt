@@ -58,7 +58,6 @@ class EmbeddedMongo private constructor(
         // implicit shutdown
       }
       return EmbeddedMongo(dbDirectory, mongodLocation, true)
-        .apply { setupShutdownHook() }
         .also {
           log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
         }
@@ -119,12 +118,6 @@ class EmbeddedMongo private constructor(
 
   override fun close() {
     executable.stop()
-  }
-
-  fun setupShutdownHook() {
-    Runtime.getRuntime().addShutdownHook(Thread {
-      close()
-    })
   }
 
   @Throws(IOException::class)

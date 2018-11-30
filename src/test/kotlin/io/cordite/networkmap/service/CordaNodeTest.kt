@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.mongodb.reactivestreams.client.MongoClients
+import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.SerializationTestEnvironment
 import io.cordite.networkmap.utils.driverWithCompatZone
@@ -60,6 +61,8 @@ class CordaNodeTest {
 
   private lateinit var service: NetworkMapService
 
+  private lateinit var mongodb: EmbeddedMongo
+
   @Before
   fun before(context: TestContext) {
     // we'll need to have a serialization context so that the NMS can set itself up
@@ -71,7 +74,8 @@ class CordaNodeTest {
     println("port   : $port")
 
 //    setupDefaultInputFiles(dbDirectory)
-    val mongoClient = MongoClients.create(MongoStorage.startEmbeddedDatabase(dbDirectory))
+    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
+    val mongoClient = MongoClients.create(mongodb.connectionString)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
@@ -87,7 +91,12 @@ class CordaNodeTest {
 
   @After
   fun after(context: TestContext) {
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      mongodb.close()
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test
