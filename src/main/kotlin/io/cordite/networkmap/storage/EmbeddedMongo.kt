@@ -101,7 +101,7 @@ class EmbeddedMongo private constructor(
       .apply {
         if (mongodLocation.isNotBlank()) {
           val execFile = File(mongodLocation).absoluteFile
-          if (execFile.exists()) {
+          if (!execFile.exists()) {
             throw FileNotFoundException("could not locate mongod executable $mongodLocation")
           }
           val fileSet = ImmutableExtractedFileSet.builder(execFile.parentFile).baseDirIsGenerated(false).executable(execFile).build()
