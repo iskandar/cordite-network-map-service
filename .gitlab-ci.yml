@@ -149,27 +149,6 @@ dast:
     - master
     - tags
 
-dast-amer:
-  stage: infosec
-  image: registry.gitlab.com/gitlab-org/security-products/zaproxy
-  variables:
-    website: "https://amer-edge.cordite.foundation/"
-  allow_failure: true
-  script:
-    - mkdir /zap/wrk/
-    - /zap/zap-baseline.py -J gl-dast-report.json -t $website || true
-    - cp /zap/wrk/gl-dast-report.json .
-  artifacts:
-    reports:
-      dast: gl-dast-report.json
-  tags:
-    - docker
-  only:
-    - 73-infosec-for-nms
-    - master
-    - tags
-
-
 dependency_scanning:
   stage: infosec
   image: docker:stable
