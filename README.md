@@ -70,6 +70,8 @@ You can configure the service using `-D` system properties. See the section for
 
 ## Command line parameters
 
+Java properties (pass with -D<propertyname>=<property-value>) and env variables:
+
 | Property                    | Env Variable                        | Default                                                                                               | Description                                                                                                              |
 | --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | auth-password               | NMS_AUTH_PASSWORD                   | admin                                                                                                 | system admin password                                                                                                    |
@@ -83,13 +85,16 @@ You can configure the service using `-D` system properties. See the section for
 | db                          | NMS_DB                              | .db                                                                                                   | database directory for this service                                                                                      |
 | doorman                     | NMS_DOORMAN                         | true                                                                                                  | enable Corda doorman protocol                                                                                            |
 | hostname                    | NMS_HOSTNAME                        | 0.0.0.0                                                                                               | interface to bind the service to                                                                                         |
+| mongo-connection-string     | NMS_MONGO_CONNECTION_STRING         | embed                                                                                                 | MongoDB connection string. If set to `embed` will start its own mongo instance                                           |
+| mongod-location             | NMS_MONGOD_LOCATION                 |                                                                                                       | optional location of pre-existing mongod server                                                                          |
 | network-map-delay           | NMS_NETWORK_MAP_DELAY               | 1S                                                                                                    | queue time for the network map to update for addition of nodes                                                           |
 | param-update-delay          | NMS_PARAM_UPDATE_DELAY              | 10S                                                                                                   | schedule duration for a parameter update                                                                                 |
 | port                        | NMS_PORT                            | 8080                                                                                                  | web port                                                                                                                 |
 | root-ca-name                | NMS_ROOT_CA_NAME                    | CN="<replace me>", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB     | the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca     |
 | tls                         | NMS_TLS                             | false                                                                                                 | whether TLS is enabled or not                                                                                            |
 | tls-cert-path               | NMS_TLS_CERT_PATH                   |                                                                                                       | path to cert if TLS is turned on                                                                                         |
-| tls-key-path                | NMS_TLS_KEY_PATH                    |                                                                                                       | path to key if TLS turned on                                           
+| tls-key-path                | NMS_TLS_KEY_PATH                    |                                                                                                       | path to key if TLS turned on                                                                                             |
+| web-root                    | NMS_WEB_ROOT                        | /                                                                                                     | for remapping the root url for all requests                                                                              |
 
 ## Doorman protocol
 
