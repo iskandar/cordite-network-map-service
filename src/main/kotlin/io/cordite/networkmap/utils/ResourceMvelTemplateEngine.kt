@@ -15,11 +15,14 @@
  */
 package io.cordite.networkmap.utils
 
+import io.netty.handler.codec.http.HttpResponseStatus
+import io.vertx.core.http.impl.MimeMapping
 import io.vertx.ext.web.RoutingContext
 import org.mvel2.integration.impl.ImmutableDefaultFactory
 import org.mvel2.templates.TemplateCompiler
 import org.mvel2.templates.TemplateRuntime
 import org.mvel2.util.StringAppender
+import java.io.FileNotFoundException
 import javax.ws.rs.core.HttpHeaders
 
 /**
@@ -32,7 +35,7 @@ class ResourceMvelTemplateEngine(
   val cachingEnabled: Boolean,
   private val properties: Map<String, String>,
   private val rootPath: String,
-  private val fileSuffixWhitelist: List<String> = listOf("html")
+  private val fileSuffixWhitelist: List<String> = listOf("html", "xml")
 ) {
   val cache = mutableMapOf<String, String>()
 
@@ -45,7 +48,7 @@ class ResourceMvelTemplateEngine(
   }
 
   private fun resolvePathUncached(path: String) : String {
-    val text = ClassLoader.getSystemClassLoader().getResource(rootPath + path).readText()
+    val text = ClassLoader.getSystemClassLoader().getResource(rootPath + path)?.readText() ?: throw FileNotFoundException(path)
     val template= TemplateCompiler.compileTemplate(text)
     return TemplateRuntime(template.template, null, template.root, ".").execute(StringAppender(), properties, ImmutableDefaultFactory()).toString()
   }
@@ -68,11 +71,24 @@ class ResourceMvelTemplateEngine(
       val process = fileSuffixWhitelist.any { path.endsWith(".$it") }
       if (process) {
         val result = resolvePath(path)
-        context.response().putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString()).end(result)
+        context.response()
+          .putHeader(HttpHeaders.CONTENT_LENGTH, result.length.toString())
+          .apply {
+            val contentType = MimeMapping.getMimeTypeForFilename(path)
+            if (contentType != null) {
+              putHeader(HttpHeaders.CONTENT_TYPE, contentType)
+            }
+            putHeader("X-Content-Type-Options", "nosniff")
+          }
+          .end(result)
       } else {
         context.next()
       }
-    } catch (err: Throwable) {
+    }
+    catch (err: FileNotFoundException) {
+      context.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).setStatusMessage("File not found").end()
+    }
+    catch (err: Throwable) {
       context.end(err)
     }
   }
