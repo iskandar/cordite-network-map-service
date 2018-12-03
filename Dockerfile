@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-FROM openjdk:8u181-jdk-alpine3.8
+FROM amazonlinux:2
 
 LABEL VENDOR="Cordite.foundation" \
       MAINTAINER="devops@cordite.foundation"
@@ -27,12 +27,14 @@ ENV NMS_DB=db
 
 WORKDIR /opt/cordite
 
-RUN mkdir -p /opt/cordite/db /opt/cordite/logs \
- && addgroup -g 1000 -S cordite \
- && adduser -u 1000 -S cordite -G cordite \
- && chgrp -R 0 /opt/cordite \
- && chmod -R g=u /opt/cordite \
- && chown -R cordite:cordite /opt/cordite
+RUN yum install -y java-1.8.0-openjdk-headless shadow-utils.x86_64 \
+  && yum clean all \
+  && mkdir -p /opt/cordite/db /opt/cordite/logs \
+  && groupadd -g 1000 -r cordite \
+  && useradd -r -u 1000 -g cordite cordite \
+  && chgrp -R 0 /opt/cordite \
+  && chmod -R g=u /opt/cordite \
+  && chown -R cordite:cordite /opt/cordite
 
 USER cordite
 
