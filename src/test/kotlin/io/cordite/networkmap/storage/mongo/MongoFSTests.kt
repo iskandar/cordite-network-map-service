@@ -34,6 +34,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
+import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 
@@ -87,15 +88,14 @@ class MongoFSTests {
         val buffer = PooledByteBufAllocator.DEFAULT.buffer()
         bucket.downloadToStream(file, buffer.asAsyncOutputStream())
           .toFuture()
-          .onSuccess {
-            println("read back $it bytes into buffer $buffer")
-            context.assertEquals(size, it)
+          .onSuccess { result ->
+            context.assertEquals(size, result)
           }.map {
             buffer
           }
       }.onSuccess {
         val msg = it.decodeString(StandardCharsets.UTF_8)
-        println(msg)
+        assertEquals(contents, msg)
       }
       .compose {
         bucket.find(Filters.eq("filename", file)).first().toFuture()
