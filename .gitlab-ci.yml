@@ -1,7 +1,7 @@
 stages:
  - build
  - package
- - infosec
+ - test
  - release
 
 # For more information on Maven see
@@ -22,7 +22,7 @@ build:maven:
     - cat target/site/jacoco/index.html
 #    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
   tags:
-    - etb3
+    - etb3 # should be shared runners to stop queuing
   cache:
     key: "$CI_JOB_NAME"
     paths:
@@ -66,13 +66,22 @@ package:docker:
   tags:
     - docker
   only:
-    - 73-infosec-for-nms
-    - master
-    - tags
+    - master # should be on all branches to stop master failing
+
+test:nms:
+  image: docker:stable
+  stage: test
+  allow_failure: true
+  script:
+    - echo 'INTEGRATION TEST OF JAVA, DOCKER AND MONGODB GOES HERE'
+  tags:
+    - docker
+  only:
+    - master # should be on all branches to stop master failing
 
 container_scanning:
   image: docker:stable
-  stage: infosec
+  stage: test
   variables:
     CI_APPLICATION_REPOSITORY: ${CI_REGISTRY_IMAGE}
     CI_APPLICATION_TAG: ${CI_PIPELINE_ID}
@@ -99,14 +108,11 @@ container_scanning:
   tags:
     - docker
   only:
-    - 73-infosec-for-nms
     - master
-    - tags
-  allow_failure: true
 
 # fails due to use of npm
 #sast:
-#  stage: infosec
+#  stage: test
 #  image: jimador/docker-jdk-8-maven-node
 #  variables:
 #    DOCKER_DRIVER: overlay2
@@ -125,12 +131,12 @@ container_scanning:
 #  tags:
 #    - docker
 #  only:
-#    - 73-infosec-for-nms
+#    - 73-test-for-nms
 #    - master
 #    - tags
 
 dast:
-  stage: infosec
+  stage: test
   image: registry.gitlab.com/gitlab-org/security-products/zaproxy
   variables:
     website: "https://network-map-edge.cordite.foundation/"
@@ -145,12 +151,10 @@ dast:
   tags:
     - docker
   only:
-    - 73-infosec-for-nms
     - master
-    - tags
 
 dependency_scanning:
-  stage: infosec
+  stage: test
   image: docker:stable
   variables:
     DOCKER_DRIVER: overlay2
@@ -170,9 +174,7 @@ dependency_scanning:
   tags:
     - docker
   only:
-    - 73-infosec-for-nms
     - master
-    - tags
 
 release:docker:
   stage: release
@@ -195,4 +197,4 @@ release:docker:
   tags:
     - docker
   only:
-    - tags
+    - master
