@@ -54,9 +54,9 @@ class EmbeddedMongo private constructor(
     private val log = loggerFor<EmbeddedMongo>()
     fun create(dbDirectory: String, mongodLocation: String, isDaemonProcess: Boolean = true): EmbeddedMongo {
       // start it up and add the admin user
-      EmbeddedMongo(dbDirectory, mongodLocation, false, false).use {
-        it.addAdmin()
-        // implicit shutdown
+      EmbeddedMongo(dbDirectory, mongodLocation, false, false).apply {
+        addAdmin()
+        // implicit shutdown happens because we
       }
       return EmbeddedMongo(dbDirectory, mongodLocation, true, isDaemonProcess)
         .also {
@@ -120,9 +120,12 @@ class EmbeddedMongo private constructor(
   }
 
   override fun close() {
-    if (!isDaemonProcess) {
-      log.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
-      executable.stop()
+    when (isDaemonProcess) {
+      true -> log.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
+      else -> {
+        log.info("manual shutdown in progress")
+        executable.stop()
+      }
     }
   }
 
@@ -138,12 +141,13 @@ class EmbeddedMongo private constructor(
     }
     val runtimeConfig = RuntimeConfigBuilder()
       .defaults(Command.Mongo)
+      .daemonProcess(false)
       .processOutput(ProcessOutput(
         mongoOutput,
         namedConsole("[mongo shell error]"),
         console()))
       .build()
-    val starter = MongoShellStarter.getInstance(runtimeConfig)
+
     val scriptFile = writeTmpScriptFile(scriptText)
     val builder = MongoShellConfigBuilder()
     if (dbName.isNotEmpty()) {
@@ -155,15 +159,21 @@ class EmbeddedMongo private constructor(
     if (password != null && password.isNotEmpty()) {
       builder.password(password)
     }
-    val shell = starter.prepare(builder
+    val mongoShellConfig = builder
       .scriptName(scriptFile.absolutePath)
       .version(mongodConfig.version())
       .net(mongodConfig.net())
-      .build()).start()
-    if (mongoOutput is LogWatchStreamProcessor) {
-      mongoOutput.waitForResult(INIT_TIMEOUT_MS)
+      .build()
+
+    val starter = MongoShellStarter.getInstance(runtimeConfig)
+    val shell = starter.prepare(mongoShellConfig).start()
+    try {
+      if (mongoOutput is LogWatchStreamProcessor) {
+        mongoOutput.waitForResult(INIT_TIMEOUT_MS)
+      }
+    } finally {
+      shell.stop()
     }
-    shell.stop()
   }
 
   @Throws(IOException::class)

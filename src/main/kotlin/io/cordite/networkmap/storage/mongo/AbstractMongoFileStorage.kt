@@ -120,12 +120,13 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
       .catch { error ->
         try {
           routingContext.end(error)
+          byteBuf.release()
         } catch (err: Throwable) {
           log.error("failed to send error to client for request to serve $key")
         }
       }
       .finally {
-        byteBuf.release()
+//        byteBuf.release() // Netty appears to release the buffer anyway
       }
   }
 
