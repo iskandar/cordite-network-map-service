@@ -31,7 +31,7 @@ class MongoTextStorage(mongoClient: MongoClient,
     private val log = loggerFor<MongoTextStorage>()
   }
 
-  private val collection = mongoClient.getDatabase(database).getCollection<KeyValue>(collection)
+  private val collection = mongoClient.getDatabase(database).getTypedCollection<KeyValue>(collection)
 
   fun clear(): Future<Unit> = collection.drop().toFuture().mapEmpty()
 

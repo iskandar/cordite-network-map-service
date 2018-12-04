@@ -43,7 +43,8 @@ import java.util.*
 class EmbeddedMongo private constructor(
   dbDirectory: String,
   private val mongodLocation: String, // empty string if none available
-  private val enableAuth: Boolean
+  private val enableAuth: Boolean,
+  private val isDaemonProcess: Boolean = true
 ) : Closeable {
   companion object {
     const val INIT_TIMEOUT_MS = 30000L
@@ -51,13 +52,13 @@ class EmbeddedMongo private constructor(
     const val MONGO_USER = "mongo"
     const val MONGO_PASSWORD = "mongo"
     private val log = loggerFor<EmbeddedMongo>()
-    fun create(dbDirectory: String, mongodLocation: String): EmbeddedMongo {
+    fun create(dbDirectory: String, mongodLocation: String, isDaemonProcess: Boolean = true): EmbeddedMongo {
       // start it up and add the admin user
-      EmbeddedMongo(dbDirectory, mongodLocation, false).use {
+      EmbeddedMongo(dbDirectory, mongodLocation, false, false).use {
         it.addAdmin()
         // implicit shutdown
       }
-      return EmbeddedMongo(dbDirectory, mongodLocation, true)
+      return EmbeddedMongo(dbDirectory, mongodLocation, true, isDaemonProcess)
         .also {
           log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
         }
@@ -111,6 +112,7 @@ class EmbeddedMongo private constructor(
           artifactStore(store)
         }
       }
+      .daemonProcess(isDaemonProcess)
       .build()
     val starter = MongodStarter.getInstance(runtimeConfig)
     executable = starter.prepare(mongodConfig)
@@ -118,7 +120,10 @@ class EmbeddedMongo private constructor(
   }
 
   override fun close() {
-    executable.stop()
+    if (!isDaemonProcess) {
+      log.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
+      executable.stop()
+    }
   }
 
   @Throws(IOException::class)
@@ -150,7 +155,7 @@ class EmbeddedMongo private constructor(
     if (password != null && password.isNotEmpty()) {
       builder.password(password)
     }
-    starter.prepare(builder
+    val shell = starter.prepare(builder
       .scriptName(scriptFile.absolutePath)
       .version(mongodConfig.version())
       .net(mongodConfig.net())
@@ -158,6 +163,7 @@ class EmbeddedMongo private constructor(
     if (mongoOutput is LogWatchStreamProcessor) {
       mongoOutput.waitForResult(INIT_TIMEOUT_MS)
     }
+    shell.stop()
   }
 
   @Throws(IOException::class)

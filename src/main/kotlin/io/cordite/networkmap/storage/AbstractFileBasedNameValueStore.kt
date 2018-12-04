@@ -17,7 +17,6 @@ package io.cordite.networkmap.storage
 
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
-import io.cordite.networkmap.utils.DirectoryDigest
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.end
 import io.cordite.networkmap.utils.handleExceptions
@@ -32,12 +31,10 @@ import io.vertx.ext.web.RoutingContext
 import java.io.File
 import java.time.Duration
 
-abstract class AbstractSimpleNameValueStore<T : Any>(
+abstract class AbstractFileBasedNameValueStore<T : Any>(
   private val dir: File,
   protected val vertx: Vertx
 ) : Storage<T> {
-    private val digest = DirectoryDigest(dir)
-
   companion object {
     inline fun <reified T : Any> deserialize(file: File, vertx: Vertx): Future<T> {
       val result = Future.future<Buffer>()
@@ -47,14 +44,14 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
       }
     }
 
-    inline fun <reified T : Any> serialize(value: T, file: File, vertx: Vertx) : Future<Unit> {
+    inline fun <reified T : Any> serialize(value: T, file: File, vertx: Vertx): Future<Unit> {
       val result = Future.future<Void>()
       vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value.serializeOnContext().bytes), result.completer())
       return result.map { Unit }
     }
   }
 
-  fun makeDirs() : Future<Unit> {
+  fun makeDirs(): Future<Unit> {
     val result = future<Void>()
     vertx.fileSystem().mkdirs(dir.absolutePath, result.completer())
     return result.map { Unit }
@@ -69,7 +66,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
       }
   }
 
-  override fun delete(key: String) : Future<Unit> {
+  override fun delete(key: String): Future<Unit> {
     val file = resolveKey(key)
     val result = future<Void>()
     vertx.fileSystem().deleteRecursive(file.absolutePath, true, result.completer())
@@ -96,7 +93,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     }
   }
 
-  override fun getOrDefault(key: String, default: T) : Future<T> {
+  override fun getOrDefault(key: String, default: T): Future<T> {
     return read(key).recover { succeededFuture(default) }
   }
 
@@ -131,7 +128,7 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     return result
   }
 
-  protected open fun write(key: String, value: T) : Future<Unit> {
+  protected open fun write(key: String, value: T): Future<Unit> {
     return serialize(value, resolveKey(key))
   }
 
@@ -152,11 +149,11 @@ abstract class AbstractSimpleNameValueStore<T : Any>(
     return result
   }
 
-  fun resolveKey(key: String) : File {
+  fun resolveKey(key: String): File {
     return File(dir, key)
   }
 
 
-  protected abstract fun deserialize(location: File) : Future<T>
-  protected abstract fun serialize(value: T, location: File) : Future<Unit>
+  protected abstract fun deserialize(location: File): Future<T>
+  protected abstract fun serialize(value: T, location: File): Future<Unit>
 }

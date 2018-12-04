@@ -22,6 +22,7 @@ package io.cordite.networkmap.utils
 import io.cordite.networkmap.service.NetworkMapService
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Future.succeededFuture
@@ -34,7 +35,9 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
@@ -174,6 +177,19 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
   return result
 }
 
+fun <T> Future<T>.finally(fn: (AsyncResult<T>) -> Unit): Future<T> {
+  val result = Future.future<T>()
+  setHandler {
+    try {
+      fn(it)
+      result.completer().handle(it)
+    } catch (err: Throwable) {
+      result.fail(err)
+    }
+  }
+  return result
+}
+
 fun <T> List<Future<T>>.all() : Future<List<T>> {
   if (this.isEmpty()) return succeededFuture(emptyList())
   val results = mutableMapOf<Int, T>()
@@ -266,5 +282,17 @@ fun <T> Future<T>.completeFrom(value: T?, err: Throwable?) {
     err != null -> fail(err)
     else -> complete(value)
   }
+}
+
+fun <T> CordaFuture<T>.toVertxFuture() : Future<T> {
+  val result = Future.future<T>()
+  this.then { f ->
+    try {
+      result.complete(f.getOrThrow())
+    } catch (err: Throwable) {
+      result.fail(err)
+    }
+  }
+  return result
 }
 

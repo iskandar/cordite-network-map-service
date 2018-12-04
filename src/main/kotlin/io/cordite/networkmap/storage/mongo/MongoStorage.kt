@@ -64,10 +64,9 @@ object MongoStorage {
   }
 }
 
-inline fun <reified T : Any> MongoDatabase.getCollection(collection: String) : MongoCollection<T> {
+inline fun <reified T : Any> MongoDatabase.getTypedCollection(collection: String) : MongoCollection<T> {
   return this.withCodecRegistry(MongoStorage.codecRegistry).getCollection(collection, T::class.java)
 }
-
 
 fun <T> Publisher<T>.toFuture() : Future<T> {
   val subscriber = SubscriberOnFuture<T>()
@@ -80,14 +79,21 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
     private val log = loggerFor<SubscriberOnFuture<*>>()
   }
 
+  private var result: T? = null
+
   override fun onComplete() {
     try {
       when {
-        future.failed() -> log.error("failed to complete future because future was failed")
-        !future.succeeded() -> {
-          val msg = "did not receive any value to complete the future"
-          log.error(msg)
-          future.fail(msg)
+        future.isComplete -> {
+          log.error("future is already complete with ${
+          when(future.succeeded()) {
+            true -> future.result()
+            else -> future.cause() as Any
+          }
+          }")
+        }
+        else -> {
+          future.complete(result)
         }
       }
     } catch (err: Throwable) {
@@ -102,8 +108,15 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
   override fun onNext(t: T) {
     try {
       when {
-        future.isComplete -> log.error("future has already been completed")
-        else -> future.complete(t)
+        future.isComplete -> {
+          log.error("future has already been completed")
+        }
+        result != null -> {
+          log.error("already received one item $result")
+        }
+        else -> {
+          result = t
+        }
       }
     } catch (err: Throwable) {
       log.error("failed to complete future", err)
@@ -111,10 +124,22 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
   }
 
   override fun onError(t: Throwable?) {
-    try {
-      future.fail(t)
-    } catch (err : Throwable) {
-      log.error("failed to fail future", err)
+    when {
+      future.isComplete -> {
+        log.error("future is already complete with ${
+        when(future.succeeded()) {
+          true -> future.result()
+          else -> future.cause() as Any
+        }
+        }")
+      }
+      else -> {
+        try {
+          future.fail(t)
+        } catch (err : Throwable) {
+          log.error("failed to fail future", err)
+        }
+      }
     }
   }
 }
