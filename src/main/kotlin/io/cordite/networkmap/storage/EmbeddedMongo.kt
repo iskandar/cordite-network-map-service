@@ -53,11 +53,12 @@ class EmbeddedMongo private constructor(
     const val MONGO_PASSWORD = "mongo"
     private val log = loggerFor<EmbeddedMongo>()
     fun create(dbDirectory: String, mongodLocation: String, isDaemonProcess: Boolean = true): EmbeddedMongo {
-      // start it up and add the admin user
+      log.info("starting up mongod to prepare auth. dbDirectory: $dbDirectory isDaemon: false")
       EmbeddedMongo(dbDirectory, mongodLocation, false, false).apply {
         addAdmin()
-        // implicit shutdown happens because we
+        // implicit shutdown happens because we have updated the authentication mechanism
       }
+      log.info("starting up mongod second time with auth. dbDirectory: $dbDirectory isDaemon: $isDaemonProcess")
       return EmbeddedMongo(dbDirectory, mongodLocation, true, isDaemonProcess)
         .also {
           log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")

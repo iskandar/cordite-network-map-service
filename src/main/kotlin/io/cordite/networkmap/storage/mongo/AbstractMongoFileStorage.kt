@@ -145,7 +145,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
       }
   }
 
-  protected abstract fun deserialize(location: ByteArray): T
+  protected abstract fun deserialize(data: ByteArray): T
   data class FileName(val filename: String)
 }
 

@@ -4,7 +4,7 @@
     <!-- encoders are assigned the type
          ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
     <encoder>
-      <pattern>%date{ISO8601} %-5level %logger{36} - %msg%n</pattern>
+      <pattern>%date{ISO8601} %-5level %X{test-class} %X{test-name} %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
 

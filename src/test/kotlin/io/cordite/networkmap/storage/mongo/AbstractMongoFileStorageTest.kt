@@ -20,10 +20,7 @@ import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoDatabase
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.storage.EmbeddedMongo
-import io.cordite.networkmap.utils.SerializationTestEnvironment
-import io.cordite.networkmap.utils.catch
-import io.cordite.networkmap.utils.getFreePort
-import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
@@ -41,6 +38,10 @@ class AbstractMongoFileStorageTest {
   companion object {
     private val dbDirectory = createTempDir()
 
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     private lateinit var mongoClient: MongoClient
     private lateinit var mongodb: EmbeddedMongo
 
@@ -51,7 +52,6 @@ class AbstractMongoFileStorageTest {
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-
       mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
       mongoClient = MongoClients.create(mongodb.connectionString)
     }
@@ -64,12 +64,16 @@ class AbstractMongoFileStorageTest {
     }
   }
 
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @CordaSerializable
   data class TestData(val name: String)
 
   class TestDataStorage(name: String, db: MongoDatabase) : AbstractMongoFileStorage<TestData>(name, db) {
-    override fun deserialize(location: ByteArray): TestData {
-      return location.deserializeOnContext()
+    override fun deserialize(data: ByteArray): TestData {
+      return data.deserializeOnContext()
     }
   }
 
@@ -89,7 +93,6 @@ class AbstractMongoFileStorageTest {
         .listen(port)
     }
   }
-
 
   @After
   fun after(context: TestContext) {
