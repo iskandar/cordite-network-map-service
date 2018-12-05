@@ -16,14 +16,13 @@
 package io.cordite.networkmap.storage
 
 import com.google.common.io.Files
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
 
@@ -31,6 +30,10 @@ import java.io.File
 class StorageTest {
   companion object {
     private lateinit var vertx: Vertx
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     @JvmStatic
     @BeforeClass
@@ -44,6 +47,10 @@ class StorageTest {
       vertx.close(context.asyncAssertSuccess())
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that storage creates parent directory`(context: TestContext) {

@@ -23,15 +23,14 @@ import io.cordite.networkmap.netty.decodeString
 import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncInputStream
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncOutputStream
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.netty.buffer.PooledByteBufAllocator
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
@@ -42,6 +41,10 @@ import kotlin.test.assertNull
 class MongoFSTests {
   companion object {
     private val dbDirectory = createTempDir()
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     private lateinit var mongoClient: MongoClient
     private lateinit var mongodb: EmbeddedMongo
@@ -60,6 +63,10 @@ class MongoFSTests {
       mongodb.close()
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that ByteBuf can resize`(context: TestContext) {

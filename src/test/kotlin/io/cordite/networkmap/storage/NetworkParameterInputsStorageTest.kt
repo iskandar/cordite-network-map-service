@@ -20,14 +20,10 @@ import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEF
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
 import io.cordite.networkmap.utils.*
-import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.core.file.FileSystem
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
 import java.nio.file.Files
@@ -37,6 +33,9 @@ import java.nio.file.Files
 class NetworkParameterInputsStorageTest {
   companion object {
     private lateinit var vertx: Vertx
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     init {
       SerializationTestEnvironment.init()
@@ -54,6 +53,11 @@ class NetworkParameterInputsStorageTest {
       vertx.close(context.asyncAssertSuccess())
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
 
   @Test
   fun `that we create the input folder`(context: TestContext) {

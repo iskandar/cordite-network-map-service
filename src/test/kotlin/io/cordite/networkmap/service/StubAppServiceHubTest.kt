@@ -15,14 +15,27 @@
  */
 package io.cordite.networkmap.service
 
+import io.cordite.networkmap.utils.JunitMDCRule
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SerializeAsToken
+import org.junit.ClassRule
+import org.junit.Rule
 import org.junit.Test
 
 class StubAppServiceHubTest {
+  companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+  }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Test
   fun `capture all the dead code for coverage`() {
     StubAppServiceHub().apply {

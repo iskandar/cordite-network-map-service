@@ -39,9 +39,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import org.apache.commons.io.FileUtils
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -63,6 +61,10 @@ class NetworkMapServiceTest {
       LogInitialiser.init()
       SerializationTestEnvironment.init()
     }
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
@@ -128,6 +130,10 @@ class NetworkMapServiceTest {
   private lateinit var service: NetworkMapService
 
   private lateinit var mongodb: EmbeddedMongo
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Before
   fun before(context: TestContext) {

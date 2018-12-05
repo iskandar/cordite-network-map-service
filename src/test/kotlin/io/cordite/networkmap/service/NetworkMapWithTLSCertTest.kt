@@ -26,15 +26,17 @@ import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapWithTLSCertTest {
   companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     init {
       SerializationTestEnvironment.init()
     }
@@ -48,6 +50,10 @@ class NetworkMapWithTLSCertTest {
   private lateinit var client: HttpClient
 
   private lateinit var mongodb: EmbeddedMongo
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Before
   fun before(context: TestContext) {

@@ -18,10 +18,7 @@ package io.cordite.networkmap.service
 import com.mongodb.reactivestreams.client.MongoClients
 import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.MongoStorage
-import io.cordite.networkmap.utils.SerializationTestEnvironment
-import io.cordite.networkmap.utils.driverWithCompatZone
-import io.cordite.networkmap.utils.getFreePort
-import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -35,9 +32,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.net.URL
 import java.security.cert.X509Certificate
@@ -49,10 +44,19 @@ class CordaNodeTest {
     val NETWORK_PARAM_UPDATE_DELAY = 1.millis
     val NETWORK_MAP_QUEUE_DELAY = 1.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     init {
       SerializationTestEnvironment.init()
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()

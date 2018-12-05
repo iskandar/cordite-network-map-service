@@ -19,13 +19,12 @@ import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.MongoClients
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 
 @RunWith(VertxUnitRunner::class)
@@ -36,6 +35,10 @@ class MongoTextStorageTest {
     private lateinit var mongoClient: MongoClient
 
     private lateinit var mongodb: EmbeddedMongo
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     @JvmStatic
     @BeforeClass
@@ -51,6 +54,12 @@ class MongoTextStorageTest {
       mongodb.close()
     }
   }
+
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
 
   @Test
   fun testStorage(context: TestContext) {

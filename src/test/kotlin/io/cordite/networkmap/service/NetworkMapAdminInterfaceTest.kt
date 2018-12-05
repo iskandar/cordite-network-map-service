@@ -31,9 +31,7 @@ import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.JsonObject
 import net.corda.core.utilities.loggerFor
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -55,6 +53,11 @@ class NetworkMapAdminInterfaceTest {
     private lateinit var client: HttpClient
 
     private lateinit var mongodb: EmbeddedMongo
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
 
     @JvmStatic
     @BeforeClass
@@ -111,6 +114,10 @@ class NetworkMapAdminInterfaceTest {
       }
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist`(context: TestContext) {
