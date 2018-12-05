@@ -55,12 +55,12 @@ object MongoStorage {
 
   private fun startEmbeddedDatabase(nmsOptions: NMSOptions): String {
     return with(nmsOptions) {
-      startEmbeddedDatabase(dbDirectory, mongodLocation).connectionString
+      startEmbeddedDatabase(dbDirectory, true, mongodLocation).connectionString
     }
   }
 
-  fun startEmbeddedDatabase(dbDirectory: File, mongodLocation: String = ""): EmbeddedMongo {
-    return EmbeddedMongo.create(File(dbDirectory, "mongo").absolutePath, mongodLocation)
+  fun startEmbeddedDatabase(dbDirectory: File, isDaemon: Boolean, mongodLocation: String = ""): EmbeddedMongo {
+    return EmbeddedMongo.create(File(dbDirectory, "mongo").absolutePath, mongodLocation, isDaemon)
   }
 }
 

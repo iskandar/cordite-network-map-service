@@ -137,7 +137,7 @@ class NetworkMapServiceTest {
 
   @Before
   fun before(context: TestContext) {
-    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
+    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
     vertx = Vertx.vertx()
 
     val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")

@@ -78,7 +78,7 @@ class CordaNodeTest {
     println("port   : $port")
 
 //    setupDefaultInputFiles(dbDirectory)
-    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory)
+    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
     val mongoClient = MongoClients.create(mongodb.connectionString)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
