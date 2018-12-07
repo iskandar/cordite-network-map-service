@@ -237,12 +237,11 @@
             </goals>
             <configuration>
               <target>
-                <exec executable="npm" failonerror="true">
+                <exec executable="npm" failonerror="true" dir="website">
                   <arg value="install"/>
-                  <arg value="-g"/>
-                  <arg value="brunch@2.10.17"/>
                 </exec>
-                <exec executable="brunch" failonerror="true" dir="website">
+                <exec executable="npm" failonerror="true" dir="website">
+                  <arg value="run"/>
                   <arg value="build"/>
                 </exec>
               </target>
