@@ -170,7 +170,8 @@ class NetworkMapServiceTest {
           certManRootCAsTrustStoreFile = null,
           certManRootCAsTrustStorePassword = null,
           certManStrictEVCerts = false),
-      mongoClient = mongoClient
+      mongoClient = mongoClient,
+      mongoDatabase = MongoStorage.DEFAULT_DATABASE
     )
 
     service.startup().setHandler(context.asyncAssertSuccess())

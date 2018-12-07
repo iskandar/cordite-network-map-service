@@ -17,7 +17,6 @@
 
 package io.cordite.networkmap.service
 
-import com.mongodb.reactivestreams.client.MongoClient
 import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.all
@@ -60,7 +59,7 @@ class NetworkMapServiceProcessor(
   private val certificateManager: CertificateManager,
   private val networkParameterUpdateDelay: Duration,
   private val networkMapQueueDelay: Duration,
-  private val mongoClient: MongoClient
+  private val textStorage: MongoTextStorage
 ) {
   companion object {
     private val logger = loggerFor<NetworkMapServiceProcessor>()
@@ -85,7 +84,6 @@ class NetworkMapServiceProcessor(
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
   private var subscription: Subscription? = null
   private var networkMapRebuildTimerId: Long? = null
-  private val textStorage: MongoTextStorage = MongoTextStorage(mongoClient)
   private val parametersUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
   private lateinit var certs: CertificateAndKeyPair
 

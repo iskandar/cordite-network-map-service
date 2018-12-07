@@ -26,6 +26,7 @@ import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.*
+import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -80,7 +81,8 @@ class NetworkMapService(
     certManRootCAsTrustStoreFile = null,
     certManRootCAsTrustStorePassword = null,
     certManStrictEVCerts = false),
-  val mongoClient: MongoClient
+  val mongoClient: MongoClient,
+  val mongoDatabase: String
 ) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"
@@ -437,7 +439,7 @@ class NetworkMapService(
       certificateManager,
       networkParamUpdateDelay,
       networkMapQueuedUpdateDelay,
-      mongoClient
+      MongoTextStorage(mongoClient, mongoDatabase)
     )
     return processor.start()
   }

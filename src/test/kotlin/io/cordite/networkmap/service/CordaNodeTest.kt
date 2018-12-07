@@ -89,7 +89,8 @@ class CordaNodeTest {
       tls = false,
       vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
-      mongoClient = mongoClient)
+      mongoClient = mongoClient,
+      mongoDatabase = MongoStorage.DEFAULT_DATABASE)
     service.startup().setHandler(context.asyncAssertSuccess())
   }
 

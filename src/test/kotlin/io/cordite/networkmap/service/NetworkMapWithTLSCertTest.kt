@@ -88,7 +88,8 @@ class NetworkMapWithTLSCertTest {
       vertx = vertx,
       hostname = "127.0.0.1",
       webRoot = NetworkMapServiceTest.WEB_ROOT,
-      mongoClient = mongoClient
+      mongoClient = mongoClient,
+      mongoDatabase = MongoStorage.DEFAULT_DATABASE
     )
 
     service.startup().setHandler(context.asyncAssertSuccess())

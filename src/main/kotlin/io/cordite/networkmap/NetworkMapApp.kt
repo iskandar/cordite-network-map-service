@@ -42,8 +42,6 @@ open class NetworkMapApp {
       }
     }
 
-    data class Foo(val bar: String)
-
     private fun NMSOptions.bootstrapNMS() {
       if (truststore != null && !truststore.exists()) {
         println("failed to find truststore ${truststore.path}")
@@ -71,7 +69,8 @@ open class NetworkMapApp {
           certManRootCAsTrustStorePassword = trustStorePassword,
           certManStrictEVCerts = strictEV
         ),
-        mongoClient = mongoClient
+        mongoClient = mongoClient,
+        mongoDatabase = mongodDatabase
       ).startup().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())

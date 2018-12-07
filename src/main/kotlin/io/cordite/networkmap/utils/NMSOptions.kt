@@ -17,6 +17,7 @@ package io.cordite.networkmap.utils
 
 import io.cordite.networkmap.service.CertificateManager
 import io.cordite.networkmap.service.InMemoryUser
+import io.cordite.networkmap.storage.mongo.MongoStorage
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import java.io.File
@@ -44,6 +45,7 @@ class NMSOptions : Options() {
   private val webRootOpt = addOption("web-root","/", "for remapping the root url for all requests")
   private val mongoConnectionOpt = addOption("mongo-connection-string", "embed", "MongoDB connection string. If set to `embed` will start its own mongo instance")
   private val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
+  private val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
 
   val port get() = portOpt.intValue
   val dbDirectory get() = dbDirectoryOpt.stringValue.toFile()
@@ -69,4 +71,5 @@ class NMSOptions : Options() {
   val webRoot get() = webRootOpt.stringValue
   val mongoConnectionString get() = mongoConnectionOpt.stringValue
   val mongodLocation get() = mongodLocationOpt.stringValue
+  val mongodDatabase get() = mongodDatabaseOpt.stringValue
 }
