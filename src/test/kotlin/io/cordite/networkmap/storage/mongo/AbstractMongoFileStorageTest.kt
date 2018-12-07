@@ -84,13 +84,16 @@ class AbstractMongoFileStorageTest {
 
   @Before
   fun before(context: TestContext) {
+    val async = context.async()
     Router.router(vertx).apply {
       get("/$fileName").handler {
         storage.serve(fileName, it, Duration.ZERO)
       }
       vertx.createHttpServer(HttpServerOptions().setHost("localhost"))
         .requestHandler(this::accept)
-        .listen(port)
+        .listen(port) {
+          async.complete()
+        }
     }
   }
 
