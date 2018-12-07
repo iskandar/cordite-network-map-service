@@ -38,6 +38,8 @@ import de.flapdoodle.embed.process.store.StaticArtifactStore
 import io.bluebank.braid.core.logging.loggerFor
 import java.io.*
 import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 
 class EmbeddedMongo private constructor(
@@ -125,7 +127,20 @@ class EmbeddedMongo private constructor(
       true -> log.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
       else -> {
         log.info("manual shutdown in progress")
-        executable.stop()
+        val countDownLatch = CountDownLatch(1)
+        val timeout = 5L // seconds
+        val shutdownThread = object: Thread() {
+          override fun run() {
+            executable.stop()
+            countDownLatch.countDown()
+          }
+        }
+        shutdownThread.start()
+        try {
+          countDownLatch.await(timeout, TimeUnit.SECONDS)
+        } catch (err: Throwable) {
+          log.error("failed to shutdown mongo within $timeout seconds", err)
+        }
       }
     }
   }
