@@ -20,6 +20,7 @@ import com.mongodb.reactivestreams.client.MongoClients
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.JunitMDCRule
+import io.cordite.networkmap.utils.TestDatabase
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.ext.unit.TestContext
@@ -30,11 +31,8 @@ import org.junit.runner.RunWith
 @RunWith(VertxUnitRunner::class)
 class MongoTextStorageTest {
   companion object {
-    private val dbDirectory = createTempDir()
 
     private lateinit var mongoClient: MongoClient
-
-    private lateinit var mongodb: EmbeddedMongo
 
     @JvmField
     @ClassRule
@@ -43,18 +41,15 @@ class MongoTextStorageTest {
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
-      mongoClient = MongoClients.create(mongodb.connectionString)
+      mongoClient = TestDatabase.createMongoClient()
     }
 
     @JvmStatic
     @AfterClass
     fun afterClass() {
       mongoClient.close()
-      mongodb.close()
     }
   }
-
 
   @JvmField
   @Rule
@@ -64,7 +59,7 @@ class MongoTextStorageTest {
   @Test
   fun testStorage(context: TestContext) {
     val async = context.async()
-    MongoTextStorage(mongoClient).apply {
+    MongoTextStorage(mongoClient, TestDatabase.createUniqueDBName()).apply {
       this.put("hello", "world")
         .compose {
           this.get("hello")

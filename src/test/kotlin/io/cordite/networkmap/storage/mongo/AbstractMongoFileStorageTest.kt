@@ -43,7 +43,6 @@ class AbstractMongoFileStorageTest {
     val mdcClassRule = JunitMDCRule()
 
     private lateinit var mongoClient: MongoClient
-    private lateinit var mongodb: EmbeddedMongo
 
     init {
       SerializationTestEnvironment.init()
@@ -52,15 +51,13 @@ class AbstractMongoFileStorageTest {
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
-      mongoClient = MongoClients.create(mongodb.connectionString)
+      mongoClient = TestDatabase.createMongoClient()
     }
 
     @JvmStatic
     @AfterClass
     fun afterClass() {
       mongoClient.close()
-      mongodb.close()
     }
   }
 
@@ -78,7 +75,7 @@ class AbstractMongoFileStorageTest {
   }
 
   private val vertx = Vertx.vertx()
-  private val storage = TestDataStorage("test-data", mongoClient.getDatabase("db"))
+  private val storage = TestDataStorage("test-data", mongoClient.getDatabase(TestDatabase.createUniqueDBName()))
   private val port = getFreePort()
   private val fileName = "foo"
 

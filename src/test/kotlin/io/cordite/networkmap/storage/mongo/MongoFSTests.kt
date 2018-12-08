@@ -24,6 +24,7 @@ import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncInputStream
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncOutputStream
 import io.cordite.networkmap.utils.JunitMDCRule
+import io.cordite.networkmap.utils.TestDatabase
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.netty.buffer.PooledByteBufAllocator
@@ -47,20 +48,17 @@ class MongoFSTests {
     val mdcClassRule = JunitMDCRule()
 
     private lateinit var mongoClient: MongoClient
-    private lateinit var mongodb: EmbeddedMongo
 
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
-      mongoClient = MongoClients.create(mongodb.connectionString)
+      mongoClient = TestDatabase.createMongoClient()
     }
 
     @JvmStatic
     @AfterClass
     fun afterClass() {
       mongoClient.close()
-      mongodb.close()
     }
   }
 
@@ -83,7 +81,7 @@ class MongoFSTests {
   @Test
   fun `that we can create and delete buckets`(context: TestContext) {
     val async = context.async()
-    val db = mongoClient.getDatabase("db")
+    val db = mongoClient.getDatabase(TestDatabase.createUniqueDBName())
     val bucket = GridFSBuckets.create(db, "my-directory")
     val file = "test.txt"
     val contents = "0123456789".repeat(16384)

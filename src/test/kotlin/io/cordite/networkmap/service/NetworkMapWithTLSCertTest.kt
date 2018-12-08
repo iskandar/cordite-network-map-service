@@ -49,7 +49,6 @@ class NetworkMapWithTLSCertTest {
   private lateinit var service: NetworkMapService
   private lateinit var client: HttpClient
 
-  private lateinit var mongodb: EmbeddedMongo
 
   @JvmField
   @Rule
@@ -57,7 +56,6 @@ class NetworkMapWithTLSCertTest {
 
   @Before
   fun before(context: TestContext) {
-    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
     vertx = Vertx.vertx()
 
     val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
@@ -74,7 +72,6 @@ class NetworkMapWithTLSCertTest {
 
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
     val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
-    val mongoClient = MongoClients.create(mongodb.connectionString)
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
@@ -88,8 +85,8 @@ class NetworkMapWithTLSCertTest {
       vertx = vertx,
       hostname = "127.0.0.1",
       webRoot = NetworkMapServiceTest.WEB_ROOT,
-      mongoClient = mongoClient,
-      mongoDatabase = MongoStorage.DEFAULT_DATABASE
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName()
     )
 
     service.startup().setHandler(context.asyncAssertSuccess())
@@ -108,7 +105,6 @@ class NetworkMapWithTLSCertTest {
     service.shutdown()
     val async = context.async()
     vertx.close {
-      mongodb.close()
       context.assertTrue(it.succeeded())
       async.complete()
     }

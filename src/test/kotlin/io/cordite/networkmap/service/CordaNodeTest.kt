@@ -62,10 +62,7 @@ class CordaNodeTest {
   private val dbDirectory = createTempDir()
   private val port = getFreePort()
   private val webRoot = DEFAULT_NETWORK_MAP_ROOT
-
   private lateinit var service: NetworkMapService
-
-  private lateinit var mongodb: EmbeddedMongo
 
   @Before
   fun before(context: TestContext) {
@@ -78,8 +75,6 @@ class CordaNodeTest {
     println("port   : $port")
 
 //    setupDefaultInputFiles(dbDirectory)
-    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
-    val mongoClient = MongoClients.create(mongodb.connectionString)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
@@ -89,8 +84,8 @@ class CordaNodeTest {
       tls = false,
       vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
-      mongoClient = mongoClient,
-      mongoDatabase = MongoStorage.DEFAULT_DATABASE)
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName())
     service.startup().setHandler(context.asyncAssertSuccess())
   }
 
@@ -98,7 +93,6 @@ class CordaNodeTest {
   fun after(context: TestContext) {
     val async = context.async()
     vertx.close {
-      mongodb.close()
       context.assertTrue(it.succeeded())
       async.complete()
     }

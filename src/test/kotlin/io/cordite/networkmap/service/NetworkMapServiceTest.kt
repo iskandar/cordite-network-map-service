@@ -129,15 +129,12 @@ class NetworkMapServiceTest {
 
   private lateinit var service: NetworkMapService
 
-  private lateinit var mongodb: EmbeddedMongo
-
   @JvmField
   @Rule
   val mdcRule = JunitMDCRule()
 
   @Before
   fun before(context: TestContext) {
-    mongodb = MongoStorage.startEmbeddedDatabase(dbDirectory, isDaemon = false)
     vertx = Vertx.vertx()
 
     val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
@@ -152,7 +149,6 @@ class NetworkMapServiceTest {
 
     setupDefaultInputFiles(dbDirectory)
 
-    val mongoClient = MongoClients.create(mongodb.connectionString)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
@@ -170,8 +166,8 @@ class NetworkMapServiceTest {
           certManRootCAsTrustStoreFile = null,
           certManRootCAsTrustStorePassword = null,
           certManStrictEVCerts = false),
-      mongoClient = mongoClient,
-      mongoDatabase = MongoStorage.DEFAULT_DATABASE
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName()
     )
 
     service.startup().setHandler(context.asyncAssertSuccess())
@@ -182,7 +178,6 @@ class NetworkMapServiceTest {
     service.shutdown()
     val async = context.async()
     vertx.close {
-      mongodb.close()
       context.assertTrue(it.succeeded())
       async.complete()
     }
