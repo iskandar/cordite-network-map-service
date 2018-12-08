@@ -15,10 +15,11 @@
  */
 package io.cordite.networkmap.storage
 
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext

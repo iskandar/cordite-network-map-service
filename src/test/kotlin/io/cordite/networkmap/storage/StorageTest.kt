@@ -16,6 +16,7 @@
 package io.cordite.networkmap.storage
 
 import com.google.common.io.Files
+import io.cordite.networkmap.storage.file.TextStorage
 import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.onSuccess

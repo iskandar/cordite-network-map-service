@@ -17,7 +17,7 @@
 
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.*
+import io.cordite.networkmap.storage.file.*
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch

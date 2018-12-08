@@ -17,10 +17,8 @@ package io.cordite.networkmap.storage.mongo
 
 import com.mongodb.client.model.Filters
 import com.mongodb.reactivestreams.client.MongoClient
-import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.gridfs.GridFSBuckets
 import io.cordite.networkmap.netty.decodeString
-import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncInputStream
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncOutputStream
 import io.cordite.networkmap.utils.JunitMDCRule

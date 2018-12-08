@@ -16,10 +16,8 @@
 package io.cordite.networkmap.storage.mongo
 
 import com.mongodb.reactivestreams.client.MongoClient
-import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoDatabase
 import io.cordite.networkmap.serialisation.deserializeOnContext
-import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
 import io.vertx.core.Vertx

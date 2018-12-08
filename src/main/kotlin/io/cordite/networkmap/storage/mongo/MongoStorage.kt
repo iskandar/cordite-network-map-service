@@ -22,7 +22,6 @@ import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoCollection
 import com.mongodb.reactivestreams.client.MongoDatabase
 import io.bluebank.braid.core.logging.loggerFor
-import io.cordite.networkmap.storage.EmbeddedMongo
 import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
 import io.cordite.networkmap.storage.mongo.serlalisation.JacksonCodecProvider
 import io.cordite.networkmap.storage.mongo.serlalisation.ObjectMapperFactory
@@ -59,7 +58,7 @@ object MongoStorage {
     }
   }
 
-  fun startEmbeddedDatabase(dbDirectory: File, isDaemon: Boolean, mongodLocation: String = ""): EmbeddedMongo {
+  internal fun startEmbeddedDatabase(dbDirectory: File, isDaemon: Boolean, mongodLocation: String = ""): EmbeddedMongo {
     return EmbeddedMongo.create(File(dbDirectory, "mongo").absolutePath, mongodLocation, isDaemon)
   }
 }

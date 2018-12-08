@@ -16,7 +16,7 @@
 package io.cordite.networkmap.service
 
 import io.cordite.networkmap.keystore.toKeyStore
-import io.cordite.networkmap.storage.CertificateAndKeyPairStorage
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess

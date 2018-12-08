@@ -13,7 +13,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package io.cordite.networkmap.storage
+package io.cordite.networkmap.storage.file
 
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.utils.*

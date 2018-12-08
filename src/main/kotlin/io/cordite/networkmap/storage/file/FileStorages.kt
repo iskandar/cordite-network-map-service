@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package io.cordite.networkmap.storage
+package io.cordite.networkmap.storage.file
 
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.utils.readFile

@@ -15,8 +15,8 @@
  */
 package io.cordite.networkmap.utils
 
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage
-import io.cordite.networkmap.storage.SignedNodeInfoStorage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.file.SignedNodeInfoStorage
 import java.io.File
 import java.nio.file.Files
 

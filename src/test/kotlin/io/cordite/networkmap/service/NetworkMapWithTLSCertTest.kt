@@ -16,9 +16,6 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.mongodb.reactivestreams.client.MongoClients
-import io.cordite.networkmap.storage.EmbeddedMongo
-import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient

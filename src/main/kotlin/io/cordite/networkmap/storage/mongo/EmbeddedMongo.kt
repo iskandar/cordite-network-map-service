@@ -13,7 +13,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package io.cordite.networkmap.storage
+package io.cordite.networkmap.storage.mongo
 
 import de.flapdoodle.embed.mongo.Command
 import de.flapdoodle.embed.mongo.MongoShellStarter
@@ -42,7 +42,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
-class EmbeddedMongo private constructor(
+internal class EmbeddedMongo private constructor(
   dbDirectory: String,
   private val mongodLocation: String, // empty string if none available
   private val enableAuth: Boolean,
