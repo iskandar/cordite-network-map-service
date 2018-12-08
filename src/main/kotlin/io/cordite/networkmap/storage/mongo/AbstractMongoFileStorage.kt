@@ -15,6 +15,7 @@
  */
 package io.cordite.networkmap.storage.mongo
 
+import com.mongodb.MongoGridFSException
 import com.mongodb.client.model.Filters
 import com.mongodb.reactivestreams.client.MongoDatabase
 import com.mongodb.reactivestreams.client.gridfs.GridFSBuckets
@@ -23,11 +24,12 @@ import io.cordite.networkmap.storage.Storage
 import io.cordite.networkmap.storage.mongo.rx.toObservable
 import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncOutputStream
 import io.cordite.networkmap.storage.mongo.serlalisation.toAsyncOutputStream
-import io.cordite.networkmap.utils.*
-import io.netty.buffer.PooledByteBufAllocator
+import io.cordite.networkmap.utils.all
+import io.cordite.networkmap.utils.catch
+import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.toVertxFuture
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
-import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.toFuture
@@ -120,28 +122,35 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
   }
 
   override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
-    val byteBuf = PooledByteBufAllocator.DEFAULT.buffer()
-    bucket.downloadToStream(key, byteBuf.asAsyncOutputStream())
-      .toFuture()
+    routingContext.response().apply {
+      isChunked = true
+      putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
+      putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+    }
+
+    bucket.downloadToStream(key, routingContext.asAsyncOutputStream()).toFuture()
       .onSuccess {
-        val buffer = Buffer.buffer(byteBuf)
-        routingContext.response().apply {
-          putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
-          putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
-          putHeader(HttpHeaders.CONTENT_LENGTH, buffer.length().toString())
-          end(buffer)
+        // NB: we need to do this because the mongo reactive streams driver doesn't respect the reactive streams protocol
+        // and never calls the close method on the output stream! 👏👏👏
+        if (!routingContext.response().ended()) {
+          routingContext.response().end()
         }
       }
       .catch { error ->
-        try {
-          routingContext.end(error)
-          byteBuf.release()
-        } catch (err: Throwable) {
-          log.error("failed to send error to client for request to serve $key")
+        when (error) {
+          is MongoGridFSException -> {
+            log.error("failed to find file for $key from bucket $name", error)
+            if (!routingContext.response().ended()) {
+              routingContext.response().setStatusCode(404).setStatusMessage("file not found").end()
+            }
+          }
+          else -> {
+            log.error("failed to serve request for $key from bucket $name", error)
+            if (!routingContext.response().ended()) {
+              routingContext.response().setStatusCode(500).setStatusMessage("unexpected server exception: ${error.message}").end()
+            }
+          }
         }
-      }
-      .finally {
-//        byteBuf.release() // Netty appears to release the buffer anyway
       }
   }
 

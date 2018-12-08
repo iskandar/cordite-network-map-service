@@ -19,7 +19,6 @@ import io.vertx.core.Future
 import io.vertx.ext.web.RoutingContext
 import java.time.Duration
 
-
 interface Storage<T> {
   fun clear() : Future<Unit>
   fun put(key: String, value: T) : Future<Unit>

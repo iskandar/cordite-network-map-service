@@ -34,7 +34,6 @@ import java.time.Duration
 @RunWith(VertxUnitRunner::class)
 class AbstractMongoFileStorageTest {
   companion object {
-    private val dbDirectory = createTempDir()
 
     @JvmField
     @ClassRule
@@ -81,8 +80,8 @@ class AbstractMongoFileStorageTest {
   fun before(context: TestContext) {
     val async = context.async()
     Router.router(vertx).apply {
-      get("/$fileName").handler {
-        storage.serve(fileName, it, Duration.ZERO)
+      get("/:fileName").handler {
+        storage.serve(it.request().getParam("fileName"), it, Duration.ZERO)
       }
       vertx.createHttpServer(HttpServerOptions().setHost("localhost"))
         .requestHandler(this::accept)
@@ -112,7 +111,7 @@ class AbstractMongoFileStorageTest {
       }
       .compose { storage.exists(fileName) }
       .onSuccess { exists -> context.assertTrue(exists, "that file exists") }
-      .compose { testRetrievalViaHttp(fileName) }
+      .compose { retrieveTestData(fileName) }
       .onSuccess { data ->
         context.assertNotNull(data)
         context.assertEquals(testName, data.name)
@@ -124,7 +123,22 @@ class AbstractMongoFileStorageTest {
       .catch { context.fail(it) }
   }
 
-  private fun testRetrievalViaHttp(fileName: String): Future<TestData> {
+  @Test
+  fun `that retrieving a file that does not exist returns a 404`(context: TestContext) {
+    val async = context.async()
+    retrieveTestData("unknown")
+      .onSuccess {
+        context.fail("expected a failure with message 404 but instead got data!")
+      }
+      .catch {
+        when {
+          it.message == "404" -> async.complete()
+          else -> context.fail("expected 404 but ${it.message}")
+        }
+      }
+  }
+
+  private fun retrieveTestData(fileName: String): Future<TestData> {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultPort(port).setDefaultHost("localhost"))
     val result = Future.future<TestData>()
     try {
@@ -134,19 +148,22 @@ class AbstractMongoFileStorageTest {
           client.close()
         }
         .handler {
-          it.bodyHandler { buffer ->
-            try {
-              val value = buffer.bytes.deserializeOnContext<TestData>()
-              result.complete(value)
-            } catch(err: Throwable) {
-              result.fail(err)
-            } finally {
-              client.close()
+          when {
+            it.statusCode() != 200 -> result.fail("${it.statusCode()}")
+            else -> it.bodyHandler { buffer ->
+              try {
+                val value = buffer.bytes.deserializeOnContext<TestData>()
+                result.complete(value)
+              } catch (err: Throwable) {
+                result.fail(err)
+              } finally {
+                client.close()
+              }
             }
           }
         }
         .end()
-    } catch(err: Throwable) {
+    } catch (err: Throwable) {
       result.fail(err)
       client.close()
     }
