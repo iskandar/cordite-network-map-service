@@ -68,7 +68,7 @@ class NetworkMapWithTLSCertTest {
     setupDefaultInputFiles(dbDirectory)
 
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
-    val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
+    val keyPath = File("src/test/resources/certificates/domain.key").absolutePath
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),

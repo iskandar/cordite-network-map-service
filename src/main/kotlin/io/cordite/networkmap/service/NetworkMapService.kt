@@ -133,7 +133,7 @@ class NetworkMapService(
       val result = Future.future<Unit>()
       val templateEngine = ResourceMvelTemplateEngine(
         cachingEnabled = true,
-        properties =  mapOf("location" to root),
+        properties = mapOf("location" to root),
         rootPath = "website/public/"
       )
       BraidConfig()

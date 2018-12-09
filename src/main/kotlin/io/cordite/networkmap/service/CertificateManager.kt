@@ -125,13 +125,13 @@ class CertificateManager(
   }
 
   private fun PKCS10CertificationRequest.getCertRole(): CertRole {
-      val firstAttributeValue = getAttributes(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE)).firstOrNull()?.attrValues?.firstOrNull()
-      // Default cert role to Node_CA for backward compatibility.
-      val encoded = firstAttributeValue?.toASN1Primitive()?.encoded ?: return CertRole.NODE_CA
-      return CertRole.getInstance(encoded)
+    val firstAttributeValue = getAttributes(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE)).firstOrNull()?.attrValues?.firstOrNull()
+    // Default cert role to Node_CA for backward compatibility.
+    val encoded = firstAttributeValue?.toASN1Primitive()?.encoded ?: return CertRole.NODE_CA
+    return CertRole.getInstance(encoded)
   }
 
-  private fun certTypeFor(role: CertRole) : CertificateType = when (role) {
+  private fun certTypeFor(role: CertRole): CertificateType = when (role) {
     CertRole.SERVICE_IDENTITY -> CertificateType.SERVICE_IDENTITY
     else -> CertificateType.NODE_CA
   }
@@ -226,21 +226,21 @@ class CertificateManager(
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {
     logger.info("checking for ${"doorman"} certificate")
     return storage.get(DOORMAN_CERT_KEY)
-        .onSuccess { logger.info("${"doorman"} certificate found") }
-        .recover {
-          // we couldn't find the cert - so generate one
-          logger.warn("failed to find ${"doorman"} certificate for this NMS. generating a new cert")
-          val cert = if (config.devMode) {
-            logger.info("in dev mode so using the dev intermediate cert for doorman")
-            DEV_INTERMEDIATE_CA
-          } else {
-            createCertificateAndKeyPair(rootCertificateAndKeyPair,
-                CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = DOORMAN_COMMON_NAME),
-                CertificateType.INTERMEDIATE_CA)
-          }
-
-          storage.put(DOORMAN_CERT_KEY, cert).map { cert }
+      .onSuccess { logger.info("${"doorman"} certificate found") }
+      .recover {
+        // we couldn't find the cert - so generate one
+        logger.warn("failed to find ${"doorman"} certificate for this NMS. generating a new cert")
+        val cert = if (config.devMode) {
+          logger.info("in dev mode so using the dev intermediate cert for doorman")
+          DEV_INTERMEDIATE_CA
+        } else {
+          createCertificateAndKeyPair(rootCertificateAndKeyPair,
+            CordaX500Name.build(config.root.certificate.issuerX500Principal).copy(commonName = DOORMAN_COMMON_NAME),
+            CertificateType.INTERMEDIATE_CA)
         }
+
+        storage.put(DOORMAN_CERT_KEY, cert).map { cert }
+      }
   }
 
   internal fun createCertificateAndKeyPair(

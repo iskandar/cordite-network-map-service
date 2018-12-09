@@ -27,6 +27,7 @@ class InMemoryUser(val name: String, val username: String, password: String) : A
   companion object {
     fun createUser(name: String, username: String, password: String) = InMemoryUser(name, username, password)
   }
+
   internal val passwordHash = SecureHash.sha256(password)
 
   override fun doIsPermitted(permission: String?, resultHandler: Handler<AsyncResult<Boolean>>?) {

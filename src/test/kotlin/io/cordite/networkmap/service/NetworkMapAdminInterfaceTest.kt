@@ -39,9 +39,11 @@ import java.security.KeyStore
 class NetworkMapAdminInterfaceTest {
   companion object {
     private val log = loggerFor<NetworkMapAdminInterfaceTest>()
+
     init {
       SerializationTestEnvironment.init()
     }
+
     private var vertx = Vertx.vertx()
     private val dbDirectory = createTempDir()
     private val port = getFreePort()
@@ -147,13 +149,13 @@ class NetworkMapAdminInterfaceTest {
       }
       .compose {
         log.info("posting non-validating notary nodeInfo")
-        val nodeInfo1= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
+        val nodeInfo1 = File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfo1.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating", payload, "Authorization" to key)
       }
       .compose {
         log.info("posting validating notaryt nodeInfo")
-        val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
+        val nodeInfoPath = File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating", payload, "Authorization" to key)
       }
@@ -176,18 +178,22 @@ class NetworkMapAdminInterfaceTest {
         val lines = whitelist.toWhitelistPairs()
         context.assertNotEquals(0, lines.size)
       }
-      .compose { // delete the whitelist
+      .compose {
+        // delete the whitelist
         log.info("deleting whitelist")
         client.futureDelete("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist", "Authorization" to key)
       }
-      .compose { // get the whitelist
+      .compose {
+        // get the whitelist
         log.info("getting whitelist")
         client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
-      .onSuccess { // check its empty
+      .onSuccess {
+        // check its empty
         context.assertTrue(it.toString().isEmpty())
       }
-      .compose { // append a set of white list items
+      .compose {
+        // append a set of white list items
         log.info("appending to whitelist")
         val updated = whitelist.toWhitelistPairs().drop(1)
         val newWhiteList = updated.toWhitelistText()
@@ -200,7 +206,8 @@ class NetworkMapAdminInterfaceTest {
       .onSuccess {
         context.assertEquals(whitelist.toWhitelistPairs().size - 1, it.toString().toWhitelistPairs().size)
       }
-      .compose { // set the complete whitelist
+      .compose {
+        // set the complete whitelist
         log.info("posting whitelist")
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist", whitelist, "Authorization" to key)
       }

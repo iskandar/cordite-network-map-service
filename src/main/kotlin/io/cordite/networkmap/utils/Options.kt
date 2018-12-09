@@ -58,7 +58,11 @@ open class Options {
     options.toList().sortedBy { it.name }.map { it.name to it.stringValue }
       .map { (key, value) ->
         key to if (key.toLowerCase().contains("password")) {
-          if (value.isEmpty()) { "" } else { "*".repeat(value.length - 1) }
+          if (value.isEmpty()) {
+            ""
+          } else {
+            "*".repeat(value.length - 1)
+          }
         } else {
           value
         }

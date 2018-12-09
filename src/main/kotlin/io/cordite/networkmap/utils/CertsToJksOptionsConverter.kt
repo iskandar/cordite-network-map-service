@@ -31,10 +31,10 @@ import java.security.cert.Certificate
 import java.util.*
 import javax.xml.bind.DatatypeConverter
 
-class CertsToJksOptionsConverter(private val certificatePath: String, private val privateKeyPath : String){
-  private val factory : CertificateFactory by lazy { CertificateFactory() }
+class CertsToJksOptionsConverter(private val certificatePath: String, private val privateKeyPath: String) {
+  private val factory: CertificateFactory by lazy { CertificateFactory() }
 
-  internal val keyStore : KeyStore by lazy {
+  internal val keyStore: KeyStore by lazy {
     KeyStore.getInstance("JKS", "SUN").apply {
       load(null, keyStorePassword.toCharArray())
       val privateKey = loadPrivateKeyFile()
@@ -45,7 +45,7 @@ class CertsToJksOptionsConverter(private val certificatePath: String, private va
 
   internal val keyStorePassword = UUID.randomUUID().toString()
 
-  fun createJksOptions() : JksOptions {
+  fun createJksOptions(): JksOptions {
     return keyStore.toJksOptions(keyStorePassword)
   }
 
@@ -80,7 +80,7 @@ class CertsToJksOptionsConverter(private val certificatePath: String, private va
     return factory.engineGenerateCertificate(ByteArrayInputStream(certBytes))
   }
 
-  private fun loadPrivateKeyFile() : PrivateKey {
+  private fun loadPrivateKeyFile(): PrivateKey {
     val pemParser = PEMParser(FileReader(privateKeyPath))
     val keyObject = pemParser.readObject()
     val converter = JcaPEMKeyConverter()

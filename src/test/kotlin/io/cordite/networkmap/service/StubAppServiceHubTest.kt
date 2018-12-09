@@ -45,7 +45,7 @@ class StubAppServiceHubTest {
       ignore { cordappProvider }
       ignore { identityService }
       ignore { keyManagementService }
-      ignore {  myInfo }
+      ignore { myInfo }
       ignore { networkMapCache }
       ignore { networkParameters }
       ignore { transactionVerifierService }
@@ -55,10 +55,22 @@ class StubAppServiceHubTest {
       ignore { jdbcSession() }
       ignore { loadState(StateRef(SecureHash.zeroHash, 0)) }
       ignore { loadStates(setOf()) }
-      ignore { recordTransactions(StatesToRecord.NONE, listOf())}
-      ignore { registerUnloadHandler {  }}
-      ignore { startFlow(object : FlowLogic<Int>() { override fun call(): Int { return 0} })}
-      ignore { startTrackedFlow(object : FlowLogic<Int>() { override fun call(): Int { return 0} })}
+      ignore { recordTransactions(StatesToRecord.NONE, listOf()) }
+      ignore { registerUnloadHandler { } }
+      ignore {
+        startFlow(object : FlowLogic<Int>() {
+          override fun call(): Int {
+            return 0
+          }
+        })
+      }
+      ignore {
+        startTrackedFlow(object : FlowLogic<Int>() {
+          override fun call(): Int {
+            return 0
+          }
+        })
+      }
     }
   }
 

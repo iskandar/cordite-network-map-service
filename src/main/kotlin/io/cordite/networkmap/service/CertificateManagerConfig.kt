@@ -31,7 +31,7 @@ import javax.net.ssl.X509TrustManager
 import javax.security.auth.x500.X500Principal
 
 class CertificateManagerConfig(
-  val root: CertificateAndKeyPair= CertificateManager.createSelfSignedCertificateAndKeyPair(DEFAULT_ROOT_NAME),
+  val root: CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(DEFAULT_ROOT_NAME),
   val doorManEnabled: Boolean,
   val certManEnabled: Boolean,
   val certManPKIVerficationEnabled: Boolean,
@@ -42,6 +42,7 @@ class CertificateManagerConfig(
   companion object {
     val DEFAULT_ROOT_NAME = CordaX500Name("<replace me>", "Cordite Foundation Network", "Cordite Foundation", "London", "London", "GB")
   }
+
   val pkixParams: PKIXParameters
   val certFactory: CertificateFactory
 
@@ -66,7 +67,7 @@ class CertificateManagerConfig(
   }
 
   val devMode = !certManEnabled && !doorManEnabled
-  fun networkMapPrincipal() : X500Principal {
+  fun networkMapPrincipal(): X500Principal {
     val subject = JcaX509CertificateHolder(root.certificate).subject
     val o = IETFUtils.valueToString(subject.getRDNs(BCStyle.O)[0].first.value) ?: "default org"
     val l = IETFUtils.valueToString(subject.getRDNs(BCStyle.L)[0].first.value) ?: "default location"

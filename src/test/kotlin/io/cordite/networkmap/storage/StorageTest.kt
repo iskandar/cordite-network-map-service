@@ -74,7 +74,7 @@ class StorageTest {
     textStorage.makeDirs()
       .compose { textStorage.put(key, value) }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(1, it.size)
         context.assertEquals(key, it.first())
       }
@@ -102,14 +102,14 @@ class StorageTest {
       .compose { textStorage.put(key1, "hello") }
       .compose { textStorage.put(key2, "world") }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(2, it.size)
         context.assertTrue(it.contains(key1))
         context.assertTrue(it.contains(key2))
       }
       .compose { textStorage.delete(key1) }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(1, it.size)
         context.assertFalse(it.contains(key1))
         context.assertTrue(it.contains(key2))
@@ -130,19 +130,19 @@ class StorageTest {
         }.all()
       }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(count, it.size)
       }
       .compose { textStorage.clear() }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(0, it.size)
       }
       .setHandler(context.asyncAssertSuccess())
   }
 
 
-  private fun createStorageParentDir(storageDirectory:String): File {
+  private fun createStorageParentDir(storageDirectory: String): File {
     val tempDir = Files.createTempDir()
     tempDir.deleteOnExit()
     return File(tempDir, storageDirectory)

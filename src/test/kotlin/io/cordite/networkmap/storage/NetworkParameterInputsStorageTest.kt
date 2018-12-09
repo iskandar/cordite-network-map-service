@@ -160,7 +160,7 @@ class NetworkParameterInputsStorageTest {
   fun `that we can upload validating notary nodeInfo`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
-    val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
+    val nodeInfoPath = File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
     nmis.makeDirs()
       .onSuccess { println("directories created in ${nmis.directory}") }
       .compose {
@@ -171,7 +171,7 @@ class NetworkParameterInputsStorageTest {
       .onSuccess {
         NetworkParameterInputsStorage.log.info("uploaded validating notary nodeInfo")
         System.out.println("${nmis.validatingNotariesPath.absolutePath}/nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
-        vertx.fileSystem().exists("${nmis.validatingNotariesPath.absolutePath}/nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533",{
+        vertx.fileSystem().exists("${nmis.validatingNotariesPath.absolutePath}/nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533", {
           context.assertEquals(true, it.result())
         })
       }
@@ -185,7 +185,7 @@ class NetworkParameterInputsStorageTest {
   fun `that we can upload non-validating notary nodeInfo`(context: TestContext) {
     val tempDir = createTempDirectory()
     val nmis = NetworkParameterInputsStorage(tempDir, vertx)
-    val nodeInfoPath= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
+    val nodeInfoPath = File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
     nmis.makeDirs()
       .onSuccess { println("directories created in ${nmis.directory}") }
       .compose {
@@ -196,7 +196,7 @@ class NetworkParameterInputsStorageTest {
       .onSuccess {
         NetworkParameterInputsStorage.log.info("uploaded non validating notary nodeInfo")
         System.out.println("${nmis.nonValidatingNotariesPath.absolutePath}/nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
-        vertx.fileSystem().exists("${nmis.nonValidatingNotariesPath.absolutePath}/nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341",{
+        vertx.fileSystem().exists("${nmis.nonValidatingNotariesPath.absolutePath}/nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341", {
           context.assertEquals(true, it.result())
         })
       }

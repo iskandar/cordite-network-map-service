@@ -42,7 +42,7 @@ class NMSOptions : Options() {
   private val certmanTruststorePasswordOpt = addOption("certman-truststore-password", "", "truststore password")
   private val certmanStrictEV = addOption("certman-strict-ev", "false", "enables strict constraint for EV certs only in certman")
   private val rootX509Name = addOption("root-ca-name", "CN=\"<replace me>\", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB", "the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca")
-  private val webRootOpt = addOption("web-root","/", "for remapping the root url for all requests")
+  private val webRootOpt = addOption("web-root", "/", "for remapping the root url for all requests")
   private val mongoConnectionOpt = addOption("mongo-connection-string", "embed", "MongoDB connection string. If set to `embed` will start its own mongo instance")
   private val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
   private val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
@@ -63,11 +63,12 @@ class NMSOptions : Options() {
   val truststore = if (certmanTruststoreOpt.stringValue.isNotEmpty()) File(certmanTruststoreOpt.stringValue) else null
   val trustStorePassword get() = if (certmanTruststorePasswordOpt.stringValue.isNotEmpty()) certmanTruststorePasswordOpt.stringValue else null
   val strictEV get() = certmanStrictEV.booleanValue
-  val root get() = if (!enableDoorman && !enableCertman) {
-    DEV_ROOT_CA
-  } else {
-    CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(rootX509Name.stringValue))
-  }
+  val root
+    get() = if (!enableDoorman && !enableCertman) {
+      DEV_ROOT_CA
+    } else {
+      CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(rootX509Name.stringValue))
+    }
   val webRoot get() = webRootOpt.stringValue
   val mongoConnectionString get() = mongoConnectionOpt.stringValue
   val mongodLocation get() = mongodLocationOpt.stringValue

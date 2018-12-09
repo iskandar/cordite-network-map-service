@@ -64,7 +64,7 @@ class SerializationEnvironment {
       }
 
       if (nodeSerializationEnv == null) {
-        val factory =  NMSSerializationFactoryImpl("nms-factory").apply {
+        val factory = NMSSerializationFactoryImpl("nms-factory").apply {
           registerScheme(KryoClientSerializationScheme())
           registerScheme(AMQPServerSerializationScheme(emptyList()))
         }
@@ -83,13 +83,13 @@ class SerializationEnvironment {
 }
 
 
-fun <T: Any> T.serializeOnContext() : ByteSequence {
+fun <T : Any> T.serializeOnContext(): ByteSequence {
   return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
     this.serialize()
   }
 }
 
-inline  fun <reified T : Any> ByteSequence.deserializeOnContext(): T {
+inline fun <reified T : Any> ByteSequence.deserializeOnContext(): T {
   return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
     this.deserialize()
   }

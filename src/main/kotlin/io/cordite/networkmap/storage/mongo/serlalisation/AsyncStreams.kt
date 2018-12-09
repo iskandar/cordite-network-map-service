@@ -26,7 +26,7 @@ import org.reactivestreams.Subscription
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
-fun RoutingContext.asAsyncOutputStream() : AsyncOutputStream {
+fun RoutingContext.asAsyncOutputStream(): AsyncOutputStream {
   return RoutingContextAsyncOutputStream(this)
 }
 
@@ -34,6 +34,7 @@ class RoutingContextAsyncOutputStream(private val routingContext: RoutingContext
   companion object {
     private val log = loggerFor<RoutingContextAsyncOutputStream>()
   }
+
   override fun write(src: ByteBuffer?): Publisher<Int> {
     return when (src) {
       // case: when no source passed in - we should comply to reactive streams spec
@@ -92,7 +93,7 @@ class RoutingContextAsyncOutputStream(private val routingContext: RoutingContext
   }
 }
 
-fun OutputStream.toAsyncOutputStream() : AsyncOutputStream {
+fun OutputStream.toAsyncOutputStream(): AsyncOutputStream {
   @Suppress("DEPRECATION")
   return com.mongodb.reactivestreams.client.internal.GridFSAsyncStreamHelper.toAsyncOutputStream(
     com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper.toAsyncOutputStream(this))

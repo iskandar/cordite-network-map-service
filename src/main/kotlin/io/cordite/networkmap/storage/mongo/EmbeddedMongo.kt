@@ -67,7 +67,7 @@ internal class EmbeddedMongo private constructor(
     }
   }
 
-//  private val RequiredVersion = PRODUCTION
+  //  private val RequiredVersion = PRODUCTION
   private object RequiredVersion : IFeatureAwareVersion {
     private val features = EnumSet.of(Feature.SYNC_DELAY, Feature.STORAGE_ENGINE, Feature.ONLY_64BIT, Feature.NO_CHUNKSIZE_ARG, Feature.MONGOS_CONFIGDB_SET_STYLE, Feature.NO_HTTP_INTERFACE_ARG, Feature.ONLY_WITH_SSL, Feature.ONLY_WINDOWS_2008_SERVER, Feature.NO_SOLARIS_SUPPORT, Feature.NO_BIND_IP_TO_LOCALHOST)
     override fun getFeatures(): EnumSet<Feature> = features
@@ -79,7 +79,7 @@ internal class EmbeddedMongo private constructor(
   private val port = Network.getFreeServerPort()
   private val location = File(dbDirectory).also { it.mkdirs() }
   private val replication = Storage(location.absolutePath, null, 0)
-  private val executable : MongodExecutable
+  private val executable: MongodExecutable
   val connectionString
     get() = when (enableAuth) {
       true -> "mongodb://$MONGO_USER:$MONGO_PASSWORD@$bindIP:$port"
@@ -128,7 +128,7 @@ internal class EmbeddedMongo private constructor(
         log.info("manual shutdown in progress")
         val countDownLatch = CountDownLatch(1)
         val timeout = 5L // seconds
-        val shutdownThread = object: Thread() {
+        val shutdownThread = object : Thread() {
           override fun run() {
             executable.stop()
             countDownLatch.countDown()

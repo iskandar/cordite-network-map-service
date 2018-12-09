@@ -26,7 +26,7 @@ import io.vertx.core.Future
 
 class MongoTextStorage(mongoClient: MongoClient,
                        database: String = MongoStorage.DEFAULT_DATABASE,
-                       collection: String = "etc")  {
+                       collection: String = "etc") {
   companion object {
     private val log = loggerFor<MongoTextStorage>()
   }
@@ -35,11 +35,11 @@ class MongoTextStorage(mongoClient: MongoClient,
 
   fun clear(): Future<Unit> = collection.drop().toFuture().mapEmpty()
 
-  fun put(key: String, value: String) : Future<Unit> = collection
+  fun put(key: String, value: String): Future<Unit> = collection
     .replaceOne(KeyValue::key eq key, KeyValue(key, value), ReplaceOptions().upsert(true))
     .toFuture().mapEmpty()
 
-  fun put(keyValue: KeyValue) : Future<Unit> = collection
+  fun put(keyValue: KeyValue): Future<Unit> = collection
     .replaceOne(KeyValue::key eq keyValue.key, keyValue, ReplaceOptions().upsert(true))
     .toFuture().mapEmpty()
 

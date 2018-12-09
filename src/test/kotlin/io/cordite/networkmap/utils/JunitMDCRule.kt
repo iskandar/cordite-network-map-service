@@ -26,6 +26,7 @@ class JunitMDCRule : TestWatcher() {
     const val MDC_CLASS = "test-class"
     const val MDC_NAME = "test-name"
   }
+
   override fun starting(description: Description?) {
     description?.apply {
       log.info("starting test: $className $methodName")

@@ -156,13 +156,13 @@ class NetworkMapServiceTest {
       vertx = vertx,
       webRoot = WEB_ROOT,
       certificateManagerConfig = CertificateManagerConfig(
-          root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
-          doorManEnabled = false,
-          certManEnabled = true,
-          certManPKIVerficationEnabled = false,
-          certManRootCAsTrustStoreFile = null,
-          certManRootCAsTrustStorePassword = null,
-          certManStrictEVCerts = false),
+        root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
+        doorManEnabled = false,
+        certManEnabled = true,
+        certManPKIVerficationEnabled = false,
+        certManRootCAsTrustStoreFile = null,
+        certManRootCAsTrustStorePassword = null,
+        certManStrictEVCerts = false),
       mongoClient = TestDatabase.createMongoClient(),
       mongoDatabase = TestDatabase.createUniqueDBName()
     )
@@ -233,7 +233,7 @@ class NetworkMapServiceTest {
     try {
       nmc.publish(sni2.signed)
       throw RuntimeException("should have throw IOException complaining that the node has been registered before")
-    } catch(err: Throwable) {
+    } catch (err: Throwable) {
       if (err !is IOException) {
         throw err
       }

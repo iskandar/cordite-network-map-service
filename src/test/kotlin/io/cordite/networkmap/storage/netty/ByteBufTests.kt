@@ -33,11 +33,13 @@ class ByteBufTests {
       byteBuf.release()
     }
   }
+
   private fun ByteBuffer.write(str: String) {
     str.apply {
       forEach { put(it.toByte()) }
     }
   }
+
   private fun ByteBuf.readString(length: Int): String {
     return readCharSequence(length, Charsets.US_ASCII).toString()
   }

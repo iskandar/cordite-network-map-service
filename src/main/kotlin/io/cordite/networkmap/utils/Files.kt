@@ -27,12 +27,12 @@ fun String.toFile() = File(this)
 
 fun File.getFiles(re: Regex): Sequence<File> {
   return this.walk()
-      .filter {
-        it.isFile && it.name.matches(re)
-      }
+    .filter {
+      it.isFile && it.name.matches(re)
+    }
 }
 
-operator fun File.div(rhs: String) : File {
+operator fun File.div(rhs: String): File {
   return File(this, rhs)
 }
 

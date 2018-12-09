@@ -63,11 +63,11 @@ object MongoStorage {
   }
 }
 
-inline fun <reified T : Any> MongoDatabase.getTypedCollection(collection: String) : MongoCollection<T> {
+inline fun <reified T : Any> MongoDatabase.getTypedCollection(collection: String): MongoCollection<T> {
   return this.withCodecRegistry(MongoStorage.codecRegistry).getCollection(collection, T::class.java)
 }
 
-fun <T> Publisher<T>.toFuture() : Future<T> {
+fun <T> Publisher<T>.toFuture(): Future<T> {
   val subscriber = SubscriberOnFuture<T>()
   this.subscribe(subscriber)
   return subscriber
@@ -85,7 +85,7 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
       when {
         future.isComplete -> {
           log.error("future is already complete with ${
-          when(future.succeeded()) {
+          when (future.succeeded()) {
             true -> future.result()
             else -> future.cause() as Any
           }
@@ -126,7 +126,7 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
     when {
       future.isComplete -> {
         log.error("future is already complete with ${
-        when(future.succeeded()) {
+        when (future.succeeded()) {
           true -> future.result()
           else -> future.cause() as Any
         }
@@ -135,7 +135,7 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
       else -> {
         try {
           future.fail(t)
-        } catch (err : Throwable) {
+        } catch (err: Throwable) {
           log.error("failed to fail future", err)
         }
       }
