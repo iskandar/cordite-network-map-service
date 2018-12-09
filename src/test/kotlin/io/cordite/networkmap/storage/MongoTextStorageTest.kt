@@ -16,8 +16,6 @@
 package io.cordite.networkmap.storage
 
 import com.mongodb.reactivestreams.client.MongoClient
-import com.mongodb.reactivestreams.client.MongoClients
-import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.TestDatabase
