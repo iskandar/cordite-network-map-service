@@ -30,7 +30,7 @@ import java.io.FileOutputStream
 /**
  * Authentication service for the REST service
  */
-class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
+class AuthService(private val adminUser: InMemoryUser, private val jksFile: File) {
   companion object {
     val log = loggerFor<AuthService>()
   }
