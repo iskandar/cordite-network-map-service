@@ -123,7 +123,7 @@ class CordaNodeTest {
 
   private fun createNetworkMapClient(context: TestContext, rootCert: X509Certificate): NetworkMapClient {
     val async = context.async()
-    service.certificateAndKeyPairStorage.get(CertificateManager.NETWORK_MAP_CERT_KEY)
+    service.storages.certAndKeys.get(CertificateManager.NETWORK_MAP_CERT_KEY)
       .onSuccess {
         context.put<X509Certificate>("cert", it.certificate)
         async.complete()

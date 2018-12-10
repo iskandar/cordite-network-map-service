@@ -25,10 +25,6 @@ import io.bluebank.braid.core.http.HttpServerConfig
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
-import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
-import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
-import io.cordite.networkmap.storage.file.TextStorage
-import io.cordite.networkmap.storage.mongo.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -64,7 +60,7 @@ import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
-  private val dbDirectory: File,
+  dbDirectory: File,
   user: InMemoryUser,
   private val port: Int,
   private val cacheTimeout: Duration,
@@ -105,21 +101,15 @@ class NetworkMapService(
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
-  internal val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
-  private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
+  internal val storages = ServiceStorages(vertx, dbDirectory, mongoClient, mongoDatabase)
   private val adminService = AdminServiceImpl()
-  private val inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-  internal val signedNetworkMapStorage = SignedNetworkMapStorage(mongoClient, mongoDatabase)
-  private val nodeInfoStorage = SignedNodeInfoStorage(mongoClient, mongoDatabase)
-  internal val signedNetworkParametersStorage = SignedNetworkParametersStorage(mongoClient, mongoDatabase)
   private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, certificateAndKeyPairStorage, certificateManagerConfig)
-  private val parametersUpdateStorage = ParametersUpdateStorage(mongoClient, mongoDatabase)
-  private val textStorage = MongoTextStorage(mongoClient, mongoDatabase)
+  private val authService = AuthService(user, File(storages.certAndKeys.resolveKey("jwt"), "jwt.jceks"))
+  internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
 
   fun startup(): Future<Unit> {
     // N.B. Ordering is important here
-    return setupStorage()
+    return storages.setupStorage()
       .compose { startCertManager() }
       .compose { startProcessor() }
       .compose { startupBraid() }
@@ -189,7 +179,7 @@ class NetworkMapService(
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
-                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
+                get("$ADMIN_REST_ROOT/whitelist", storages.input::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
                 get("$ADMIN_REST_ROOT/network-parameters", thisService::getCurrentNetworkParameters)
@@ -210,14 +200,14 @@ class NetworkMapService(
                 }
               }
               protected {
-                put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
-                post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
-                delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
+                put("$ADMIN_REST_ROOT/whitelist", storages.input::appendWhitelist)
+                post("$ADMIN_REST_ROOT/whitelist", storages.input::replaceWhitelist)
+                delete("$ADMIN_REST_ROOT/whitelist", storages.input::clearWhitelist)
                 delete("$ADMIN_REST_ROOT/notaries/validating", thisService::deleteValidatingNotary)
                 delete("$ADMIN_REST_ROOT/notaries/nonValidating", thisService::deleteNonValidatingNotary)
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
-                post("$ADMIN_REST_ROOT/notaries/validating", inputsStorage::postValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/notaries/nonValidating", inputsStorage::postNonValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/validating", storages.input::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating", storages.input::postNonValidatingNotaryNodeInfo)
               }
             }
           }
@@ -238,17 +228,17 @@ class NetworkMapService(
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   fun serveNetworkMap(context: RoutingContext) {
-    signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
+    storages.networkMap.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current network parameters",
     produces = MediaType.APPLICATION_JSON, response = NetworkParameters::class)
   fun getCurrentNetworkParameters(context: RoutingContext) {
-    signedNetworkMapStorage.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
+    storages.networkMap.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
       .compose {
         val hash = it.verified().networkParameterHash.toString()
-        signedNetworkParametersStorage.get(hash)
+        storages.networkParameters.get(hash)
       }
       .onSuccess { context.end(it.verified()) }
       .catch { context.end(it) }
@@ -310,7 +300,7 @@ class NetworkMapService(
   @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
   fun serveNodes(context: RoutingContext) {
     context.setNoCache()
-    nodeInfoStorage.getAll()
+    storages.nodeInfo.getAll()
       .onSuccess {
         context.end(it.map {
           val node = it.value.verified()
@@ -322,7 +312,7 @@ class NetworkMapService(
 
   @ApiOperation(value = "server set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {
-    inputsStorage.readNotaries()
+    storages.input.readNotaries()
       .onSuccess {
         val simpleNotaryInfos = it.map { SimpleNotaryInfo(File(it.first).name, it.second) }
         routingContext.setNoCache().end(simpleNotaryInfos)
@@ -335,19 +325,19 @@ class NetworkMapService(
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a node by its key")
   fun deleteNode(nodeKey: String): Future<Unit> {
-    return nodeInfoStorage.delete(nodeKey)
+    return storages.nodeInfo.delete(nodeKey)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a validating notary with the node key")
   fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
-    return inputsStorage.deleteNotary(nodeKey, true)
+    return storages.input.deleteNotary(nodeKey, true)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "delete a non-validating notary with the node key")
   fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
-    return inputsStorage.deleteNotary(nodeKey, false)
+    return storages.input.deleteNotary(nodeKey, false)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -355,7 +345,7 @@ class NetworkMapService(
   fun postAckNetworkParameters(signedSecureHash: Buffer): Future<Unit> {
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     val hash = signedParameterHash.verified()
-    return nodeInfoStorage.get(hash.toString())
+    return storages.nodeInfo.get(hash.toString())
       .onSuccess {
         logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
       }
@@ -372,7 +362,7 @@ class NetworkMapService(
   )
   fun getNodeInfo(context: RoutingContext) {
     val hash = SecureHash.parse(context.request().getParam("hash"))
-    nodeInfoStorage.get(hash.toString())
+    storages.nodeInfo.get(hash.toString())
       .onSuccess { sni ->
         context.response().apply {
           setCacheControl(cacheTimeout)
@@ -392,7 +382,7 @@ class NetworkMapService(
     produces = MediaType.APPLICATION_OCTET_STREAM)
   fun getNetworkParameter(context: RoutingContext) {
     val hash = SecureHash.parse(context.request().getParam("hash"))
-    signedNetworkParametersStorage.get(hash.toString())
+    storages.networkParameters.get(hash.toString())
       .onSuccess { snp ->
         context.response().apply {
           setCacheControl(cacheTimeout)
@@ -450,29 +440,12 @@ class NetworkMapService(
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
       vertx = vertx,
-      inputs = inputsStorage,
-      nodeInfoStorage = nodeInfoStorage,
-      networkMapStorage = signedNetworkMapStorage,
-      networkParamsStorage = signedNetworkParametersStorage,
-      parametersUpdateStorage = parametersUpdateStorage,
+      storages = storages,
       certificateManager = certificateManager,
-      textStorage = textStorage,
       networkMapQueueDelay = networkMapQueuedUpdateDelay,
       networkParameterUpdateDelay = networkParamUpdateDelay
     )
     return processor.start()
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    return all(
-      inputsStorage.makeDirs(),
-      signedNetworkParametersStorage.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, dbDirectory)),
-      parametersUpdateStorage.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, dbDirectory)),
-      signedNetworkMapStorage.migrate(io.cordite.networkmap.storage.file.SignedNetworkMapStorage(vertx, dbDirectory)),
-      textStorage.migrate(TextStorage(vertx, dbDirectory)),
-      nodeInfoStorage.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
-      certificateAndKeyPairStorage.makeDirs()
-    ).mapUnit()
   }
 
   private fun createHttpServerOptions(): HttpServerOptions {

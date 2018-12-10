@@ -17,9 +17,6 @@
 
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.Storage
-import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
-import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
@@ -51,13 +48,8 @@ import java.time.Instant
  */
 class NetworkMapServiceProcessor(
   private val vertx: Vertx,
-  private val inputs: NetworkParameterInputsStorage,
-  private val nodeInfoStorage: Storage<SignedNodeInfo>,
-  private val networkMapStorage: Storage<SignedNetworkMap>,
-  private val networkParamsStorage: Storage<SignedNetworkParameters>,
-  private val parametersUpdateStorage: Storage<ParametersUpdate>,
+  private val storages: ServiceStorages,
   private val certificateManager: CertificateManager,
-  private val textStorage: MongoTextStorage,
   private val networkMapQueueDelay: Duration,
   private val networkParameterUpdateDelay: Duration
 ) {
@@ -88,11 +80,11 @@ class NetworkMapServiceProcessor(
 
   fun start(): Future<Unit> {
     certs = certificateManager.networkMapCertAndKeyPair
-    subscription = inputs.registerForChanges().subscribe { digest ->
+    subscription = storages.input.registerForChanges().subscribe { digest ->
       logger.info("input change detected with hash $digest")
       execute { processNewDigest(digest, "network parameters change") }
     }
-    return inputs.digest()
+    return storages.input.digest()
       .compose { currentDigest ->
         processNewDigest(currentDigest, "first setup", true)
       }
@@ -114,7 +106,7 @@ class NetworkMapServiceProcessor(
       val partyAndCerts = ni.legalIdentitiesAndCerts
 
       return execute {
-        nodeInfoStorage.getAll()
+        storages.nodeInfo.getAll()
       }
         .onSuccess { nodes ->
           // flatten the current nodes to Party -> PublicKey map
@@ -140,7 +132,7 @@ class NetworkMapServiceProcessor(
         }
         .compose {
           val hash = signedNodeInfo.raw.sha256()
-          nodeInfoStorage.put(hash.toString(), signedNodeInfo)
+          storages.nodeInfo.put(hash.toString(), signedNodeInfo)
             .onSuccess { scheduleNetworkMapRebuild() }
             .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
         }
@@ -203,11 +195,11 @@ class NetworkMapServiceProcessor(
   }
 
   private fun getLastDigestProcessed(): Future<String> {
-    return textStorage.getOrDefault(LAST_DIGEST_KEY, "")
+    return storages.text.getOrDefault(LAST_DIGEST_KEY, "")
   }
 
   private fun saveLastDigest(digest: String): Future<Unit> {
-    return textStorage.put(LAST_DIGEST_KEY, digest)
+    return storages.text.put(LAST_DIGEST_KEY, digest)
   }
 
   private inline fun <reified T : Any> T.sign(): SignedDataWithCert<T> {
@@ -238,16 +230,16 @@ class NetworkMapServiceProcessor(
     logger.info("creating network parameters")
 
     // get the inputs
-    val fWhiteList = inputs.readWhiteList()
-    val fNotaries = inputs.readNotaries()
+    val fWhiteList = storages.input.readWhiteList()
+    val fNotaries = storages.input.readNotaries()
 
     // get the last network params hash
     logger.info("retrieving current network parameter hash")
-    val fCurrentNetworkParamsHash = textStorage.get(CURRENT_PARAMETERS)
+    val fCurrentNetworkParamsHash = storages.text.get(CURRENT_PARAMETERS)
       .compose { key ->
         logger.info("current network param hash is $key")
         logger.info("attempting to retrieve network param hash $key")
-        networkParamsStorage.get(key)
+        storages.networkParameters.get(key)
       }
       .map { snp ->
         logger.info("verifying and extracting network parameters")
@@ -275,13 +267,13 @@ class NetworkMapServiceProcessor(
       }
       .compose { snp ->
         logger.info("storing new network parameters to ${snp.raw.hash}")
-        networkParamsStorage.put(snp.raw.hash.toString(), snp).map { snp }
+        storages.networkParameters.put(snp.raw.hash.toString(), snp).map { snp }
       }
       .compose { snp ->
         if (activation <= Instant.now()) {
-          textStorage.put(CURRENT_PARAMETERS, snp.raw.hash.toString())
+          storages.text.put(CURRENT_PARAMETERS, snp.raw.hash.toString())
         } else {
-          parametersUpdateStorage.put(NEXT_PARAMS_UPDATE, ParametersUpdate(snp.raw.hash, description, activation))
+          storages.parameterUpdate.put(NEXT_PARAMS_UPDATE, ParametersUpdate(snp.raw.hash, description, activation))
             .compose {
               processParamUpdate()
             }
@@ -296,14 +288,14 @@ class NetworkMapServiceProcessor(
   }
 
   private fun processParamUpdate(): Future<Unit> {
-    return parametersUpdateStorage.getOrNull(NEXT_PARAMS_UPDATE)
+    return storages.parameterUpdate.getOrNull(NEXT_PARAMS_UPDATE)
       .compose { paramsUpdate ->
         if (paramsUpdate != null) { // there's a parameter update planned
           val now = Instant.now() // compare to current time
           if (paramsUpdate.updateDeadline <= Instant.now()) {
             logger.info("param update being activated for networkparams ${paramsUpdate.newParametersHash}")
-            textStorage.put(CURRENT_PARAMETERS, paramsUpdate.newParametersHash.toString())
-              .compose { parametersUpdateStorage.delete(NEXT_PARAMS_UPDATE) }
+            storages.text.put(CURRENT_PARAMETERS, paramsUpdate.newParametersHash.toString())
+              .compose { storages.parameterUpdate.delete(NEXT_PARAMS_UPDATE) }
               .compose { createNetworkMap().map { } }
           } else {
             val duration = Duration.between(now, paramsUpdate.updateDeadline)
@@ -326,9 +318,9 @@ class NetworkMapServiceProcessor(
   private fun createNetworkMap(): Future<SignedNetworkMap> {
     logger.info("creating network map")
     // collect the inputs from disk
-    val fNodes = nodeInfoStorage.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
-    val fParamUpdate = parametersUpdateStorage.getOrNull(NEXT_PARAMS_UPDATE)
-    val fLatestParamHash = textStorage.get(CURRENT_PARAMETERS).map { SecureHash.parse(it) }
+    val fNodes = storages.nodeInfo.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
+    val fParamUpdate = storages.parameterUpdate.getOrNull(NEXT_PARAMS_UPDATE)
+    val fLatestParamHash = storages.text.get(CURRENT_PARAMETERS).map { SecureHash.parse(it) }
 
     // when all collected
     return all(fNodes, fParamUpdate, fLatestParamHash)
@@ -342,7 +334,7 @@ class NetworkMapServiceProcessor(
         ).sign()
       }.compose { snm ->
         logger.info("saving network map")
-        networkMapStorage.put(NETWORK_MAP_KEY, snm).map { snm }
+        storages.networkMap.put(NETWORK_MAP_KEY, snm).map { snm }
       }
       .onSuccess {
         logger.info("network map rebuilt ${it.raw.hash}")

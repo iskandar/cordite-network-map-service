@@ -259,9 +259,9 @@ class NetworkMapAdminInterfaceTest {
     val async = context.async()
     var np : NetworkParameters? = null
 
-    service.signedNetworkMapStorage.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
+    service.storages.networkMap.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
       .map { it.verified().networkParameterHash.toString() }
-      .compose { service.signedNetworkParametersStorage.get(it) }
+      .compose { service.storages.networkParameters.get(it) }
       .map { np = it.verified() }
       .compose { client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/network-parameters") }
       .map { Json.decodeValue(it, NetworkParameters::class.java) }
