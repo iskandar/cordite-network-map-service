@@ -45,6 +45,7 @@ import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -108,9 +109,9 @@ class NetworkMapService(
   private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
   private val adminService = AdminServiceImpl()
   private val inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-  private val signedNetworkMapStorage = SignedNetworkMapStorage(mongoClient, mongoDatabase)
+  internal val signedNetworkMapStorage = SignedNetworkMapStorage(mongoClient, mongoDatabase)
   private val nodeInfoStorage = SignedNodeInfoStorage(mongoClient, mongoDatabase)
-  private val signedNetworkParametersStorage = SignedNetworkParametersStorage(mongoClient, mongoDatabase)
+  internal val signedNetworkParametersStorage = SignedNetworkParametersStorage(mongoClient, mongoDatabase)
   private lateinit var processor: NetworkMapServiceProcessor
   internal val certificateManager = CertificateManager(vertx, certificateAndKeyPairStorage, certificateManagerConfig)
   private val parametersUpdateStorage = ParametersUpdateStorage(mongoClient, mongoDatabase)
@@ -161,7 +162,7 @@ class NetworkMapService(
           .withPaths {
             group("network map") {
               unprotected {
-                get(NETWORK_MAP_ROOT, thisService::getNetworkMap)
+                get(NETWORK_MAP_ROOT, thisService::serveNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
                 post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
@@ -191,6 +192,7 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
+                get("$ADMIN_REST_ROOT/network-parameters", thisService::getCurrentNetworkParameters)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
@@ -235,8 +237,21 @@ class NetworkMapService(
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
-  fun getNetworkMap(context: RoutingContext) {
+  fun serveNetworkMap(context: RoutingContext) {
     signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve the current network parameters",
+    produces = MediaType.APPLICATION_JSON, response = NetworkParameters::class)
+  fun getCurrentNetworkParameters(context: RoutingContext) {
+    signedNetworkMapStorage.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
+      .compose {
+        val hash = it.verified().networkParameterHash.toString()
+        signedNetworkParametersStorage.get(hash)
+      }
+      .onSuccess { context.end(it.verified()) }
+      .catch { context.end(it) }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

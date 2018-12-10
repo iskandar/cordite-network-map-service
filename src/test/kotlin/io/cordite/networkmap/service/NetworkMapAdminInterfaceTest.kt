@@ -27,6 +27,7 @@ import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.JsonObject
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.loggerFor
 import org.junit.*
 import org.junit.runner.RunWith
@@ -251,5 +252,21 @@ class NetworkMapAdminInterfaceTest {
         async.complete()
       }
       .end()
+  }
+
+  @Test
+  fun `that we can retrieve the current network parameters`(context: TestContext) {
+    val async = context.async()
+    var np : NetworkParameters? = null
+
+    service.signedNetworkMapStorage.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
+      .map { it.verified().networkParameterHash.toString() }
+      .compose { service.signedNetworkParametersStorage.get(it) }
+      .map { np = it.verified() }
+      .compose { client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/network-parameters") }
+      .map { Json.decodeValue(it, NetworkParameters::class.java) }
+      .onSuccess { context.assertEquals(np, it) }
+      .onSuccess { async.complete() }
+      .catch { context.fail(it) }
   }
 }
