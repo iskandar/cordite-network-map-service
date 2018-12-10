@@ -159,7 +159,7 @@ class NetworkParameterInputsStorage(parentDir: File,
         .compose { newValue ->
           vertx.fileSystem().writeFile(whitelistPath.absolutePath, newValue.toByteArray())
         }
-        .mapEmpty()
+        .mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -170,7 +170,7 @@ class NetworkParameterInputsStorage(parentDir: File,
     return try {
       val cleaned = replacement.toWhitelistPairs().distinct().joinToString("\n") { "${it.first}:${it.second}" }
       vertx.fileSystem().writeFile(whitelistPath.absolutePath, cleaned.toByteArray())
-        .mapEmpty()
+        .mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -179,7 +179,7 @@ class NetworkParameterInputsStorage(parentDir: File,
   @ApiOperation(value = "clears the whitelist")
   fun clearWhitelist(): Future<Unit> {
     return try {
-      vertx.fileSystem().writeFile(whitelistPath.absolutePath, "".toByteArray()).mapEmpty()
+      vertx.fileSystem().writeFile(whitelistPath.absolutePath, "".toByteArray()).mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }

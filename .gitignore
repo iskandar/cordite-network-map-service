@@ -2,7 +2,7 @@ target
 network-map-service.iml
 .idea
 **/.vertx
-**/.db
+**/.db*
 build
 **/file-uploads
 

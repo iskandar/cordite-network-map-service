@@ -16,7 +16,6 @@
 package io.cordite.networkmap.storage.mongo
 
 import com.mongodb.reactivestreams.client.MongoClient
-import com.mongodb.reactivestreams.client.MongoDatabase
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
@@ -65,14 +64,14 @@ class AbstractMongoFileStorageTest {
   @CordaSerializable
   data class TestData(val name: String)
 
-  class TestDataStorage(name: String, db: MongoDatabase) : AbstractMongoFileStorage<TestData>(name, db) {
+  class TestDataStorage(client: MongoClient, dbName: String, bucketName: String) : AbstractMongoFileStorage<TestData>(client, dbName, bucketName) {
     override fun deserialize(data: ByteArray): TestData {
       return data.deserializeOnContext()
     }
   }
 
   private val vertx = Vertx.vertx()
-  private val storage = TestDataStorage("test-data", mongoClient.getDatabase(TestDatabase.createUniqueDBName()))
+  private val storage = TestDataStorage(mongoClient, TestDatabase.createUniqueDBName(), "test-data")
   private val port = getFreePort()
   private val fileName = "foo"
 
@@ -111,6 +110,11 @@ class AbstractMongoFileStorageTest {
       }
       .compose { storage.exists(fileName) }
       .onSuccess { exists -> context.assertTrue(exists, "that file exists") }
+      .compose { storage.getKeys() }
+      .onSuccess {
+        context.assertEquals(1, it.size)
+        context.assertEquals(fileName, it.first())
+      }
       .compose { retrieveTestData(fileName) }
       .onSuccess { data ->
         context.assertNotNull(data)

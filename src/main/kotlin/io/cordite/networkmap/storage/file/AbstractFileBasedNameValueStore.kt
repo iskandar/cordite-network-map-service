@@ -87,11 +87,20 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
   }
 
   override fun getKeys(): Future<List<String>> {
-    val result = future<List<String>>()
-    vertx.fileSystem().readDir(dir.absolutePath, result.completer())
-    return result.map {
-      it.map { File(it).name }
+    val fExists = future<Boolean>()
+    vertx.fileSystem().exists(dir.absolutePath, fExists.completer())
+    return fExists.compose { exists ->
+      if (exists) {
+        val result = future<List<String>>()
+        vertx.fileSystem().readDir(dir.absolutePath, result.completer())
+        result
+      } else {
+        succeededFuture<List<String>>(listOf())
+      }
     }
+      .map { paths ->
+        paths.map { path -> File(path).name }
+      }
   }
 
   override fun getOrDefault(key: String, default: T): Future<T> {

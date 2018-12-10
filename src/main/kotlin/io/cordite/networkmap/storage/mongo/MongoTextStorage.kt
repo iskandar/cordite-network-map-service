@@ -21,6 +21,7 @@ import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.file.TextStorage
 import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
 import io.cordite.networkmap.utils.all
+import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
 
@@ -33,15 +34,15 @@ class MongoTextStorage(mongoClient: MongoClient,
 
   private val collection = mongoClient.getDatabase(database).getTypedCollection<KeyValue>(collection)
 
-  fun clear(): Future<Unit> = collection.drop().toFuture().mapEmpty()
+  fun clear(): Future<Unit> = collection.drop().toFuture().mapUnit()
 
   fun put(key: String, value: String): Future<Unit> = collection
     .replaceOne(KeyValue::key eq key, KeyValue(key, value), ReplaceOptions().upsert(true))
-    .toFuture().mapEmpty()
+    .toFuture().mapUnit()
 
   fun put(keyValue: KeyValue): Future<Unit> = collection
     .replaceOne(KeyValue::key eq keyValue.key, keyValue, ReplaceOptions().upsert(true))
-    .toFuture().mapEmpty()
+    .toFuture().mapUnit()
 
   fun get(key: String): Future<String> = collection.find(KeyValue::key eq key)
     .first()

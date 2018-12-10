@@ -60,6 +60,9 @@ class RoutingContextAsyncOutputStream(private val routingContext: RoutingContext
           override fun request(n: Long) {
             val size = src.remaining()
             try {
+              // please note, whilst this is as efficient it can be, improvements are needed in the mongo driver
+              // to ensure we don't accrue unecessary JVM on-heap buffers
+              // https://jira.mongodb.org/browse/JAVA-3118
               val wrapped = Buffer.buffer(Unpooled.wrappedBuffer(src).slice(0, size))
               routingContext.response().write(wrapped)
               subscriber.onNext(size)
@@ -76,7 +79,7 @@ class RoutingContextAsyncOutputStream(private val routingContext: RoutingContext
 
   override fun close(): Publisher<Success> {
     // NB: the mongo reactive streams driver doesn't respect the reactive streams protocol
-    // and never calls the close method on the output stream! 👏👏👏
+    // and never calls the close method on the output stream!
     return Publisher { subscriber ->
       subscriber.onSubscribe(object : Subscription {
         override fun cancel() {

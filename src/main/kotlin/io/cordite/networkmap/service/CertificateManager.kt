@@ -18,6 +18,7 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.core.http.write
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
+import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
 import io.vertx.core.Future.succeededFuture
@@ -200,7 +201,7 @@ class CertificateManager(
           .map { cert }
       }
       .onSuccess { rootCertificateAndKeyPair = it }
-      .mapEmpty()
+      .mapUnit()
   }
 
   private fun ensureNetworkMapCertExists(): Future<Unit> {
@@ -220,7 +221,7 @@ class CertificateManager(
         storage.put(NETWORK_MAP_CERT_KEY, cert).map { cert }
       }
       .onSuccess { networkMapCertAndKeyPair = it }
-      .mapEmpty()
+      .mapUnit()
   }
 
   private fun ensureDoormanCertExists(): Future<CertificateAndKeyPair> {

@@ -17,8 +17,9 @@ package io.cordite.networkmap.storage.mongo
 
 import com.mongodb.MongoGridFSException
 import com.mongodb.client.model.Filters
-import com.mongodb.reactivestreams.client.MongoDatabase
+import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.gridfs.GridFSBuckets
+import io.bluebank.braid.core.async.toFuture
 import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.storage.Storage
 import io.cordite.networkmap.storage.mongo.rx.toObservable
@@ -26,29 +27,29 @@ import io.cordite.networkmap.storage.mongo.serlalisation.asAsyncOutputStream
 import io.cordite.networkmap.storage.mongo.serlalisation.toAsyncOutputStream
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
+import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
-import io.cordite.networkmap.utils.toVertxFuture
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
-import net.corda.core.toFuture
 import net.corda.core.utilities.loggerFor
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.time.Duration
 
-abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: MongoDatabase) : Storage<T> {
+abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName: String, private val bucketName: String) : Storage<T> {
   companion object {
     private val log = loggerFor<AbstractMongoFileStorage<*>>()
   }
 
-  private var bucket = GridFSBuckets.create(db, name)
+  private val db = client.getDatabase(dbName)
+  private var bucket = GridFSBuckets.create(db, bucketName)
 
   override fun clear(): Future<Unit> {
     return bucket.drop().toFuture()
-      .onSuccess { bucket = GridFSBuckets.create(db, name) }
-      .mapEmpty()
+      .onSuccess { bucket = GridFSBuckets.create(db, bucketName) }
+      .mapUnit()
   }
 
   override fun put(key: String, value: T): Future<Unit> {
@@ -56,7 +57,10 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
     val stream = bucket.openUploadStream(key)
     return stream.write(bytes).toFuture()
       .compose { stream.close().toFuture() }
-      .mapEmpty()
+      .onSuccess {
+        log.trace("wrote file $key in bucket $bucketName")
+      }
+      .mapUnit()
   }
 
   override fun get(key: String): Future<T> {
@@ -83,12 +87,12 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
   }
 
   override fun getKeys(): Future<List<String>> {
-    return db.getCollection("$name.files", FileName::class.java).find()
+    return bucket.find()
       .toObservable()
       .map { it.filename }
       .toList()
-      .map { it as List<String> }
-      .toFuture().toVertxFuture()
+      .toSingle()
+      .toFuture<List<String>>()
   }
 
   override fun getAll(): Future<Map<String, T>> {
@@ -110,7 +114,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
         when (fileDescriptor) {
           null -> Future.succeededFuture<Unit>()
           else -> {
-            bucket.delete(fileDescriptor.objectId).toFuture().mapEmpty<Unit>()
+            bucket.delete(fileDescriptor.objectId).toFuture().mapUnit()
           }
         }
       }
@@ -139,13 +143,13 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
       .catch { error ->
         when (error) {
           is MongoGridFSException -> {
-            log.error("failed to find file for $key from bucket $name", error)
+            log.error("failed to find file for $key from bucket $bucketName", error)
             if (!routingContext.response().ended()) {
               routingContext.response().setStatusCode(404).setStatusMessage("file not found").end()
             }
           }
           else -> {
-            log.error("failed to serve request for $key from bucket $name", error)
+            log.error("failed to serve request for $key from bucket $bucketName", error)
             if (!routingContext.response().ended()) {
               routingContext.response().setStatusCode(500).setStatusMessage("unexpected server exception: ${error.message}").end()
             }
@@ -155,6 +159,27 @@ abstract class AbstractMongoFileStorage<T : Any>(val name: String, val db: Mongo
   }
 
   protected abstract fun deserialize(data: ByteArray): T
-  data class FileName(val filename: String)
+
+  fun migrate(src: Storage<T>) : Future<Unit> {
+    val name = this.javaClass.simpleName
+    return src.getAll()
+      .compose { keyedItems ->
+        if (keyedItems.isEmpty()) {
+          log.info("$name migration: files are empty; no migration required")
+          Future.succeededFuture<Unit>()
+        } else {
+          log.info("$name migrating to mongodb")
+          keyedItems.map {
+            log.info("$name migrating: $it")
+            put(it.key, it.value)
+          }.all()
+            .compose {
+              log.info("$name migration: clearing file-base storage")
+              src.clear()
+            }
+            .onSuccess { log.info("$name migration: done") }
+        }
+      }
+  }
 }
 

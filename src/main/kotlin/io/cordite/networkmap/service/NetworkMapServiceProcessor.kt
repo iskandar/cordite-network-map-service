@@ -17,7 +17,8 @@
 
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.file.*
+import io.cordite.networkmap.storage.Storage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.storage.mongo.MongoTextStorage
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
@@ -40,7 +41,6 @@ import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import rx.Subscription
-import java.io.File
 import java.time.Duration
 import java.time.Instant
 
@@ -51,15 +51,15 @@ import java.time.Instant
  */
 class NetworkMapServiceProcessor(
   private val vertx: Vertx,
-  private val dbDirectory: File,
   private val inputs: NetworkParameterInputsStorage,
-  private val nodeInfoStorage: SignedNodeInfoStorage,
-  private val networkMapStorage: SignedNetworkMapStorage,
-  private val networkParamsStorage: SignedNetworkParametersStorage,
+  private val nodeInfoStorage: Storage<SignedNodeInfo>,
+  private val networkMapStorage: Storage<SignedNetworkMap>,
+  private val networkParamsStorage: Storage<SignedNetworkParameters>,
+  private val parametersUpdateStorage: Storage<ParametersUpdate>,
   private val certificateManager: CertificateManager,
-  private val networkParameterUpdateDelay: Duration,
+  private val textStorage: MongoTextStorage,
   private val networkMapQueueDelay: Duration,
-  private val textStorage: MongoTextStorage
+  private val networkParameterUpdateDelay: Duration
 ) {
   companion object {
     private val logger = loggerFor<NetworkMapServiceProcessor>()
@@ -84,7 +84,6 @@ class NetworkMapServiceProcessor(
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
   private var subscription: Subscription? = null
   private var networkMapRebuildTimerId: Long? = null
-  private val parametersUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
   private lateinit var certs: CertificateAndKeyPair
 
   fun start(): Future<Unit> {
@@ -93,12 +92,9 @@ class NetworkMapServiceProcessor(
       logger.info("input change detected with hash $digest")
       execute { processNewDigest(digest, "network parameters change") }
     }
-    return setupStorage()
-      .compose {
-        inputs.digest()
-          .compose { currentDigest ->
-            processNewDigest(currentDigest, "first setup", true)
-          }
+    return inputs.digest()
+      .compose { currentDigest ->
+        processNewDigest(currentDigest, "first setup", true)
       }
   }
 
@@ -119,33 +115,38 @@ class NetworkMapServiceProcessor(
 
       return execute {
         nodeInfoStorage.getAll()
-      }.onSuccess { nodes ->
-        // flatten the current nodes to Party -> PublicKey map
-        val registered = nodes.flatMap {
-          it.value.verified().legalIdentitiesAndCerts.map {
-            it.party.name to it.owningKey
-          }
-        }.toMap()
-
-        // now filter the party and certs of the nodeinfo we're trying to register
-        val registeredWithDifferentKey = partyAndCerts.filter {
-          // looking for where the public keys differ
-          registered[it.party.name].let { pk ->
-            pk != null && pk != it.owningKey
-          }
-        }
-        if (registeredWithDifferentKey.any()) {
-          val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
-          val msg = "node failed to registered because the following names have already been registered with different public keys $names"
-          logger.warn(msg)
-          throw RuntimeException(msg)
-        }
-      }.compose {
-        val hash = signedNodeInfo.raw.sha256()
-        nodeInfoStorage.put(hash.toString(), signedNodeInfo)
-          .onSuccess { scheduleNetworkMapRebuild() }
-          .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
       }
+        .onSuccess { nodes ->
+          // flatten the current nodes to Party -> PublicKey map
+          val registered = nodes.flatMap {
+            it.value.verified().legalIdentitiesAndCerts.map {
+              it.party.name to it.owningKey
+            }
+          }.toMap()
+
+          // now filter the party and certs of the nodeinfo we're trying to register
+          val registeredWithDifferentKey = partyAndCerts.filter {
+            // looking for where the public keys differ
+            registered[it.party.name].let { pk ->
+              pk != null && pk != it.owningKey
+            }
+          }
+          if (registeredWithDifferentKey.any()) {
+            val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
+            val msg = "node failed to registered because the following names have already been registered with different public keys $names"
+            logger.warn(msg)
+            throw RuntimeException(msg)
+          }
+        }
+        .compose {
+          val hash = signedNodeInfo.raw.sha256()
+          nodeInfoStorage.put(hash.toString(), signedNodeInfo)
+            .onSuccess { scheduleNetworkMapRebuild() }
+            .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
+        }
+        .catch { ex ->
+          logger.error("failed to add node", ex)
+        }
     } catch (err: Throwable) {
       logger.error("failed to add node", err)
       return failedFuture(err)
@@ -349,12 +350,5 @@ class NetworkMapServiceProcessor(
       .catch {
         logger.error("failed to create network map", it)
       }
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    return all(
-      parametersUpdateStorage.makeDirs(),
-      textStorage.migrate(TextStorage(vertx, dbDirectory))
-    ).mapEmpty()
   }
 }

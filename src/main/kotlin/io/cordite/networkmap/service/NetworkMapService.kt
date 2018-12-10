@@ -25,8 +25,10 @@ import io.bluebank.braid.core.http.HttpServerConfig
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
-import io.cordite.networkmap.storage.file.*
-import io.cordite.networkmap.storage.mongo.MongoTextStorage
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.file.TextStorage
+import io.cordite.networkmap.storage.mongo.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -106,11 +108,13 @@ class NetworkMapService(
   private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
   private val adminService = AdminServiceImpl()
   private val inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-  private val signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
-  private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
-  private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
+  private val signedNetworkMapStorage = SignedNetworkMapStorage(mongoClient, mongoDatabase)
+  private val nodeInfoStorage = SignedNodeInfoStorage(mongoClient, mongoDatabase)
+  private val signedNetworkParametersStorage = SignedNetworkParametersStorage(mongoClient, mongoDatabase)
   private lateinit var processor: NetworkMapServiceProcessor
   internal val certificateManager = CertificateManager(vertx, certificateAndKeyPairStorage, certificateManagerConfig)
+  private val parametersUpdateStorage = ParametersUpdateStorage(mongoClient, mongoDatabase)
+  private val textStorage = MongoTextStorage(mongoClient, mongoDatabase)
 
   fun startup(): Future<Unit> {
     // N.B. Ordering is important here
@@ -343,7 +347,7 @@ class NetworkMapService(
       .catch {
         logger.warn("received acknowledgement from unknown node!")
       }
-      .mapEmpty<Unit>()
+      .mapUnit()
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -430,16 +434,16 @@ class NetworkMapService(
 
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
-      vertx,
-      dbDirectory,
-      inputsStorage,
-      nodeInfoStorage,
-      signedNetworkMapStorage,
-      signedNetworkParametersStorage,
-      certificateManager,
-      networkParamUpdateDelay,
-      networkMapQueuedUpdateDelay,
-      MongoTextStorage(mongoClient, mongoDatabase)
+      vertx = vertx,
+      inputs = inputsStorage,
+      nodeInfoStorage = nodeInfoStorage,
+      networkMapStorage = signedNetworkMapStorage,
+      networkParamsStorage = signedNetworkParametersStorage,
+      parametersUpdateStorage = parametersUpdateStorage,
+      certificateManager = certificateManager,
+      textStorage = textStorage,
+      networkMapQueueDelay = networkMapQueuedUpdateDelay,
+      networkParameterUpdateDelay = networkParamUpdateDelay
     )
     return processor.start()
   }
@@ -447,11 +451,13 @@ class NetworkMapService(
   private fun setupStorage(): Future<Unit> {
     return all(
       inputsStorage.makeDirs(),
-      signedNetworkParametersStorage.makeDirs(),
-      signedNetworkMapStorage.makeDirs(),
-      nodeInfoStorage.makeDirs(),
+      signedNetworkParametersStorage.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, dbDirectory)),
+      parametersUpdateStorage.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, dbDirectory)),
+      signedNetworkMapStorage.migrate(io.cordite.networkmap.storage.file.SignedNetworkMapStorage(vertx, dbDirectory)),
+      textStorage.migrate(TextStorage(vertx, dbDirectory)),
+      nodeInfoStorage.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
       certificateAndKeyPairStorage.makeDirs()
-    ).mapEmpty()
+    ).mapUnit()
   }
 
   private fun createHttpServerOptions(): HttpServerOptions {

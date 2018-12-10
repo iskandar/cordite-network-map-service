@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import org.junit.Test
 import java.nio.ByteBuffer
+import kotlin.test.assertEquals
 
 class ByteBufTests {
   @Test
@@ -28,7 +29,8 @@ class ByteBufTests {
     byteBuffer.flip()
     val byteBuf = Unpooled.wrappedBuffer(byteBuffer).slice(0, 5)
     try {
-      println(byteBuf.readString(5))
+      val result = byteBuf.readString(5)
+      assertEquals("hello", result)
     } finally {
       byteBuf.release()
     }

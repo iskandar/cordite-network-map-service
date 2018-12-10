@@ -15,12 +15,15 @@
  */
 package io.cordite.networkmap.storage.mongo
 
-import com.mongodb.reactivestreams.client.MongoDatabase
+import com.mongodb.reactivestreams.client.MongoClient
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 
-class SignedNodeInfoStorage(database: MongoDatabase, bucketName: String = DEFAULT_BUCKET_NAME)
-  : AbstractMongoFileStorage<SignedNodeInfo>(bucketName, database) {
+class SignedNodeInfoStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
+  : AbstractMongoFileStorage<SignedNodeInfo>(client, databaseName, bucketName) {
   companion object {
     const val DEFAULT_BUCKET_NAME = "nodes"
   }
@@ -29,3 +32,38 @@ class SignedNodeInfoStorage(database: MongoDatabase, bucketName: String = DEFAUL
     return data.deserializeOnContext()
   }
 }
+
+class ParametersUpdateStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
+  : AbstractMongoFileStorage<ParametersUpdate>(client, databaseName, bucketName){
+  companion object {
+    const val DEFAULT_BUCKET_NAME = "parameters-update"
+  }
+
+  override fun deserialize(data: ByteArray): ParametersUpdate {
+    return data.deserializeOnContext()
+  }
+}
+
+
+class SignedNetworkMapStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
+  : AbstractMongoFileStorage<SignedNetworkMap>(client, databaseName, bucketName){
+  companion object {
+    const val DEFAULT_BUCKET_NAME = "network-map"
+  }
+
+  override fun deserialize(data: ByteArray): SignedNetworkMap {
+    return data.deserializeOnContext()
+  }
+}
+
+class SignedNetworkParametersStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
+  : AbstractMongoFileStorage<SignedNetworkParameters>(client, databaseName, bucketName){
+  companion object {
+    const val DEFAULT_BUCKET_NAME = "signed-network-parameters"
+  }
+
+  override fun deserialize(data: ByteArray): SignedNetworkParameters {
+    return data.deserializeOnContext()
+  }
+}
+
