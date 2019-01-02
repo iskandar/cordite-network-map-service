@@ -301,10 +301,15 @@ class NetworkMapService(
   fun serveNodes(context: RoutingContext) {
     context.setNoCache()
     storages.nodeInfo.getAll()
-      .onSuccess {
-        context.end(it.map {
-          val node = it.value.verified()
-          SimpleNodeInfo(it.key, node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
+      .onSuccess { mapOfNodes ->
+        context.end(mapOfNodes.map { namedNodeInfo ->
+          val node = namedNodeInfo.value.verified()
+          SimpleNodeInfo(
+            nodeKey = namedNodeInfo.key,
+            addresses = node.addresses,
+            parties = node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) },
+            platformVersion = node.platformVersion
+          )
         })
       }
       .catch { context.end(it) }

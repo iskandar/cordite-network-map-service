@@ -145,7 +145,7 @@ class NetworkMapAdminInterfaceTest {
       }
       .onSuccess {
         log.info("succeeded getting nodes")
-        val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNetworkMapServiceImpl.SimpleNodeInfo>>() {})
+        val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
         context.assertEquals(2, nodes.size, "nodes should be correct count")
         log.info("node count is correct")
       }
