@@ -17,6 +17,7 @@
 package io.cordite.networkmap.storage.mongo
 
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Indexes
 import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoCollection
@@ -149,4 +150,14 @@ infix fun <R> KProperty<R>.eq(key: R): Bson {
     null -> this.name
     else -> "_id"
   }.let { Filters.eq(it, key) }
+}
+
+enum class IndexType {
+  HASHED
+}
+
+infix fun <R> IndexType.idx(property: KProperty<R>): Bson {
+  return when(this) {
+    IndexType.HASHED -> Indexes.hashed(property.name)
+  }
 }

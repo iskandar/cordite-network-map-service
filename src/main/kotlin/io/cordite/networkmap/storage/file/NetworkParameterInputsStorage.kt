@@ -17,26 +17,22 @@ package io.cordite.networkmap.storage.file
 
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.utils.*
-import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpHeaderValues
-import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.core.buffer.Buffer
-import io.vertx.ext.web.RoutingContext
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.File
-import javax.ws.rs.core.MediaType
 
 
+/**
+ * @Deprecated("this is only provided for migration from earlier versions of network parameters to the database implementation")
+ */
 class NetworkParameterInputsStorage(parentDir: File,
                                     private val vertx: Vertx,
                                     childDir: String = DEFAULT_DIR_NAME,
@@ -50,8 +46,6 @@ class NetworkParameterInputsStorage(parentDir: File,
     const val DEFAULT_DIR_NAME = "inputs"
     const val DEFAULT_DIR_VALIDATING_NOTARIES = "validating-notaries"
     const val DEFAULT_DIR_NON_VALIDATING_NOTARIES = "non-validating-notaries"
-    const val VALIDATING_NOTARY = "validating-notary"
-    const val NON_VALIDATING_NOTARY = "non-validating-notary"
   }
 
   internal val directory = File(parentDir, childDir)
@@ -97,32 +91,6 @@ class NetworkParameterInputsStorage(parentDir: File,
     return publishSubject
   }
 
-  @ApiOperation(value = "serve whitelist", response = String::class)
-  fun serveWhitelist(routingContext: RoutingContext) {
-    vertx.fileSystem().exists(whitelistPath.absolutePath) {
-      if (it.result()) {
-        routingContext.response()
-          .setNoCache()
-          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
-          .sendFile(whitelistPath.absolutePath)
-      } else {
-        routingContext.response()
-          .setNoCache()
-          .putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
-          .end("")
-      }
-    }
-  }
-
-  fun deleteNotary(identity: String, validating: Boolean): Future<Unit> {
-    val file = if (validating) {
-      File(validatingNotariesPath, identity)
-    } else {
-      File(nonValidatingNotariesPath, identity)
-    }
-    return vertx.fileSystem().deleteFile(file.absolutePath)
-  }
-
   fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
     try {
       return vertx.fileSystem().readFile(whitelistPath.absolutePath)
@@ -143,72 +111,6 @@ class NetworkParameterInputsStorage(parentDir: File,
     } catch (err: Throwable) {
       return Future.failedFuture(err)
     }
-  }
-
-  @ApiOperation(value = "append to the whitelist")
-  fun appendWhitelist(append: String): Future<Unit> {
-    return try {
-      val parsed = append.toWhitelistPairs()
-      readWhiteList()
-        .map { wl ->
-          val flattened = wl.flatMap { item ->
-            item.value.map { item.key to it }
-          }
-          (flattened + parsed).distinct().joinToString("\n") { "${it.first}:${it.second}" }
-        }
-        .compose { newValue ->
-          vertx.fileSystem().writeFile(whitelistPath.absolutePath, newValue.toByteArray())
-        }
-        .mapUnit()
-    } catch (err: Throwable) {
-      Future.failedFuture(err)
-    }
-  }
-
-  @ApiOperation(value = "replace the whitelist")
-  fun replaceWhitelist(replacement: String): Future<Unit> {
-    return try {
-      val cleaned = replacement.toWhitelistPairs().distinct().joinToString("\n") { "${it.first}:${it.second}" }
-      vertx.fileSystem().writeFile(whitelistPath.absolutePath, cleaned.toByteArray())
-        .mapUnit()
-    } catch (err: Throwable) {
-      Future.failedFuture(err)
-    }
-  }
-
-  @ApiOperation(value = "clears the whitelist")
-  fun clearWhitelist(): Future<Unit> {
-    return try {
-      vertx.fileSystem().writeFile(whitelistPath.absolutePath, "".toByteArray()).mapUnit()
-    } catch (err: Throwable) {
-      Future.failedFuture(err)
-    }
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = """For the validating notary to upload its signed NodeInfo object to the network map.
-    Please ignore the way swagger presents this. To upload a notary info file use:
-      <code>
-      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/validating
-      </code>
-      """,
-    consumes = MediaType.APPLICATION_OCTET_STREAM
-  )
-  fun postValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<String> {
-    return postNotaryNodeInfo(nodeInfo, VALIDATING_NOTARY)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = """For the non validating notary to upload its signed NodeInfo object to the network map",
-    Please ignore the way swagger presents this. To upload a notary info file use:
-      <code>
-      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/nonValidating
-      </code>
-      """,
-    consumes = MediaType.APPLICATION_OCTET_STREAM
-  )
-  fun postNonValidatingNotaryNodeInfo(nodeInfo: Buffer): Future<String> {
-    return postNotaryNodeInfo(nodeInfo, NON_VALIDATING_NOTARY)
   }
 
 
@@ -282,58 +184,4 @@ class NetworkParameterInputsStorage(parentDir: File,
     }
   }
 
-  private fun postNotaryNodeInfo(nodeInfo: Buffer, notaryType: String): Future<String> {
-    return try {
-      val signedNodeInfo = nodeInfo.bytes.deserializeOnContext<SignedNodeInfo>()
-      val nodeHash = signedNodeInfo.verified().legalIdentities[0].name.serialize().hash
-      val filePath = when (notaryType) {
-        VALIDATING_NOTARY -> "${validatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
-        NON_VALIDATING_NOTARY -> "${nonValidatingNotariesPath.absolutePath}/nodeInfo-$nodeHash"
-        else -> throw Exception()
-      }
-      vertx.fileSystem().writeFile(filePath, nodeInfo.bytes).map { "OK" }
-    } catch (err: UnsupportedOperationException) {
-      val message = "Failed to upload $notaryType nodeInfo. Expected valid nodeInfo file"
-      log.error(message, err)
-      throw err
-    } catch (err: Throwable) {
-      val message = "Failed to upload $notaryType nodeInfo"
-      log.error(message, err)
-      throw err
-    }
-  }
-}
-
-fun List<Pair<String, AttachmentId>>.toWhitelistText(): String {
-  return this.joinToString("\n") { it.first + ':' + it.second.toString() }
-}
-
-
-fun String.toWhitelistPairs(): List<Pair<String, AttachmentId>> {
-  return this.lines().parseToWhitelistPairs()
-}
-
-fun List<String>.parseToWhitelistPairs(): List<Pair<String, AttachmentId>> {
-  return map { it.trim() }
-    .filter { it.isNotEmpty() }
-    .map { row -> row.split(":") } // simple parsing for the whitelist
-    .mapIndexed { index, row ->
-      if (row.size != 2) {
-        NetworkParameterInputsStorage.log.error("malformed whitelist entry on line $index - expected <class>:<attachment id>")
-        null
-      } else {
-        row
-      }
-    }
-    .mapNotNull {
-      // if we have an attachment id, try to parse it
-      it?.let {
-        try {
-          it[0] to AttachmentId.parse(it[1])
-        } catch (err: Throwable) {
-          NetworkParameterInputsStorage.log.error("failed to parse attachment nodeKey", err)
-          null
-        }
-      }
-    }
 }

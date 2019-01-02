@@ -41,7 +41,6 @@ import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
@@ -103,7 +102,7 @@ class NetworkMapService(
 
   internal val storages = ServiceStorages(vertx, dbDirectory, mongoClient, mongoDatabase)
   private val adminService = AdminServiceImpl()
-  private lateinit var processor: NetworkMapServiceProcessor
+  internal lateinit var processor: NetworkMapServiceProcessor
   private val authService = AuthService(user, File(storages.certAndKeys.resolveKey("jwt"), "jwt.jceks"))
   internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
 
@@ -179,10 +178,10 @@ class NetworkMapService(
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
-                get("$ADMIN_REST_ROOT/whitelist", storages.input::serveWhitelist)
-                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
-                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
-                get("$ADMIN_REST_ROOT/network-parameters", thisService::getCurrentNetworkParameters)
+                get("$ADMIN_REST_ROOT/whitelist", processor::serveWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", processor::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", processor::serveNodes)
+                get("$ADMIN_REST_ROOT/network-parameters", processor::getCurrentNetworkParameters)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
@@ -194,20 +193,20 @@ class NetworkMapService(
                   route("/*").handler { context ->
                     templateEngine.handler(context, root)
                   }
-                  route("/*").handler {
-                    staticHandler.handle(it)
+                  route("/*").handler { context ->
+                    staticHandler.handle(context)
                   }
                 }
               }
               protected {
-                put("$ADMIN_REST_ROOT/whitelist", storages.input::appendWhitelist)
-                post("$ADMIN_REST_ROOT/whitelist", storages.input::replaceWhitelist)
-                delete("$ADMIN_REST_ROOT/whitelist", storages.input::clearWhitelist)
-                delete("$ADMIN_REST_ROOT/notaries/validating", thisService::deleteValidatingNotary)
-                delete("$ADMIN_REST_ROOT/notaries/nonValidating", thisService::deleteNonValidatingNotary)
-                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
-                post("$ADMIN_REST_ROOT/notaries/validating", storages.input::postValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/notaries/nonValidating", storages.input::postNonValidatingNotaryNodeInfo)
+                put("$ADMIN_REST_ROOT/whitelist", processor::appendWhitelist)
+                post("$ADMIN_REST_ROOT/whitelist", processor::replaceWhitelist)
+                delete("$ADMIN_REST_ROOT/whitelist", processor::clearWhitelist)
+                delete("$ADMIN_REST_ROOT/notaries/validating", processor::deleteValidatingNotary)
+                delete("$ADMIN_REST_ROOT/notaries/nonValidating", processor::deleteNonValidatingNotary)
+                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", processor::deleteNode)
+                post("$ADMIN_REST_ROOT/notaries/validating", processor::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
               }
             }
           }
@@ -229,19 +228,6 @@ class NetworkMapService(
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   fun serveNetworkMap(context: RoutingContext) {
     storages.networkMap.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "Retrieve the current network parameters",
-    produces = MediaType.APPLICATION_JSON, response = NetworkParameters::class)
-  fun getCurrentNetworkParameters(context: RoutingContext) {
-    storages.networkMap.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
-      .compose {
-        val hash = it.verified().networkParameterHash.toString()
-        storages.networkParameters.get(hash)
-      }
-      .onSuccess { context.end(it.verified()) }
-      .catch { context.end(it) }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -294,55 +280,6 @@ class NetworkMapService(
     } catch (err: Throwable) {
       routingContext.response().setStatusMessage(err.message).setStatusCode(HttpURLConnection.HTTP_UNAUTHORIZED).end()
     }
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
-  fun serveNodes(context: RoutingContext) {
-    context.setNoCache()
-    storages.nodeInfo.getAll()
-      .onSuccess { mapOfNodes ->
-        context.end(mapOfNodes.map { namedNodeInfo ->
-          val node = namedNodeInfo.value.verified()
-          SimpleNodeInfo(
-            nodeKey = namedNodeInfo.key,
-            addresses = node.addresses,
-            parties = node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) },
-            platformVersion = node.platformVersion
-          )
-        })
-      }
-      .catch { context.end(it) }
-  }
-
-  @ApiOperation(value = "server set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
-  fun serveNotaries(routingContext: RoutingContext) {
-    storages.input.readNotaries()
-      .onSuccess {
-        val simpleNotaryInfos = it.map { SimpleNotaryInfo(File(it.first).name, it.second) }
-        routingContext.setNoCache().end(simpleNotaryInfos)
-      }
-      .catch {
-        routingContext.setNoCache().end(it)
-      }
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a node by its key")
-  fun deleteNode(nodeKey: String): Future<Unit> {
-    return storages.nodeInfo.delete(nodeKey)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a validating notary with the node key")
-  fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
-    return storages.input.deleteNotary(nodeKey, true)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a non-validating notary with the node key")
-  fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
-    return storages.input.deleteNotary(nodeKey, false)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -447,8 +384,7 @@ class NetworkMapService(
       vertx = vertx,
       storages = storages,
       certificateManager = certificateManager,
-      networkMapQueueDelay = networkMapQueuedUpdateDelay,
-      networkParameterUpdateDelay = networkParamUpdateDelay
+      networkMapQueueDelay = networkMapQueuedUpdateDelay
     )
     return processor.start()
   }

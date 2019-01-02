@@ -16,6 +16,8 @@
 package io.cordite.networkmap.service
 
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NAME
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
@@ -314,8 +316,8 @@ class NetworkMapServiceTest {
   }
 
   private fun deleteValidatingNotaries(directory: File) {
-    val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
-    FileUtils.cleanDirectory(File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES))
+    val inputs = File(directory, DEFAULT_DIR_NAME)
+    FileUtils.cleanDirectory(File(inputs, DEFAULT_DIR_VALIDATING_NOTARIES))
   }
 
   private fun createAliceSignedNodeInfo(): NodeInfoAndSigned {

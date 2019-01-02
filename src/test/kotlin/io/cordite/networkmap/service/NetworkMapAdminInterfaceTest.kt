@@ -16,10 +16,12 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
-import io.bluebank.braid.corda.services.SimpleNetworkMapServiceImpl
-import io.cordite.networkmap.storage.file.parseToWhitelistPairs
-import io.cordite.networkmap.storage.file.toWhitelistPairs
-import io.cordite.networkmap.storage.file.toWhitelistText
+import io.cordite.networkmap.changeset.Change
+import io.cordite.networkmap.changeset.changeSet
+import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
@@ -29,13 +31,16 @@ import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.JsonObject
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.SignedNodeInfo
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.security.KeyStore
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAdminInterfaceTest {
@@ -63,24 +68,21 @@ class NetworkMapAdminInterfaceTest {
     fun before(context: TestContext) {
       vertx = Vertx.vertx()
 
-      val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
       val async = context.async()
-      fRead.setHandler { async.complete() }
-      async.await()
 
       val path = dbDirectory.absolutePath
       println("db path: $path")
       println("port   : $port")
 
       setupDefaultInputFiles(dbDirectory)
-      setupDefaultNodes(dbDirectory)
+      // setupDefaultNodes(dbDirectory)
 
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
         networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
-        networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
+        networkMapQueuedUpdateDelay = Duration.ZERO,
         tls = true,
         vertx = vertx,
         hostname = "127.0.0.1",
@@ -89,7 +91,13 @@ class NetworkMapAdminInterfaceTest {
         mongoDatabase = TestDatabase.createUniqueDBName()
       )
 
-      service.startup().setHandler(context.asyncAssertSuccess())
+      service.startup().setHandler {
+        when {
+          it.succeeded() -> async.complete()
+          else -> context.fail(it.cause())
+        }
+      }
+
       client = vertx.createHttpClient(HttpClientOptions()
         .setDefaultHost("127.0.0.1")
         .setDefaultPort(port)
@@ -97,6 +105,36 @@ class NetworkMapAdminInterfaceTest {
         .setTrustAll(true)
         .setVerifyHost(false)
       )
+
+      async.await()
+
+      val changes = mutableListOf<Change>()
+
+      File(SAMPLE_INPUTS, DEFAULT_DIR_VALIDATING_NOTARIES).getFiles()
+          .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>().verified() }
+          .map {  Change.AddNotary(NotaryInfo(it.legalIdentities.first(), true)) as Change }
+          .also { changes.addAll(it) }
+
+      File(SAMPLE_INPUTS, DEFAULT_DIR_NON_VALIDATING_NOTARIES).getFiles()
+        .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>().verified() }
+        .map {  Change.AddNotary(NotaryInfo(it.legalIdentities.first(), false)) as Change }
+        .also { changes.addAll(it) }
+
+      File(SAMPLE_INPUTS, WHITELIST_NAME).let { vertx.fileSystem().readFileBlocking(it.absolutePath).toString() }
+        .let { Change.ReplaceWhiteList(it.toWhiteList()) }
+        .also { changes.add(it) }
+
+      val nodes = File(SAMPLE_NODES).getFiles()
+        .map { vertx.fileSystem().readFileBlocking(it.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>() }
+
+      generateSequence()
+      service.processor.updateNetworkParameters(changeSet(changes))
+        .compose {
+          nodes.map {  }
+        }
+
+
+        // .forEach { signedNodeInfo -> service.processor.addNode(signedNodeInfo).setHandler(context.asyncAssertSuccess()) }
     }
 
     @JvmStatic
@@ -117,12 +155,11 @@ class NetworkMapAdminInterfaceTest {
   val mdcRule = JunitMDCRule()
 
   @Test
-  fun `that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist`(context: TestContext) {
+  fun `that we can login, retrieve notaries, nodes, whitelist, and we can modify notaries and whitelist`(context: TestContext) {
     val async = context.async()
     var key = ""
     var whitelist = ""
 
-    log.info("running: that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist")
     log.info("logging in")
     client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/login", JsonObject("user" to "sa", "password" to ""))
       .onSuccess {
@@ -136,7 +173,7 @@ class NetworkMapAdminInterfaceTest {
       .onSuccess {
         log.info("succeeded in getting notaries")
         val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
-        context.assertEquals(2, notaries.size, "notaries should be correct count")
+        context.assertEquals(0, notaries.size, "notaries should be correct count")
         log.info("count of notaries is right")
       }
       .compose {
@@ -151,13 +188,13 @@ class NetworkMapAdminInterfaceTest {
       }
       .compose {
         log.info("posting non-validating notary nodeInfo")
-        val nodeInfo1 = File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
+        val nodeInfo1 = File("$SAMPLE_INPUTS$DEFAULT_DIR_NON_VALIDATING_NOTARIES/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfo1.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating", payload, "Authorization" to key)
       }
       .compose {
-        log.info("posting validating notaryt nodeInfo")
-        val nodeInfoPath = File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
+        log.info("posting validating notary nodeInfo")
+        val nodeInfoPath = File("$SAMPLE_INPUTS$DEFAULT_DIR_VALIDATING_NOTARIES/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating", payload, "Authorization" to key)
       }

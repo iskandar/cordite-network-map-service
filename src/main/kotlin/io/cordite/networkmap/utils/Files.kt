@@ -25,8 +25,18 @@ import java.nio.file.StandardCopyOption
 fun String.toPath() = Paths.get(this)!!
 fun String.toFile() = File(this)
 
+/**
+ * walks all subdirectories looking for files
+ */
+fun File.getFiles(): Sequence<File> {
+  return this.absoluteFile.walk().filter { it.isFile }
+}
+
+/**
+ * walks all subdirectories looking for files that match the regulart expression [re]
+ */
 fun File.getFiles(re: Regex): Sequence<File> {
-  return this.walk()
+  return this.absoluteFile.walk()
     .filter {
       it.isFile && it.name.matches(re)
     }
