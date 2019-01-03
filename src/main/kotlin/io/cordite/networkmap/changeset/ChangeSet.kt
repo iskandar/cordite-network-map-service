@@ -56,21 +56,11 @@ sealed class Change : Function<NetworkParameters, NetworkParameters> {
 
   data class AppendWhiteList(val whitelist: Map<String, List<AttachmentId>>) : Change() {
     override fun apply(networkParameters: NetworkParameters): NetworkParameters {
-      val newWhiteList = networkParameters.whitelistedContractImplementations
-        .map { it.key to it.value }
-        .zip(whitelist.entries.map { it.key to it.value }) { a, b ->
-          when {
-            a.first == b.first -> {
-              listOf(a.first to (a.second + b.second))
-            }
-            else -> {
-              listOf(a, b)
-            }
-          }
-        }.flatten().toMap()
-
+      val flattenedOldList = networkParameters.whitelistedContractImplementations.flatMap { entry -> entry.value.map { attachmentId -> entry.key to attachmentId} }
+      val flattenedNewList = whitelist.flatMap { entry -> entry.value.map { attachmentId -> entry.key to attachmentId} }
+      val joined = (flattenedOldList + flattenedNewList).distinct().groupBy({it.first}, {it.second})
       return networkParameters.copy(
-        whitelistedContractImplementations = newWhiteList,
+        whitelistedContractImplementations = joined,
         modifiedTime = Instant.now()
       )
     }

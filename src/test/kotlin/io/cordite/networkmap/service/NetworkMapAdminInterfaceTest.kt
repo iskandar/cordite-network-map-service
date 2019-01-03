@@ -23,6 +23,7 @@ import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companio
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
 import io.cordite.networkmap.utils.*
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
@@ -124,17 +125,14 @@ class NetworkMapAdminInterfaceTest {
         .let { Change.ReplaceWhiteList(it.toWhiteList()) }
         .also { changes.add(it) }
 
-      val nodes = File(SAMPLE_NODES).getFiles()
-        .map { vertx.fileSystem().readFileBlocking(it.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>() }
-
-      generateSequence()
       service.processor.updateNetworkParameters(changeSet(changes))
         .compose {
-          nodes.map {  }
-        }
-
-
-        // .forEach { signedNodeInfo -> service.processor.addNode(signedNodeInfo).setHandler(context.asyncAssertSuccess()) }
+          File(SAMPLE_NODES).getFiles()
+            .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>() }
+            .fold(Future.succeededFuture<Unit>()) { acc, signedNodeInfo -> // we do these ops in sequence - consider running them in parallel
+              acc.compose { service.processor.addNode(signedNodeInfo) }
+            }
+        }.setHandler(context.asyncAssertSuccess())
     }
 
     @JvmStatic
@@ -173,7 +171,7 @@ class NetworkMapAdminInterfaceTest {
       .onSuccess {
         log.info("succeeded in getting notaries")
         val notaries = Json.decodeValue(it, object : TypeReference<List<SimpleNotaryInfo>>() {})
-        context.assertEquals(0, notaries.size, "notaries should be correct count")
+        context.assertEquals(2, notaries.size, "notaries should be correct count")
         log.info("count of notaries is right")
       }
       .compose {

@@ -57,6 +57,9 @@ class NetworkMapServiceProcessor(
   private val vertx: Vertx,
   private val storages: ServiceStorages,
   private val certificateManager: CertificateManager,
+  /**
+   * how long a change to the network parameters will be queued (and signalled as such in the [NetworkMap.parametersUpdate]) before being applied
+   */
   private val networkMapQueueDelay: Duration
 ) {
   companion object {
@@ -139,23 +142,11 @@ class NetworkMapServiceProcessor(
     }
   }
 
-  fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = "", activation: Instant = Instant.now()) : Future<Unit> {
-    return getCurrentNetworkParameters()
-      .map { update(it).sign() } // apply changeset and sign
-      .compose { snp ->
-        val hash = snp.raw.hash
-        storages.networkParameters.put(hash.toString(), snp).map { hash }
-      }
-      .compose { hash -> storages.parameterUpdate.put(NEXT_PARAMS_UPDATE, ParametersUpdate(hash, description, activation)) }
-      .compose {
-        if (activation <= Instant.now()) {
-          createNetworkMap().mapUnit()
-        } else {
-          scheduleNetworkMapRebuild()
-          succeededFuture()
-        }
-      }
+  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = "") : Future<Unit> {
+    return updateNetworkParameters(update, description, Instant.now().plus(networkMapQueueDelay))
   }
+
+  // BEGIN: web entry points
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = """For the non validating notary to upload its signed NodeInfo object to the network map",
@@ -170,7 +161,7 @@ class NetworkMapServiceProcessor(
     return try {
       val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
       val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), false)))
-      updateNetworkParameters(updater).map { "OK" }
+      updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -189,7 +180,7 @@ class NetworkMapServiceProcessor(
     return try {
       val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
       val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), true)))
-      updateNetworkParameters(updater).map { "OK" }
+      updateNetworkParameters(updater, "admin adding validating notary").map { "OK" }
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -198,9 +189,17 @@ class NetworkMapServiceProcessor(
   @ApiOperation(value = "append to the whitelist")
   fun appendWhitelist(append: String): Future<Unit> {
     return try {
+      logger.info("web request to append to whitelist $append")
       val parsed = append.toWhiteList()
       val updater = changeSet(Change.AppendWhiteList(parsed))
-      updateNetworkParameters(updater).mapUnit()
+      updateNetworkParameters(updater, "admin appending to the whitelist")
+        .onSuccess {
+          logger.info("completed append to whitelist")
+        }
+        .catch {
+          logger.error("failed to append to whitelist")
+        }
+        .mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -211,7 +210,7 @@ class NetworkMapServiceProcessor(
     return try {
       val parsed = replacement.toWhiteList()
       val updater = changeSet(Change.ReplaceWhiteList(parsed))
-      updateNetworkParameters(updater).mapUnit()
+      updateNetworkParameters(updater, "admin replacing the whitelist").mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -222,7 +221,7 @@ class NetworkMapServiceProcessor(
   fun clearWhitelist(): Future<Unit> {
     return try {
       val updater = changeSet(Change.ClearWhiteList)
-      updateNetworkParameters(updater).mapUnit()
+      updateNetworkParameters(updater, "admin clearing the whitelist").mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -251,7 +250,7 @@ class NetworkMapServiceProcessor(
   fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
     return try {
       val nameHash = SecureHash.parse(nodeKey)
-      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash, true))).mapUnit()
+      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash, true)), "admin deleting validating notary").mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -262,7 +261,7 @@ class NetworkMapServiceProcessor(
   fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
     return try {
       val nameHash = SecureHash.parse(nodeKey)
-      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash, false))).mapUnit()
+      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash, false)), "admin deleting non-validating notary").mapUnit()
     } catch (err: Throwable) {
       Future.failedFuture(err)
     }
@@ -320,14 +319,10 @@ class NetworkMapServiceProcessor(
       .catch { context.end(it) }
   }
 
-  private fun getCurrentNetworkParameters() : Future<NetworkParameters> {
-    return getCurrentSignedNetworkParameters().map { it.verified() }
-  }
+  // END: web entry points
 
-  private fun getCurrentSignedNetworkParameters() : Future<SignedNetworkParameters> {
-    return storages.text.get(CURRENT_PARAMETERS).compose { key -> storages.networkParameters.get(key) }
-  }
 
+  // BEGIN: core functions
   /**
    * we use this function to schedule a rebuild of the network map
    * we do this to avoid masses of network map rebuilds in the case of several nodes joining
@@ -349,42 +344,41 @@ class NetworkMapServiceProcessor(
     }
   }
 
-  private inline fun <reified T : Any> T.sign(): SignedDataWithCert<T> {
-    return this.signWithCert(certs.keyPair.private, certs.certificate)
-  }
-
-  private fun <T> execute(fn: () -> Future<T>): Future<T> {
-    return withFuture { result ->
-      executor.executeBlocking<T>({
-        fn().setHandler(it.completer())
-      }, {
-        result.handle(it)
-      })
-    }
-  }
-
-  private fun createNetworkParameters(): Future<SignedNetworkParameters> {
+  private fun createNetworkParameters(): Future<SecureHash> {
     logger.info("creating network parameters")
 
     // get the inputs
 
     logger.info("retrieving current network parameter")
-    return getCurrentSignedNetworkParameters()
+    return getCurrentSignedNetworkParameters().map { it.raw.hash }
       .recover {
         logger.info("could not find network parameters - creating one from the template")
-        val snp = templateNetworkParameters.sign()
-        val hash = snp.raw.hash.toString()
-        storages.networkParameters.put(hash, snp)
-          .compose {
-            storages.text.put(CURRENT_PARAMETERS, hash)
-          }
-          .map { snp } // return the signed network parameters
+        storeNetworkParameters(templateNetworkParameters)
+          .compose { hash -> storeCurrentParametersHash(hash) }
           .onSuccess { result ->
-            logger.info("network parameters saved ${result.raw.hash}")
+            logger.info("network parameters saved $result")
           }
           .catch { err ->
             logger.info("failed to create network parameters", err)
           }
+      }
+  }
+
+  private fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant) : Future<Unit> {
+    return getCurrentNetworkParameters()
+      .map { update(it) } // apply changeset and sign
+      .compose { newNetworkParameters ->
+        storeNetworkParameters(newNetworkParameters)
+      }
+      .compose { hash ->
+        if (activation <= Instant.now()) {
+          storeCurrentParametersHash(hash)
+            .compose { createNetworkMap() }
+            .mapUnit()
+        } else {
+          storeNextParametersUpdate(ParametersUpdate(hash, description, activation))
+            .compose { scheduleNetworkMapRebuild() }
+        }
       }
   }
 
@@ -400,11 +394,14 @@ class NetworkMapServiceProcessor(
       .map {
         logger.info("building network map object")
         // build the network map
-        NetworkMap(
+        val nm = NetworkMap(
           networkParameterHash = fLatestParamHash.result(),
           parametersUpdate = fParamUpdate.result(),
           nodeInfoHashes = fNodes.result()
-        ).sign()
+        )
+        val snm = nm.sign()
+        logger.info("constructed network map ${snm.raw.hash} with contents $nm")
+        snm
       }.compose { snm ->
         logger.info("saving network map")
         storages.networkMap.put(NETWORK_MAP_KEY, snm).map { snm }
@@ -416,4 +413,59 @@ class NetworkMapServiceProcessor(
         logger.error("failed to create network map", it)
       }
   }
+
+  // END: core functions
+
+  // BEGIN: Storage functions
+
+  private fun getCurrentNetworkParameters() : Future<NetworkParameters> {
+    return getCurrentSignedNetworkParameters().map { it.verified() }
+  }
+
+  private fun getCurrentSignedNetworkParameters() : Future<SignedNetworkParameters> {
+    return storages.text.get(CURRENT_PARAMETERS).compose { key -> storages.networkParameters.get(key) }
+  }
+
+
+  private fun storeCurrentParametersHash(hash: SecureHash) : Future<SecureHash> {
+    logger.info("storing current network parameters $hash")
+    return storages.text.put(CURRENT_PARAMETERS, hash.toString()).map { hash }
+  }
+
+  private fun storeNetworkParameters(networkParameters: NetworkParameters) : Future<SecureHash> {
+    val signed = networkParameters.sign()
+    val hash = signed.raw.hash
+    logger.info("storing network parameters $hash with values $networkParameters")
+    return storages.networkParameters.put(hash.toString(), signed).map { hash }
+  }
+
+  private fun storeNextParametersUpdate(parametersUpdate: ParametersUpdate) : Future<Unit> {
+    logger.info("storing next parameter update $parametersUpdate")
+    return storages.parameterUpdate.put(NEXT_PARAMS_UPDATE, parametersUpdate)
+  }
+
+  // END: Storage functions
+
+
+  // BEGIN: utility functions
+  /**
+   * sign an object with this networkmap's certificates
+   */
+  private inline fun <reified T : Any> T.sign(): SignedDataWithCert<T> {
+    return signWithCert(certs.keyPair.private, certs.certificate)
+  }
+
+  /**
+   * Execute a blocking operation on a non-eventloop thread
+   */
+  private fun <T> execute(fn: () -> Future<T>): Future<T> {
+    return withFuture { result ->
+      executor.executeBlocking<T>({
+        fn().setHandler(it.completer())
+      }, {
+        result.handle(it)
+      })
+    }
+  }
+  // END: utility functions
 }
