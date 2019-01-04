@@ -193,11 +193,11 @@ class CertificateManager(
           .compose {
             logger.info("clearing network-map cert")
             storage.delete(NETWORK_MAP_CERT_KEY)
-          }.recover { succeededFuture() }
+          }.recover { succeededFuture(Unit) }
           .compose {
             logger.info("clearing doorman cert")
             storage.delete(DOORMAN_CERT_KEY)
-          }.recover { succeededFuture() }
+          }.recover { succeededFuture(Unit) }
           .map { cert }
       }
       .onSuccess { rootCertificateAndKeyPair = it }

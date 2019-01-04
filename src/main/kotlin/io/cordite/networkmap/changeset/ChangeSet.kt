@@ -10,10 +10,14 @@ import java.time.Instant
 import java.util.function.Function
 
 fun changeSet(vararg change: Change): (NetworkParameters) -> NetworkParameters {
-  return changeSet(change.toList())
+  return changeSet(change.asSequence())
 }
 
-fun changeSet(changes: List<Change>): (NetworkParameters) -> NetworkParameters {
+fun changeSet(change: Collection<Change>): (NetworkParameters) -> NetworkParameters {
+  return changeSet(change.asSequence())
+}
+
+fun changeSet(changes: Sequence<Change>): (NetworkParameters) -> NetworkParameters {
   return { np: NetworkParameters ->
     changes.fold(np) { acc, change -> change.apply(acc) }.let { it.copy(epoch = it.epoch + 1) }
   }
@@ -30,10 +34,10 @@ sealed class Change : Function<NetworkParameters, NetworkParameters> {
       )
   }
 
-  data class RemoveNotary(val nameHash: SecureHash, val validating : Boolean) : Change() {
+  data class RemoveNotary(val nameHash: SecureHash) : Change() {
     override fun apply(networkParameters: NetworkParameters) =
       networkParameters.copy(
-        notaries = networkParameters.notaries.filter { it.identity.name.serialize().hash != nameHash || it.validating != validating },
+        notaries = networkParameters.notaries.filter { it.identity.name.serialize().hash != nameHash },
         modifiedTime = Instant.now()
       )
   }

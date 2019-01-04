@@ -4,7 +4,7 @@
     <!-- encoders are assigned the type
          ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
     <encoder>
-      <pattern>%date{ISO8601} %-5level %X{test-class} %X{test-name} %logger{36} - %msg%n</pattern>
+      <pattern>[%-5level] [%date{ISO8601}] %X{test-class} %X{test-name} %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
 
@@ -16,4 +16,6 @@
   <logger name="io.bluebank.braid.corda.rest.RestMounter" level="info"/>
   <logger name="io.bluebank.braid.corda.CordaSockJSHandler" level="info"/>
   <logger name="BasicInfo" level="info"/>
+  <logger name="test-data" level="info"/>
+  <logger name="mongo" level="warn"/>
 </configuration>

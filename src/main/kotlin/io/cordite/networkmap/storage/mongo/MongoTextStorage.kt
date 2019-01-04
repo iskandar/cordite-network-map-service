@@ -61,7 +61,7 @@ class MongoTextStorage(mongoClient: MongoClient,
       .compose {
         if (it.isEmpty()) {
           log.info("text storage is empty; no migration required")
-          Future.succeededFuture<Unit>()
+          Future.succeededFuture(Unit)
         } else {
           log.info("migrating text storage to mongodb")
           it.map {

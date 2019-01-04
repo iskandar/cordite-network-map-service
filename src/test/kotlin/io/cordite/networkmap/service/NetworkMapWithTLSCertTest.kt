@@ -17,6 +17,7 @@ package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.utils.*
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
@@ -26,6 +27,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapWithTLSCertTest {
@@ -54,28 +56,23 @@ class NetworkMapWithTLSCertTest {
   @Before
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
-
-    val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
-    val async = context.async()
-    fRead.setHandler { async.complete() }
-    async.await()
-
-
-    val path = dbDirectory.absolutePath
-    println("db path: $path")
-    println("port   : $port")
-
-    setupDefaultInputFiles(dbDirectory)
-
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
     val keyPath = File("src/test/resources/certificates/domain.key").absolutePath
+
+    client = vertx.createHttpClient(HttpClientOptions()
+      .setDefaultHost("127.0.0.1")
+      .setDefaultPort(port)
+      .setSsl(true)
+      .setTrustAll(true)
+      .setVerifyHost(false)
+    )
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-      networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
-      networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
+      networkMapQueuedUpdateDelay = Duration.ZERO,
+      paramUpdateDelay = Duration.ZERO,
       tls = true,
       certPath = certPath,
       keyPath = keyPath,
@@ -86,14 +83,11 @@ class NetworkMapWithTLSCertTest {
       mongoDatabase = TestDatabase.createUniqueDBName()
     )
 
-    service.startup().setHandler(context.asyncAssertSuccess())
-    client = vertx.createHttpClient(HttpClientOptions()
-      .setDefaultHost("127.0.0.1")
-      .setDefaultPort(port)
-      .setSsl(true)
-      .setTrustAll(true)
-      .setVerifyHost(false)
-    )
+    val completed = Future.future<Unit>()
+    service.startup().setHandler(completed.completer())
+    completed
+      .compose {  service.processor.initialiseWithTestData(vertx) }
+      .setHandler(context.asyncAssertSuccess())
   }
 
   @After

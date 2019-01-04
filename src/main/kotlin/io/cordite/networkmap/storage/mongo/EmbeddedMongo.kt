@@ -27,14 +27,13 @@ import de.flapdoodle.embed.process.distribution.BitSize
 import de.flapdoodle.embed.process.distribution.Distribution
 import de.flapdoodle.embed.process.distribution.Platform
 import de.flapdoodle.embed.process.extract.ImmutableExtractedFileSet
-import de.flapdoodle.embed.process.io.IStreamProcessor
-import de.flapdoodle.embed.process.io.LogWatchStreamProcessor
-import de.flapdoodle.embed.process.io.NamedOutputStreamProcessor
+import de.flapdoodle.embed.process.io.*
 import de.flapdoodle.embed.process.io.Processors.console
 import de.flapdoodle.embed.process.io.Processors.namedConsole
 import de.flapdoodle.embed.process.runtime.Network
 import de.flapdoodle.embed.process.store.StaticArtifactStore
 import io.bluebank.braid.core.logging.loggerFor
+import org.slf4j.LoggerFactory
 import java.io.*
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -52,17 +51,17 @@ internal class EmbeddedMongo private constructor(
     const val USER_ADDED_TOKEN = "Successfully added user"
     const val MONGO_USER = "mongo"
     const val MONGO_PASSWORD = "mongo"
-    private val log = loggerFor<EmbeddedMongo>()
+    private val logger = loggerFor<EmbeddedMongo>()
     fun create(dbDirectory: String, mongodLocation: String, isDaemonProcess: Boolean = true): EmbeddedMongo {
-      log.info("starting up mongod to prepare auth. dbDirectory: $dbDirectory isDaemon: false")
+      logger.info("starting up mongod to prepare auth. dbDirectory: $dbDirectory isDaemon: false")
       EmbeddedMongo(dbDirectory, mongodLocation, false, false).apply {
         addAdmin()
         // implicit shutdown happens because we have updated the authentication mechanism
       }
-      log.info("starting up mongod second time with auth. dbDirectory: $dbDirectory isDaemon: $isDaemonProcess")
+      logger.info("starting up mongod second time with auth. dbDirectory: $dbDirectory isDaemon: $isDaemonProcess")
       return EmbeddedMongo(dbDirectory, mongodLocation, true, isDaemonProcess)
         .also {
-          log.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
+          logger.info("mongo database started on ${it.connectionString} mounted on ${it.location.absolutePath}")
         }
     }
   }
@@ -101,7 +100,10 @@ internal class EmbeddedMongo private constructor(
     .build()
 
   init {
-    val runtimeConfig = RuntimeConfigBuilder().defaults(Command.MongoD)
+    val mongoLogger = LoggerFactory.getLogger("mongo")
+    val processOutput = ProcessOutput(Processors.logTo(mongoLogger, Slf4jLevel.INFO), Processors.logTo(mongoLogger, Slf4jLevel.ERROR), Processors.logTo(mongoLogger, Slf4jLevel.INFO))
+
+    val runtimeConfig = RuntimeConfigBuilder().defaults(Command.MongoD).processOutput(processOutput)
       .apply {
         if (mongodLocation.isNotBlank()) {
           val execFile = File(mongodLocation).absoluteFile
@@ -123,9 +125,9 @@ internal class EmbeddedMongo private constructor(
 
   override fun close() {
     when (isDaemonProcess) {
-      true -> log.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
+      true -> logger.info("request for shutdown ignored: process is daemon and will shutdown during JVM shutdown")
       else -> {
-        log.info("manual shutdown in progress")
+        logger.info("manual shutdown in progress")
         val countDownLatch = CountDownLatch(1)
         val timeout = 5L // seconds
         val shutdownThread = object : Thread() {
@@ -138,7 +140,7 @@ internal class EmbeddedMongo private constructor(
         try {
           countDownLatch.await(timeout, TimeUnit.SECONDS)
         } catch (err: Throwable) {
-          log.error("failed to shutdown mongo within $timeout seconds", err)
+          logger.error("failed to shutdown mongo within $timeout seconds", err)
         }
       }
     }
@@ -146,11 +148,13 @@ internal class EmbeddedMongo private constructor(
 
   @Throws(IOException::class)
   private fun runScriptAndWait(scriptText: String, token: String, failures: Array<String>?, dbName: String, username: String?, password: String?) {
+    val mongoLogger = LoggerFactory.getLogger("mongo")
+    val processOutput = ProcessOutput(Processors.logTo(mongoLogger, Slf4jLevel.INFO), Processors.logTo(mongoLogger, Slf4jLevel.ERROR), Processors.logTo(mongoLogger, Slf4jLevel.INFO))
     val mongoOutput: IStreamProcessor = if (token.isNotEmpty()) {
       LogWatchStreamProcessor(
         String.format(token),
         if (failures != null) HashSet(failures.toList()) else emptySet(),
-        namedConsole("[mongo shell output]"))
+        Processors.logTo(mongoLogger, Slf4jLevel.INFO))
     } else {
       NamedOutputStreamProcessor("[mongo shell output]", console())
     }

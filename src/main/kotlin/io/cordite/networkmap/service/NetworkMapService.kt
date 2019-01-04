@@ -63,7 +63,6 @@ class NetworkMapService(
   user: InMemoryUser,
   private val port: Int,
   private val cacheTimeout: Duration,
-  private val networkParamUpdateDelay: Duration,
   private val networkMapQueuedUpdateDelay: Duration,
   private val tls: Boolean = true,
   private val certPath: String = "",
@@ -80,7 +79,8 @@ class NetworkMapService(
     certManRootCAsTrustStorePassword = null,
     certManStrictEVCerts = false),
   val mongoClient: MongoClient,
-  val mongoDatabase: String
+  val mongoDatabase: String,
+  val paramUpdateDelay: Duration
 ) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"
@@ -117,7 +117,7 @@ class NetworkMapService(
   fun shutdown(): Future<Unit> {
     processor.stop()
     mongoClient.close()
-    return Future.succeededFuture()
+    return Future.succeededFuture(Unit)
   }
 
   private fun startupBraid(): Future<Unit> {
@@ -227,7 +227,7 @@ class NetworkMapService(
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   fun serveNetworkMap(context: RoutingContext) {
-    storages.networkMap.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
+    storages.networkMap.serve(ServiceStorages.NETWORK_MAP_KEY, context, cacheTimeout)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -384,7 +384,8 @@ class NetworkMapService(
       vertx = vertx,
       storages = storages,
       certificateManager = certificateManager,
-      networkMapQueueDelay = networkMapQueuedUpdateDelay
+      networkMapQueueDelay = networkMapQueuedUpdateDelay,
+      paramUpdateDelay = paramUpdateDelay
     )
     return processor.start()
   }

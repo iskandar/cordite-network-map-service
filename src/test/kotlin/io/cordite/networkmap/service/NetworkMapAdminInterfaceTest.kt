@@ -16,14 +16,9 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
-import io.cordite.networkmap.changeset.Change
-import io.cordite.networkmap.changeset.changeSet
-import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
-import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.WHITELIST_NAME
 import io.cordite.networkmap.utils.*
-import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
@@ -32,9 +27,7 @@ import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.JsonObject
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.SignedNodeInfo
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
@@ -70,20 +63,12 @@ class NetworkMapAdminInterfaceTest {
       vertx = Vertx.vertx()
 
       val async = context.async()
-
-      val path = dbDirectory.absolutePath
-      println("db path: $path")
-      println("port   : $port")
-
-      setupDefaultInputFiles(dbDirectory)
-      // setupDefaultNodes(dbDirectory)
-
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-        networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
         networkMapQueuedUpdateDelay = Duration.ZERO,
+        paramUpdateDelay = Duration.ZERO,
         tls = true,
         vertx = vertx,
         hostname = "127.0.0.1",
@@ -109,30 +94,7 @@ class NetworkMapAdminInterfaceTest {
 
       async.await()
 
-      val changes = mutableListOf<Change>()
-
-      File(SAMPLE_INPUTS, DEFAULT_DIR_VALIDATING_NOTARIES).getFiles()
-          .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>().verified() }
-          .map {  Change.AddNotary(NotaryInfo(it.legalIdentities.first(), true)) as Change }
-          .also { changes.addAll(it) }
-
-      File(SAMPLE_INPUTS, DEFAULT_DIR_NON_VALIDATING_NOTARIES).getFiles()
-        .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>().verified() }
-        .map {  Change.AddNotary(NotaryInfo(it.legalIdentities.first(), false)) as Change }
-        .also { changes.addAll(it) }
-
-      File(SAMPLE_INPUTS, WHITELIST_NAME).let { vertx.fileSystem().readFileBlocking(it.absolutePath).toString() }
-        .let { Change.ReplaceWhiteList(it.toWhiteList()) }
-        .also { changes.add(it) }
-
-      service.processor.updateNetworkParameters(changeSet(changes))
-        .compose {
-          File(SAMPLE_NODES).getFiles()
-            .map { file -> vertx.fileSystem().readFileBlocking(file.absolutePath).bytes.deserializeOnContext<SignedNodeInfo>() }
-            .fold(Future.succeededFuture<Unit>()) { acc, signedNodeInfo -> // we do these ops in sequence - consider running them in parallel
-              acc.compose { service.processor.addNode(signedNodeInfo) }
-            }
-        }.setHandler(context.asyncAssertSuccess())
+      service.processor.initialiseWithTestData(vertx).setHandler(context.asyncAssertSuccess())
     }
 
     @JvmStatic
@@ -295,7 +257,7 @@ class NetworkMapAdminInterfaceTest {
     val async = context.async()
     var np : NetworkParameters? = null
 
-    service.storages.networkMap.get(NetworkMapServiceProcessor.NETWORK_MAP_KEY)
+    service.storages.networkMap.get(ServiceStorages.NETWORK_MAP_KEY)
       .map { it.verified().networkParameterHash.toString() }
       .compose { service.storages.networkParameters.get(it) }
       .map { np = it.verified() }

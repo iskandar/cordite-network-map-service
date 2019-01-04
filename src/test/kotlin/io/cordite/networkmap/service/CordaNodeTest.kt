@@ -67,17 +67,12 @@ class CordaNodeTest {
     // BUT we can't use the one used by the application
 
     vertx = Vertx.vertx()
-    val path = dbDirectory.absolutePath
-    println("db path: $path")
-    println("port   : $port")
-
-//    setupDefaultInputFiles(dbDirectory)
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
-      networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       tls = false,
       vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,

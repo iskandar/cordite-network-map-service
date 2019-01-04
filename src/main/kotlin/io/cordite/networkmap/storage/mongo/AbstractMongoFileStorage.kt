@@ -31,6 +31,7 @@ import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.vertx.core.Future
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.utilities.loggerFor
@@ -73,16 +74,22 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
   }
 
   override fun getOrNull(key: String): Future<T?> {
-    return get(key)
-      .recover {
-        Future.succeededFuture(null)
+    return exists(key)
+      .compose { exists ->
+        when  {
+          exists -> get(key)
+          else -> succeededFuture()
+        }
       }
   }
 
   override fun getOrDefault(key: String, default: T): Future<T> {
-    return get(key)
-      .recover {
-        Future.succeededFuture(default)
+    return exists(key)
+      .compose { exists ->
+        when  {
+          exists -> get(key)
+          else -> succeededFuture(default)
+        }
       }
   }
 
@@ -112,7 +119,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
     return bucket.find(Filters.eq("filename", key)).first().toFuture()
       .compose { fileDescriptor ->
         when (fileDescriptor) {
-          null -> Future.succeededFuture<Unit>()
+          null -> succeededFuture(Unit)
           else -> {
             bucket.delete(fileDescriptor.objectId).toFuture().mapUnit()
           }
@@ -166,7 +173,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       .compose { keyedItems ->
         if (keyedItems.isEmpty()) {
           log.info("$name migration: files are empty; no migration required")
-          Future.succeededFuture<Unit>()
+          succeededFuture(Unit)
         } else {
           log.info("$name migrating to mongodb")
           keyedItems.map {

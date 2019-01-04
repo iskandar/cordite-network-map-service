@@ -53,7 +53,7 @@ open class NetworkMapApp {
         user = user,
         port = port,
         cacheTimeout = cacheTimeout,
-        networkParamUpdateDelay = paramUpdateDelay,
+        paramUpdateDelay = paramUpdateDelay,
         networkMapQueuedUpdateDelay = networkMapUpdateDelay,
         tls = tls,
         certPath = certPath,
