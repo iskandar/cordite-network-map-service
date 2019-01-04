@@ -47,6 +47,7 @@ class SerializationEnvironment {
       // implicit static causes one-time init of this class
     }
 
+    @Suppress("DEPRECATION")
     private fun initialiseJackson() {
       val module = SimpleModule()
         .addDeserializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameDeserializer)

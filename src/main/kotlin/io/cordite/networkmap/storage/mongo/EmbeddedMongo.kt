@@ -149,7 +149,6 @@ internal class EmbeddedMongo private constructor(
   @Throws(IOException::class)
   private fun runScriptAndWait(scriptText: String, token: String, failures: Array<String>?, dbName: String, username: String?, password: String?) {
     val mongoLogger = LoggerFactory.getLogger("mongo")
-    val processOutput = ProcessOutput(Processors.logTo(mongoLogger, Slf4jLevel.INFO), Processors.logTo(mongoLogger, Slf4jLevel.ERROR), Processors.logTo(mongoLogger, Slf4jLevel.INFO))
     val mongoOutput: IStreamProcessor = if (token.isNotEmpty()) {
       LogWatchStreamProcessor(
         String.format(token),
