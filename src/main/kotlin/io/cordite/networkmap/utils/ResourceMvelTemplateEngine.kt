@@ -39,7 +39,7 @@ class ResourceMvelTemplateEngine(
 ) {
   val cache = mutableMapOf<String, String>()
 
-  private fun resolvePath(path: String) : String {
+  private fun resolvePath(path: String): String {
     return if (cachingEnabled) {
       cache.computeIfAbsent(path, this::resolvePathUncached)
     } else {
@@ -47,9 +47,10 @@ class ResourceMvelTemplateEngine(
     }
   }
 
-  private fun resolvePathUncached(path: String) : String {
-    val text = ClassLoader.getSystemClassLoader().getResource(rootPath + path)?.readText() ?: throw FileNotFoundException(path)
-    val template= TemplateCompiler.compileTemplate(text)
+  private fun resolvePathUncached(path: String): String {
+    val text = ClassLoader.getSystemClassLoader().getResource(rootPath + path)?.readText()
+      ?: throw FileNotFoundException(path)
+    val template = TemplateCompiler.compileTemplate(text)
     return TemplateRuntime(template.template, null, template.root, ".").execute(StringAppender(), properties, ImmutableDefaultFactory()).toString()
   }
 
@@ -84,11 +85,9 @@ class ResourceMvelTemplateEngine(
       } else {
         context.next()
       }
-    }
-    catch (err: FileNotFoundException) {
+    } catch (err: FileNotFoundException) {
       context.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).setStatusMessage("File not found").end()
-    }
-    catch (err: Throwable) {
+    } catch (err: Throwable) {
       context.end(err)
     }
   }

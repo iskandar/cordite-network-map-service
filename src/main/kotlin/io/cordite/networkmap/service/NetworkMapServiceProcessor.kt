@@ -13,33 +13,37 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.*
-import io.cordite.networkmap.utils.all
-import io.cordite.networkmap.utils.catch
-import io.cordite.networkmap.utils.onSuccess
-import io.cordite.networkmap.utils.withFuture
+import io.cordite.networkmap.changeset.Change
+import io.cordite.networkmap.changeset.changeSet
+import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.utils.*
+import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpHeaderValues
+import io.swagger.annotations.ApiOperation
 import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
+import io.vertx.ext.web.RoutingContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.nodeapi.internal.network.SignedNetworkMap
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import rx.Subscription
-import java.io.File
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
+import javax.ws.rs.core.MediaType
 
 /**
  * Event processor for the network map
@@ -48,22 +52,17 @@ import java.time.Instant
  */
 class NetworkMapServiceProcessor(
   private val vertx: Vertx,
-  dbDirectory: File,
-  private val inputs: NetworkParameterInputsStorage,
-  private val nodeInfoStorage: SignedNodeInfoStorage,
-  private val networkMapStorage: SignedNetworkMapStorage,
-  private val networkParamsStorage: SignedNetworkParametersStorage,
+  private val storages: ServiceStorages,
   private val certificateManager: CertificateManager,
-  private val networkParameterUpdateDelay: Duration,
-  private val networkMapQueueDelay: Duration
+  /**
+   * how long a change to the network parameters will be queued (and signalled as such in the [NetworkMap.parametersUpdate]) before being applied
+   */
+  private val networkMapQueueDelay: Duration,
+  val paramUpdateDelay: Duration
 ) {
   companion object {
     private val logger = loggerFor<NetworkMapServiceProcessor>()
-    const val EXECUTOR = "pool"
-    const val CURRENT_PARAMETERS = "current-parameters"
-    const val NEXT_PARAMS_UPDATE = "next-params-update"
-    const val NETWORK_MAP_KEY = "latest-network-map"
-    const val LAST_DIGEST_KEY = "last-digest.txt"
+    const val EXECUTOR = "network-map-pool"
 
     private val templateNetworkParameters = NetworkParameters(
       minimumPlatformVersion = 1,
@@ -78,35 +77,18 @@ class NetworkMapServiceProcessor(
 
   // we use a single thread to queue changes to the map, to ensure consistency
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
-  private var subscription: Subscription? = null
   private var networkMapRebuildTimerId: Long? = null
-  private val textStorage: TextStorage = TextStorage(vertx, dbDirectory)
-  private val parametersUpdateStorage = ParametersUpdateStorage(vertx, dbDirectory)
   private lateinit var certs: CertificateAndKeyPair
 
   fun start(): Future<Unit> {
     certs = certificateManager.networkMapCertAndKeyPair
-    subscription = inputs.registerForChanges().subscribe { digest ->
-      logger.info("input change detected with hash $digest")
-      execute { processNewDigest(digest, "network parameters change") }
+    return execute {
+      createNetworkParameters()
+        .compose { createNetworkMap() }
     }
-    return setupStorage()
-      .compose {
-        inputs.digest()
-          .compose { currentDigest ->
-            processNewDigest(currentDigest, "first setup", true)
-          }
-      }
   }
 
-  fun stop() {
-    subscription = subscription?.let {
-      if (!it.isUnsubscribed) {
-        it.unsubscribe()
-      }
-      null
-    }
-  }
+  fun stop() {}
 
   fun addNode(signedNodeInfo: SignedNodeInfo): Future<Unit> {
     try {
@@ -114,39 +96,238 @@ class NetworkMapServiceProcessor(
       val ni = signedNodeInfo.verified()
       val partyAndCerts = ni.legalIdentitiesAndCerts
 
-      return execute {
-        nodeInfoStorage.getAll()
-      }.onSuccess { nodes ->
-        // flatten the current nodes to Party -> PublicKey map
-        val registered = nodes.flatMap {
-          it.value.verified().legalIdentitiesAndCerts.map {
-            it.party.name to it.owningKey
-          }
-        }.toMap()
+      // TODO: optimise this to use the database, and avoid loading all nodes into memory
 
-        // now filter the party and certs of the nodeinfo we're trying to register
-        val registeredWithDifferentKey = partyAndCerts.filter {
-          // looking for where the public keys differ
-          registered[it.party.name].let { pk ->
-            pk != null && pk != it.owningKey
+        return storages.nodeInfo.getAll()
+        .onSuccess { nodes ->
+          // flatten the current nodes to Party -> PublicKey map
+          val registered = nodes.flatMap { namedSignedNodeInfo ->
+            namedSignedNodeInfo.value.verified().legalIdentitiesAndCerts.map { partyAndCertificate ->
+              partyAndCertificate.party.name to partyAndCertificate.owningKey
+            }
+          }.toMap()
+
+          // now filter the party and certs of the nodeinfo we're trying to register
+          val registeredWithDifferentKey = partyAndCerts.filter {
+            // looking for where the public keys differ
+            registered[it.party.name].let { pk ->
+              pk != null && pk != it.owningKey
+            }
+          }
+          if (registeredWithDifferentKey.any()) {
+            val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
+            val msg = "node failed to registered because the following names have already been registered with different public keys $names"
+            logger.warn(msg)
+            throw RuntimeException(msg)
           }
         }
-        if (registeredWithDifferentKey.any()) {
-          val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
-          val msg = "node failed to registered because the following names have already been registered with different public keys $names"
-          logger.warn(msg)
-          throw RuntimeException(msg)
+        .compose {
+          val hash = signedNodeInfo.raw.sha256()
+          storages.nodeInfo.put(hash.toString(), signedNodeInfo)
+            .compose { scheduleNetworkMapRebuild() }
+            .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
         }
-      }.compose {
-        val hash = signedNodeInfo.raw.sha256()
-        nodeInfoStorage.put(hash.toString(), signedNodeInfo)
-          .onSuccess { scheduleNetworkMapRebuild() }
-          .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
-      }
+        .catch { ex ->
+          logger.error("failed to add node", ex)
+        }
     } catch (err: Throwable) {
       logger.error("failed to add node", err)
       return failedFuture(err)
     }
+  }
+
+  // BEGIN: web entry points
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = """For the non validating notary to upload its signed NodeInfo object to the network map",
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/nonValidating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postNonValidatingNotaryNodeInfo(nodeInfoBuffer: Buffer): Future<String> {
+    logger.info("adding non-validating notary")
+    return try {
+      val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
+      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), false)))
+      updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to add validating notary", err)
+      Future.failedFuture(err)
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = """For the validating notary to upload its signed NodeInfo object to the network map.
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/validating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postValidatingNotaryNodeInfo(nodeInfoBuffer: Buffer): Future<String> {
+    logger.info("adding validating notary")
+    return try {
+      val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
+      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), true)))
+      updateNetworkParameters(updater, "admin adding validating notary").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to add validating notary", err)
+      Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "append to the whitelist")
+  fun appendWhitelist(append: String): Future<Unit> {
+    logger.info("appending to whitelist:\n$append")
+    return try {
+      logger.info("web request to append to whitelist $append")
+      val parsed = append.toWhiteList()
+      val updater = changeSet(Change.AppendWhiteList(parsed))
+      updateNetworkParameters(updater, "admin appending to the whitelist")
+        .onSuccess {
+          logger.info("completed append to whitelist")
+        }
+        .catch {
+          logger.error("failed to append to whitelist")
+        }
+        .mapUnit()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "replace the whitelist")
+  fun replaceWhitelist(replacement: String): Future<Unit> {
+    logger.info("replacing current whitelist with: \n$replacement")
+    return try {
+      val parsed = replacement.toWhiteList()
+      val updater = changeSet(Change.ReplaceWhiteList(parsed))
+      updateNetworkParameters(updater, "admin replacing the whitelist").mapUnit()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+
+  @ApiOperation(value = "clears the whitelist")
+  fun clearWhitelist(): Future<Unit> {
+    logger.info("clearing current whitelist")
+    return try {
+      val updater = changeSet(Change.ClearWhiteList)
+      updateNetworkParameters(updater, "admin clearing the whitelist").mapUnit()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @ApiOperation(value = "serve whitelist", response = String::class)
+  fun serveWhitelist(routingContext: RoutingContext) {
+    logger.trace("serving current whitelist")
+    storages.getCurrentNetworkParameters()
+      .map {
+        it.whitelistedContractImplementations
+          .flatMap { entry ->
+            entry.value.map { attachmentId ->
+              "${entry.key}:$attachmentId"
+            }
+          }.joinToString("\n")
+      }
+      .onSuccess { whitelist ->
+        routingContext.response()
+          .setNoCache().putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN).end(whitelist)
+      }
+      .catch { routingContext.setNoCache().end(it) }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a validating notary with the node key")
+  fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
+    logger.info("deleting validating notary $nodeKey")
+    return try {
+      val nameHash = SecureHash.parse(nodeKey)
+      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash)), "admin deleting validating notary").mapUnit()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a non-validating notary with the node key")
+  fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
+    logger.info("deleting non-validating notary $nodeKey")
+    return try {
+      val nameHash = SecureHash.parse(nodeKey)
+      updateNetworkParameters(changeSet(Change.RemoveNotary(nameHash)), "admin deleting non-validating notary").mapUnit()
+    } catch (err: Throwable) {
+      Future.failedFuture(err)
+    }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete a node by its key")
+  fun deleteNode(nodeKey: String): Future<Unit> {
+    logger.info("deleting node $nodeKey")
+    return storages.nodeInfo.delete(nodeKey)
+      .compose { createNetworkMap() }
+  }
+
+  @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
+  fun serveNotaries(routingContext: RoutingContext) {
+    logger.trace("serving current notaries")
+    storages.getCurrentNetworkParameters()
+      .map { networkParameters ->
+        networkParameters.notaries.map {
+          SimpleNotaryInfo(it.identity.name.serialize().hash.toString(), it)
+        }
+      }
+      .onSuccess {
+        simpleNodeInfos -> routingContext.setNoCache().end(simpleNodeInfos)
+      }
+      .catch {
+        routingContext.setNoCache().end(it)
+      }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
+  fun serveNodes(context: RoutingContext) {
+    logger.info("serving current set of node")
+    context.setNoCache()
+    storages.nodeInfo.getAll()
+      .onSuccess { mapOfNodes ->
+        context.end(mapOfNodes.map { namedNodeInfo ->
+          val node = namedNodeInfo.value.verified()
+          SimpleNodeInfo(
+            nodeKey = namedNodeInfo.key,
+            addresses = node.addresses,
+            parties = node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) },
+            platformVersion = node.platformVersion
+          )
+        })
+      }
+      .catch { context.end(it) }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "Retrieve the current network parameters",
+    produces = MediaType.APPLICATION_JSON, response = NetworkParameters::class)
+  fun getCurrentNetworkParameters(context: RoutingContext) {
+    logger.trace("serving current network parameters")
+    storages.getCurrentNetworkParameters()
+      .onSuccess { context.end(it) }
+      .catch { context.end(it) }
+  }
+
+  // END: web entry points
+
+  // BEGIN: core functions
+
+  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = "") : Future<Unit> {
+    return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay))
   }
 
   /**
@@ -154,72 +335,124 @@ class NetworkMapServiceProcessor(
    * we do this to avoid masses of network map rebuilds in the case of several nodes joining
    * or DoS attack
    */
-  private fun scheduleNetworkMapRebuild() {
+  private fun scheduleNetworkMapRebuild() : Future<Unit> {
     logger.info("queuing network map rebuild in $networkMapQueueDelay")
     // cancel the old timer
     networkMapRebuildTimerId = networkMapRebuildTimerId?.let { vertx.cancelTimer(it); null }
     // setup a timer to rebuild the network map
-    vertx.setTimer(networkMapQueueDelay.toMillis()) {
-      // we'll queue this on the executor thread to ensure consistency
-      execute { createNetworkMap() }
+    return if (networkMapQueueDelay == Duration.ZERO) {
+      createNetworkMap()
+    } else {
+      vertx.setTimer(Math.max(1, networkMapQueueDelay.toMillis())) {
+        // we'll queue this on the executor thread to ensure consistency
+        execute { createNetworkMap() }
+      }
+      succeededFuture(Unit)
     }
   }
 
-  private fun processNewDigest(digest: String, description: String, forceRebuild: Boolean = false): Future<Unit> {
-    logger.info("processing new digest $digest from input directory")
-    return getLastDigestProcessed()
-      .compose { lastDigest ->
-        if (digest != lastDigest) {
-          logger.info("digest $digest not processed. last digest is $lastDigest")
-          val activationTime = Instant.now().plusMillis(if (forceRebuild) {
-            0
+  private fun createNetworkParameters(): Future<SecureHash> {
+    logger.info("creating network parameters ...")
+    logger.info("retrieving current network parameter ...")
+    return storages.getCurrentSignedNetworkParameters().map { it.raw.hash }
+      .recover {
+        logger.info("could not find network parameters - creating one from the template")
+        storages.storeNetworkParameters(templateNetworkParameters, certs)
+          .compose { hash -> storages.storeCurrentParametersHash(hash) }
+          .onSuccess { result ->
+            logger.info("network parameters saved $result")
+          }
+          .catch { err ->
+            logger.info("failed to create network parameters", err)
+          }
+      }
+  }
+
+  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant) : Future<Unit> {
+    return execute {
+      logger.info("updating network parameters")
+      storages.getCurrentNetworkParameters()
+        .map { update(it) } // apply changeset and sign
+        .compose { newNetworkParameters ->
+          storages.storeNetworkParameters(newNetworkParameters, certs)
+        }
+        .compose { hash ->
+          if (activation <= Instant.now()) {
+            storages.storeCurrentParametersHash(hash)
+              .compose { createNetworkMap() }
           } else {
-            networkParameterUpdateDelay.toMillis()
-          })
-          onInputsChanged(description, activationTime)
-            .compose { saveLastDigest(digest) }
-        } else {
-          logger.info("digest $digest has already been processed")
-          succeededFuture(Unit)
+            storages.storeNextParametersUpdate(ParametersUpdate(hash, description, activation))
+              .compose { scheduleNetworkMapRebuild() }
+          }
         }
+    }
+  }
+
+  private val uniqueIdFountain = AtomicInteger(1)
+  private fun createNetworkMap(): Future<Unit> {
+    val id = uniqueIdFountain.getAndIncrement()
+    logger.info("($id) creating network map")
+    // collect the inputs from disk
+    val fNodes = storages.nodeInfo.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
+    val fParamUpdate = storages.getParameterUpdateOrNull()
+    val fLatestParamHash = storages.getCurrentNetworkParametersHash()
+
+    // when all collected
+    return all(fNodes, fParamUpdate, fLatestParamHash)
+      .map {
+        logger.info("($id) building network map object")
+        // build the network map
+        NetworkMap(
+          networkParameterHash = fLatestParamHash.result(),
+          parametersUpdate = fParamUpdate.result(),
+          nodeInfoHashes = fNodes.result()
+        ).also { nm -> logger.info("($id) the new map will be $nm")}
+      }.compose { nm ->
+        val snm = nm.sign(certs)
+        storages.storeNetworkMap(snm)
       }
-      .onSuccess {
-        // we always rebuild the network map
-        // this can happen for the following cases:
-        // 1. we've restarted the node and, whilst the network parameters are up to date, the NetworkMap isn't
-        // 2. or we've got a genuine input parameter change
-        if (forceRebuild) {
-          createNetworkMap()
-        } else {
-          scheduleNetworkMapRebuild()
-        }
-      }.catch {
-        logger.error("failed to process new digest $digest", it)
+      .compose {
+        logger.info("($id) checking if parameter update needs to be scheduled")
+        storages.getParameterUpdateOrNull()
+          .compose { parametersUpdate ->
+            try {
+              if (parametersUpdate != null) {
+                val delay = Duration.between(Instant.now(), parametersUpdate.updateDeadline)
+                logger.info("($id) scheduling parameter update ${parametersUpdate.newParametersHash} '${parametersUpdate.description}' in $delay")
+                vertx.setTimer(Math.max(1, delay.toMillis())) {
+                  logger.info("($id) applying parameter update ${parametersUpdate.newParametersHash}")
+                  storages.storeCurrentParametersHash(parametersUpdate.newParametersHash)
+                    .compose { storages.resetNextParametersUpdate() }
+                    .compose { createNetworkMap() }
+                    .onSuccess { logger.info("($id) parameter update applied ${parametersUpdate.newParametersHash} '${parametersUpdate.description}'") }
+                    .catch { logger.error("($id) failed to apply parameter update ${parametersUpdate.newParametersHash} '${parametersUpdate.description}'", it) }
+                }
+              } else {
+                logger.info("($id) no parameters update scheduled")
+              }
+              succeededFuture(Unit)
+            } catch (err: Throwable) {
+              logger.error("($id) failed to schedule timer", err)
+              failedFuture<Unit>(err)
+            }
+          }
+          .recover {
+            logger.info("($id) no planned parameter update found - scheduling nothing")
+            succeededFuture(Unit)
+          }
+      }
+      .catch {
+        logger.error("($id) failed to create network map", it)
       }
   }
 
-  private fun getLastDigestProcessed(): Future<String> {
-    return textStorage.getOrDefault(LAST_DIGEST_KEY, "")
-  }
+  // END: core functions
 
-  private fun saveLastDigest(digest: String): Future<Unit> {
-    return textStorage.put(LAST_DIGEST_KEY, digest)
-  }
+  // BEGIN: utility functions
 
-  private inline fun <reified T : Any> T.sign(): SignedDataWithCert<T> {
-    return this.signWithCert(certs.keyPair.private, certs.certificate)
-  }
-
-  private fun onInputsChanged(description: String, activation: Instant): Future<Unit> {
-    logger.info("processing inputs with activation set for $activation - effective in ${Duration.between(Instant.now(), activation)}")
-    return createNetworkParameters(description, activation)
-      .compose { createNetworkMap() }
-      .onSuccess {
-        logger.info("inputs processed")
-      }
-      .map { }
-  }
-
+  /**
+   * Execute a blocking operation on a non-eventloop thread
+   */
   private fun <T> execute(fn: () -> Future<T>): Future<T> {
     return withFuture { result ->
       executor.executeBlocking<T>({
@@ -229,129 +462,5 @@ class NetworkMapServiceProcessor(
       })
     }
   }
-
-  private fun createNetworkParameters(description: String = "", activation: Instant = Instant.now()): Future<SignedNetworkParameters> {
-    logger.info("creating network parameters")
-
-    // get the inputs
-    val fWhiteList = inputs.readWhiteList()
-    val fNotaries = inputs.readNotaries()
-
-    // get the last network params hash
-    logger.info("retrieving current network parameter hash")
-    val fCurrentNetworkParamsHash = textStorage.get(CURRENT_PARAMETERS)
-      .compose { key ->
-        logger.info("current network param hash is $key")
-        logger.info("attempting to retrieve network param hash $key")
-        networkParamsStorage.get(key)
-      }
-      .map { snp ->
-        logger.info("verifying and extracting network parameters")
-        snp.verified()
-      }
-      // if it's the first time, default to the template
-      .recover {
-        logger.info("could not find network parameter. using the template instead")
-        succeededFuture(templateNetworkParameters)
-      }
-      .onSuccess {
-        logger.info("acquired network parameters")
-      }
-
-    // wait for the above to complete
-    return all(fWhiteList, fNotaries, fCurrentNetworkParamsHash)
-      .map {
-        logger.info("creating new network parameter from notaries, whitelist, present time and updating epoch")
-        fCurrentNetworkParamsHash.result().copy(
-          notaries = fNotaries.result().map { it.second },
-          whitelistedContractImplementations = fWhiteList.result(),
-          modifiedTime = Instant.now(),
-          epoch = fCurrentNetworkParamsHash.result().epoch + 1
-        ).sign()
-      }
-      .compose { snp ->
-        logger.info("storing new network parameters to ${snp.raw.hash}")
-        networkParamsStorage.put(snp.raw.hash.toString(), snp).map { snp }
-      }
-      .compose { snp ->
-        if (activation <= Instant.now()) {
-          textStorage.put(CURRENT_PARAMETERS, snp.raw.hash.toString())
-        } else {
-          parametersUpdateStorage.put(NEXT_PARAMS_UPDATE, ParametersUpdate(snp.raw.hash, description, activation))
-            .compose {
-              processParamUpdate()
-            }
-        }.map { snp }
-      }
-      .onSuccess {
-        logger.info("network parameters saved ${it.raw.hash}")
-      }
-      .catch {
-        logger.info("failed to create network parameters", it)
-      }
-  }
-
-  private fun processParamUpdate(): Future<Unit> {
-    return parametersUpdateStorage.getOrNull(NEXT_PARAMS_UPDATE)
-      .compose { paramsUpdate ->
-        if (paramsUpdate != null) { // there's a parameter update planned
-          val now = Instant.now() // compare to current time
-          if (paramsUpdate.updateDeadline <= Instant.now()) {
-            logger.info("param update being activated for networkparams ${paramsUpdate.newParametersHash}")
-            textStorage.put(CURRENT_PARAMETERS, paramsUpdate.newParametersHash.toString())
-              .compose { parametersUpdateStorage.delete(NEXT_PARAMS_UPDATE) }
-              .compose { createNetworkMap().map { } }
-          } else {
-            val duration = Duration.between(now, paramsUpdate.updateDeadline)
-            logger.info("preparing parameter update in $duration")
-            vertx.setTimer(duration.toMillis()) { execute { processParamUpdate() } }
-            succeededFuture(Unit)
-          }
-        } else {
-          succeededFuture(Unit)
-        }
-      }
-      .onSuccess {
-        logger.info("processed param update")
-      }
-      .catch {
-        logger.error("failed during processParamUpdate", it)
-      }
-  }
-
-  private fun createNetworkMap(): Future<SignedNetworkMap> {
-    logger.info("creating network map")
-    // collect the inputs from disk
-    val fNodes = nodeInfoStorage.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
-    val fParamUpdate = parametersUpdateStorage.getOrNull(NEXT_PARAMS_UPDATE)
-    val fLatestParamHash = textStorage.get(CURRENT_PARAMETERS).map { SecureHash.parse(it) }
-
-    // when all collected
-    return all(fNodes, fParamUpdate, fLatestParamHash)
-      .map {
-        logger.info("building network map object")
-        // build the network map
-        NetworkMap(
-          networkParameterHash = fLatestParamHash.result(),
-          parametersUpdate = fParamUpdate.result(),
-          nodeInfoHashes = fNodes.result()
-        ).sign()
-      }.compose { snm ->
-        logger.info("saving network map")
-        networkMapStorage.put(NETWORK_MAP_KEY, snm).map { snm }
-      }
-      .onSuccess {
-        logger.info("network map rebuilt ${it.raw.hash}")
-      }
-      .catch {
-        logger.error("failed to create network map", it)
-      }
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    return all(
-      textStorage.makeDirs(),
-      parametersUpdateStorage.makeDirs()
-    ).mapEmpty()
-  }
+  // END: utility functions
 }

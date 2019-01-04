@@ -17,21 +17,25 @@ package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.utils.*
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapWithTLSCertTest {
   companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     init {
       SerializationTestEnvironment.init()
     }
@@ -44,40 +48,17 @@ class NetworkMapWithTLSCertTest {
   private lateinit var service: NetworkMapService
   private lateinit var client: HttpClient
 
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Before
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
-
-    val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
-    val async = context.async()
-    fRead.setHandler { async.complete() }
-    async.await()
-
-
-    val path = dbDirectory.absolutePath
-    println("db path: $path")
-    println("port   : $port")
-
-    setupDefaultInputFiles(dbDirectory)
-
     val certPath = File("src/test/resources/certificates/domain.crt").absolutePath
-    val keyPath =  File("src/test/resources/certificates/domain.key").absolutePath
+    val keyPath = File("src/test/resources/certificates/domain.key").absolutePath
 
-    this.service = NetworkMapService(dbDirectory = dbDirectory,
-      user = InMemoryUser.createUser("", "sa", ""),
-      port = port,
-      hostname = "127.0.0.1",
-      webRoot = NetworkMapServiceTest.WEB_ROOT,
-      cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-      networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
-      networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
-      tls = true,
-      certPath = certPath,
-      keyPath = keyPath,
-      vertx = vertx
-    )
-
-    service.startup().setHandler(context.asyncAssertSuccess())
     client = vertx.createHttpClient(HttpClientOptions()
       .setDefaultHost("127.0.0.1")
       .setDefaultPort(port)
@@ -85,13 +66,39 @@ class NetworkMapWithTLSCertTest {
       .setTrustAll(true)
       .setVerifyHost(false)
     )
+
+    this.service = NetworkMapService(dbDirectory = dbDirectory,
+      user = InMemoryUser.createUser("", "sa", ""),
+      port = port,
+      cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
+      networkMapQueuedUpdateDelay = Duration.ZERO,
+      paramUpdateDelay = Duration.ZERO,
+      tls = true,
+      certPath = certPath,
+      keyPath = keyPath,
+      vertx = vertx,
+      hostname = "127.0.0.1",
+      webRoot = NetworkMapServiceTest.WEB_ROOT,
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName()
+    )
+
+    val completed = Future.future<Unit>()
+    service.startup().setHandler(completed.completer())
+    completed
+      .compose {  service.processor.initialiseWithTestData(vertx) }
+      .setHandler(context.asyncAssertSuccess())
   }
 
   @After
   fun after(context: TestContext) {
     client.close()
     service.shutdown()
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test

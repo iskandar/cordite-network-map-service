@@ -16,9 +16,8 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
-import io.cordite.networkmap.storage.parseToWhitelistPairs
-import io.cordite.networkmap.storage.toWhitelistPairs
-import io.cordite.networkmap.storage.toWhitelistText
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
@@ -27,23 +26,25 @@ import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.JsonObject
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.loggerFor
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.security.KeyStore
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAdminInterfaceTest {
   companion object {
     private val log = loggerFor<NetworkMapAdminInterfaceTest>()
+
     init {
       SerializationTestEnvironment.init()
     }
+
     private var vertx = Vertx.vertx()
     private val dbDirectory = createTempDir()
     private val port = getFreePort()
@@ -51,37 +52,38 @@ class NetworkMapAdminInterfaceTest {
     private lateinit var service: NetworkMapService
     private lateinit var client: HttpClient
 
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
+
     @JvmStatic
     @BeforeClass
     fun before(context: TestContext) {
       vertx = Vertx.vertx()
 
-      val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
       val async = context.async()
-      fRead.setHandler { async.complete() }
-      async.await()
-
-
-      val path = dbDirectory.absolutePath
-      println("db path: $path")
-      println("port   : $port")
-
-      setupDefaultInputFiles(dbDirectory)
-      setupDefaultNodes(dbDirectory)
-
       this.service = NetworkMapService(dbDirectory = dbDirectory,
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
+        cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
+        networkMapQueuedUpdateDelay = Duration.ZERO,
+        paramUpdateDelay = Duration.ZERO,
+        tls = true,
+        vertx = vertx,
         hostname = "127.0.0.1",
         webRoot = NetworkMapServiceTest.WEB_ROOT,
-        cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-        networkParamUpdateDelay = NetworkMapServiceTest.NETWORK_PARAM_UPDATE_DELAY,
-        networkMapQueuedUpdateDelay = NetworkMapServiceTest.NETWORK_MAP_QUEUE_DELAY,
-        tls = true,
-        vertx = vertx
+        mongoClient = TestDatabase.createMongoClient(),
+        mongoDatabase = TestDatabase.createUniqueDBName()
       )
 
-      service.startup().setHandler(context.asyncAssertSuccess())
+      service.startup().setHandler {
+        when {
+          it.succeeded() -> async.complete()
+          else -> context.fail(it.cause())
+        }
+      }
+
       client = vertx.createHttpClient(HttpClientOptions()
         .setDefaultHost("127.0.0.1")
         .setDefaultPort(port)
@@ -89,6 +91,10 @@ class NetworkMapAdminInterfaceTest {
         .setTrustAll(true)
         .setVerifyHost(false)
       )
+
+      async.await()
+
+      service.processor.initialiseWithTestData(vertx).setHandler(context.asyncAssertSuccess())
     }
 
     @JvmStatic
@@ -96,17 +102,24 @@ class NetworkMapAdminInterfaceTest {
     fun after(context: TestContext) {
       client.close()
       service.shutdown()
-      vertx.close(context.asyncAssertSuccess())
+      val async = context.async()
+      vertx.close {
+        context.assertTrue(it.succeeded())
+        async.complete()
+      }
     }
   }
 
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Test
-  fun `that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist`(context: TestContext) {
+  fun `that we can login, retrieve notaries, nodes, whitelist, and we can modify notaries and whitelist`(context: TestContext) {
     val async = context.async()
     var key = ""
     var whitelist = ""
 
-    log.info("running: that we can login, retrieve notaries, nodes, whitelist, and we can delete the whitelist")
     log.info("logging in")
     client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/login", JsonObject("user" to "sa", "password" to ""))
       .onSuccess {
@@ -135,13 +148,13 @@ class NetworkMapAdminInterfaceTest {
       }
       .compose {
         log.info("posting non-validating notary nodeInfo")
-        val nodeInfo1= File("${SAMPLE_INPUTS}non-validating/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
+        val nodeInfo1 = File("$SAMPLE_INPUTS$DEFAULT_DIR_NON_VALIDATING_NOTARIES/", "nodeInfo-B5CD5B0AD037FD930549D9F3D562AB9B0E94DAB8284DB205E2E82F639EAB4341")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfo1.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/nonValidating", payload, "Authorization" to key)
       }
       .compose {
-        log.info("posting validating notaryt nodeInfo")
-        val nodeInfoPath= File("${SAMPLE_INPUTS}validating/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
+        log.info("posting validating notary nodeInfo")
+        val nodeInfoPath = File("$SAMPLE_INPUTS$DEFAULT_DIR_VALIDATING_NOTARIES/", "nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533")
         val payload = vertx.fileSystem().readFileBlocking(nodeInfoPath.absolutePath)
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/notaries/validating", payload, "Authorization" to key)
       }
@@ -164,18 +177,22 @@ class NetworkMapAdminInterfaceTest {
         val lines = whitelist.toWhitelistPairs()
         context.assertNotEquals(0, lines.size)
       }
-      .compose { // delete the whitelist
+      .compose {
+        // delete the whitelist
         log.info("deleting whitelist")
         client.futureDelete("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist", "Authorization" to key)
       }
-      .compose { // get the whitelist
+      .compose {
+        // get the whitelist
         log.info("getting whitelist")
         client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
-      .onSuccess { // check its empty
+      .onSuccess {
+        // check its empty
         context.assertTrue(it.toString().isEmpty())
       }
-      .compose { // append a set of white list items
+      .compose {
+        // append a set of white list items
         log.info("appending to whitelist")
         val updated = whitelist.toWhitelistPairs().drop(1)
         val newWhiteList = updated.toWhitelistText()
@@ -188,7 +205,8 @@ class NetworkMapAdminInterfaceTest {
       .onSuccess {
         context.assertEquals(whitelist.toWhitelistPairs().size - 1, it.toString().toWhitelistPairs().size)
       }
-      .compose { // set the complete whitelist
+      .compose {
+        // set the complete whitelist
         log.info("posting whitelist")
         client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist", whitelist, "Authorization" to key)
       }
@@ -232,5 +250,21 @@ class NetworkMapAdminInterfaceTest {
         async.complete()
       }
       .end()
+  }
+
+  @Test
+  fun `that we can retrieve the current network parameters`(context: TestContext) {
+    val async = context.async()
+    var np : NetworkParameters? = null
+
+    service.storages.networkMap.get(ServiceStorages.NETWORK_MAP_KEY)
+      .map { it.verified().networkParameterHash.toString() }
+      .compose { service.storages.networkParameters.get(it) }
+      .map { np = it.verified() }
+      .compose { client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/network-parameters") }
+      .map { Json.decodeValue(it, NetworkParameters::class.java) }
+      .onSuccess { context.assertEquals(np, it) }
+      .onSuccess { async.complete() }
+      .catch { context.fail(it) }
   }
 }

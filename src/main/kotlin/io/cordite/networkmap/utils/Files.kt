@@ -25,14 +25,24 @@ import java.nio.file.StandardCopyOption
 fun String.toPath() = Paths.get(this)!!
 fun String.toFile() = File(this)
 
-fun File.getFiles(re: Regex): Sequence<File> {
-  return this.walk()
-      .filter {
-        it.isFile && it.name.matches(re)
-      }
+/**
+ * walks all subdirectories looking for files
+ */
+fun File.getFiles(): Sequence<File> {
+  return this.absoluteFile.walk().filter { it.isFile }
 }
 
-operator fun File.div(rhs: String) : File {
+/**
+ * walks all subdirectories looking for files that match the regulart expression [re]
+ */
+fun File.getFiles(re: Regex): Sequence<File> {
+  return this.absoluteFile.walk()
+    .filter {
+      it.isFile && it.name.matches(re)
+    }
+}
+
+operator fun File.div(rhs: String): File {
   return File(this, rhs)
 }
 

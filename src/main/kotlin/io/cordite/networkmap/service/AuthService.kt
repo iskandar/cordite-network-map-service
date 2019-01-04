@@ -30,7 +30,7 @@ import java.io.FileOutputStream
 /**
  * Authentication service for the REST service
  */
-class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
+class AuthService(private val adminUser: InMemoryUser, private val jksFile: File) {
   companion object {
     val log = loggerFor<AuthService>()
   }
@@ -70,8 +70,9 @@ class AuthService(private val adminUser: InMemoryUser, val jksFile: File) {
       it.flush()
     }
   }
+
   data class LoginRequest(@ApiModelProperty(value = "user name", example = "sa") val user: String, @ApiModelProperty(value = "password", example = "admin") val password: String) {
-    fun matches(value: InMemoryUser) : Boolean {
+    fun matches(value: InMemoryUser): Boolean {
       return value.username == user && value.passwordHash == SecureHash.sha256(password)
     }
   }

@@ -16,7 +16,7 @@
 package io.cordite.networkmap.utils
 
 
-class Options {
+open class Options {
   data class Option(val name: String, val default: String, val description: String = "") {
     val environmentVariable: String = "NMS_" + name.toUpperCase().replace('-', '_')
     fun width() = name.length
@@ -58,7 +58,11 @@ class Options {
     options.toList().sortedBy { it.name }.map { it.name to it.stringValue }
       .map { (key, value) ->
         key to if (key.toLowerCase().contains("password")) {
-          if (value.isEmpty()) { "" } else { "*".repeat(value.length - 1) }
+          if (value.isEmpty()) {
+            ""
+          } else {
+            "*".repeat(value.length - 1)
+          }
         } else {
           value
         }

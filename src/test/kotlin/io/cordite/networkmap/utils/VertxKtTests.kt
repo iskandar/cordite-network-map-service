@@ -200,7 +200,7 @@ private class JiggedFuture<T> : Future<T>, Handler<AsyncResult<T>> {
   override fun tryComplete(result: T?): Boolean {
     var h: Handler<AsyncResult<T>>? = null
     synchronized(this) {
-//      if (succeeded || failed) {
+      //      if (succeeded || failed) {
 //        return false
 //      }
       this.result = result

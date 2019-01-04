@@ -15,8 +15,12 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.storage.NetworkParameterInputsStorage
+import io.bluebank.braid.core.async.getOrThrow
+import io.cordite.networkmap.changeset.Change
+import io.cordite.networkmap.changeset.changeSet
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.utils.*
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpClientResponse
@@ -27,6 +31,7 @@ import net.corda.core.crypto.sign
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
@@ -35,10 +40,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
-import org.apache.commons.io.FileUtils
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -60,6 +62,10 @@ class NetworkMapServiceTest {
       LogInitialiser.init()
       SerializationTestEnvironment.init()
     }
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
@@ -124,48 +130,50 @@ class NetworkMapServiceTest {
 
   private lateinit var service: NetworkMapService
 
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Before
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
-
-    val fRead = vertx.fileSystem().readFiles("/Users/fuzz/tmp")
-    val async = context.async()
-    fRead.setHandler { async.complete() }
-    async.await()
-
-
-    val path = dbDirectory.absolutePath
-    println("db path: $path")
-    println("port   : $port")
-
-    setupDefaultInputFiles(dbDirectory)
 
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
-      networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       tls = false,
       vertx = vertx,
       webRoot = WEB_ROOT,
       certificateManagerConfig = CertificateManagerConfig(
-          root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
-          doorManEnabled = false,
-          certManEnabled = true,
-          certManPKIVerficationEnabled = false,
-          certManRootCAsTrustStoreFile = null,
-          certManRootCAsTrustStorePassword = null,
-          certManStrictEVCerts = false)
-  )
+        root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
+        doorManEnabled = false,
+        certManEnabled = true,
+        certManPKIVerficationEnabled = false,
+        certManRootCAsTrustStoreFile = null,
+        certManRootCAsTrustStorePassword = null,
+        certManStrictEVCerts = false),
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName()
+    )
 
-    service.startup().setHandler(context.asyncAssertSuccess())
+    val completed = Future.future<Unit>()
+    service.startup().setHandler(completed.completer())
+    completed
+      .compose {  service.processor.initialiseWithTestData(vertx = vertx, includeNodes = false) }
+      .setHandler(context.asyncAssertSuccess())
   }
 
   @After
   fun after(context: TestContext) {
     service.shutdown()
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test
@@ -221,7 +229,7 @@ class NetworkMapServiceTest {
     try {
       nmc.publish(sni2.signed)
       throw RuntimeException("should have throw IOException complaining that the node has been registered before")
-    } catch(err: Throwable) {
+    } catch (err: Throwable) {
       if (err !is IOException) {
         throw err
       }
@@ -233,15 +241,15 @@ class NetworkMapServiceTest {
   @Test
   fun `that we can modify the network parameters`() {
     val nmc = createNetworkMapClient()
-    deleteValidatingNotaries(dbDirectory)
-    Thread.sleep(NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)
-    Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
+    deleteValidatingNotaries(nmc)
+    Thread.sleep(Math.max(1, NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY))
+    Thread.sleep(Math.max(1, NETWORK_MAP_QUEUE_DELAY.toMillis() * 2))
     val nm = nmc.getNetworkMap().payload
     assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
     val deadLine = nm.parametersUpdate!!.updateDeadline
     val delay = Duration.between(Instant.now(), deadLine)
     assert(delay > Duration.ZERO && delay <= NETWORK_PARAM_UPDATE_DELAY)
-    Thread.sleep(delay.toMillis() * 2)
+    Thread.sleep(Math.max(1, delay.toMillis() * 2))
     val nm2 = nmc.getNetworkMap().payload
     assertNull(nm2.parametersUpdate)
     val nmp = nmc.getNetworkParameters(nm2.networkParameterHash).verified()
@@ -301,9 +309,10 @@ class NetworkMapServiceTest {
       }
   }
 
-  private fun deleteValidatingNotaries(directory: File) {
-    val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
-    FileUtils.cleanDirectory(File(inputs, NetworkParameterInputsStorage.DEFAULT_DIR_VALIDATING_NOTARIES))
+  private fun deleteValidatingNotaries(nmc: NetworkMapClient) {
+    val parameters = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash).verified()
+    val notaries = parameters.notaries.filter { it.validating }.map { it.identity.name.serialize().hash }.map { Change.RemoveNotary(it) }
+    service.processor.updateNetworkParameters(changeSet(notaries), "removing all validating notaries").getOrThrow()
   }
 
   private fun createAliceSignedNodeInfo(): NodeInfoAndSigned {

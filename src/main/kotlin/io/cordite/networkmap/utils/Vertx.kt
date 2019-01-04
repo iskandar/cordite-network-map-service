@@ -22,6 +22,7 @@ package io.cordite.networkmap.utils
 import io.cordite.networkmap.service.NetworkMapService
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
+import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Future.succeededFuture
@@ -34,7 +35,9 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
@@ -45,6 +48,7 @@ object LogInitialiser {
   init {
     System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory")
   }
+
   fun init() {
     // will cause init to be called once and once only
   }
@@ -65,13 +69,13 @@ fun RoutingContext.handleExceptions(fn: RoutingContext.() -> Unit) {
   } catch (err: Throwable) {
     logger.error("web request failed", err)
     response()
-        .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-        .setStatusMessage(err.message)
-        .end()
+      .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+      .setStatusMessage(err.message)
+      .end()
   }
 }
 
-fun RoutingContext.setNoCache() : RoutingContext {
+fun RoutingContext.setNoCache(): RoutingContext {
   response().setNoCache()
   return this
 }
@@ -120,7 +124,7 @@ fun RoutingContext.end(err: Throwable) {
   }
 }
 
-fun HttpServerResponse.setNoCache() : HttpServerResponse {
+fun HttpServerResponse.setNoCache(): HttpServerResponse {
   return putHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
     .putHeader("pragma", "no-cache")
     .putHeader("expires", "0")
@@ -174,7 +178,20 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
   return result
 }
 
-fun <T> List<Future<T>>.all() : Future<List<T>> {
+fun <T> Future<T>.finally(fn: (AsyncResult<T>) -> Unit): Future<T> {
+  val result = Future.future<T>()
+  setHandler {
+    try {
+      fn(it)
+      result.completer().handle(it)
+    } catch (err: Throwable) {
+      result.fail(err)
+    }
+  }
+  return result
+}
+
+fun <T> List<Future<T>>.all(): Future<List<T>> {
   if (this.isEmpty()) return succeededFuture(emptyList())
   val results = mutableMapOf<Int, T>()
   val fResult = future<List<T>>()
@@ -204,37 +221,41 @@ fun <T> List<Future<T>>.all() : Future<List<T>> {
   return fResult
 }
 
+fun <T> Future<T>.mapUnit() : Future<Unit> {
+  return this.map { Unit }
+}
+
 @JvmName("allTyped")
-fun <T> all(vararg futures: Future<T>) : Future<List<T>> {
+fun <T> all(vararg futures: Future<T>): Future<List<T>> {
   return futures.toList().all()
 }
 
 @Suppress("UNCHECKED_CAST")
-fun all(vararg futures: Future<*>) : Future<List<*>> {
+fun all(vararg futures: Future<*>): Future<List<*>> {
   return (futures.toList() as List<Future<Any>>).all() as Future<List<*>>
 }
 
-fun FileSystem.mkdirs(path: String) : Future<Void> {
+fun FileSystem.mkdirs(path: String): Future<Void> {
   return withFuture { mkdirs(path, it.completer()) }
 }
 
-fun FileSystem.readFile(path: String) : Future<Buffer> {
+fun FileSystem.readFile(path: String): Future<Buffer> {
   return withFuture { readFile(path, it.completer()) }
 }
 
-fun FileSystem.writeFile(path: String, byteArray: ByteArray) : Future<Void> {
+fun FileSystem.writeFile(path: String, byteArray: ByteArray): Future<Void> {
   return withFuture { writeFile(path, Buffer.buffer(byteArray), it.completer()) }
 }
 
-fun FileSystem.readDir(path: String) : Future<List<String>> {
-  return withFuture { readDir(path, it.completer())}
+fun FileSystem.readDir(path: String): Future<List<String>> {
+  return withFuture { readDir(path, it.completer()) }
 }
 
-fun FileSystem.copy(from: String, to: String) : Future<Void> {
+fun FileSystem.copy(from: String, to: String): Future<Void> {
   return withFuture { copy(from, to, it.completer()) }
 }
 
-fun FileSystem.readFiles(dirPath: String) : Future<List<Pair<String, Buffer>>> {
+fun FileSystem.readFiles(dirPath: String): Future<List<Pair<String, Buffer>>> {
   return readDir(dirPath)
     .compose { files ->
       files.map { file ->
@@ -243,7 +264,7 @@ fun FileSystem.readFiles(dirPath: String) : Future<List<Pair<String, Buffer>>> {
     }
 }
 
-fun FileSystem.deleteFile(filePath: String) : Future<Unit> {
+fun FileSystem.deleteFile(filePath: String): Future<Unit> {
   return withFuture { future ->
     delete(filePath) {
       if (it.succeeded()) {
@@ -255,10 +276,28 @@ fun FileSystem.deleteFile(filePath: String) : Future<Unit> {
   }
 }
 
-inline fun <T> withFuture(fn: (Future<T>) -> Unit) : Future<T> {
+inline fun <T> withFuture(fn: (Future<T>) -> Unit): Future<T> {
   val result = future<T>()
   fn(result)
   return result
 }
 
+fun <T> Future<T>.completeFrom(value: T?, err: Throwable?) {
+  return when {
+    err != null -> fail(err)
+    else -> complete(value)
+  }
+}
+
+fun <T> CordaFuture<T>.toVertxFuture(): Future<T> {
+  val result = Future.future<T>()
+  this.then { f ->
+    try {
+      result.complete(f.getOrThrow())
+    } catch (err: Throwable) {
+      result.fail(err)
+    }
+  }
+  return result
+}
 

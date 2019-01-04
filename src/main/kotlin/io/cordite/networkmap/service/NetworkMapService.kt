@@ -13,8 +13,11 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package io.cordite.networkmap.service
 
+import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
@@ -22,7 +25,6 @@ import io.bluebank.braid.core.http.HttpServerConfig
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
-import io.cordite.networkmap.storage.*
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -57,11 +59,10 @@ import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
-  private val dbDirectory: File,
+  dbDirectory: File,
   user: InMemoryUser,
   private val port: Int,
   private val cacheTimeout: Duration,
-  private val networkParamUpdateDelay: Duration,
   private val networkMapQueuedUpdateDelay: Duration,
   private val tls: Boolean = true,
   private val certPath: String = "",
@@ -76,7 +77,10 @@ class NetworkMapService(
     certManPKIVerficationEnabled = false,
     certManRootCAsTrustStoreFile = null,
     certManRootCAsTrustStorePassword = null,
-    certManStrictEVCerts = false)
+    certManStrictEVCerts = false),
+  val mongoClient: MongoClient,
+  val mongoDatabase: String,
+  val paramUpdateDelay: Duration
 ) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"
@@ -96,19 +100,15 @@ class NetworkMapService(
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
-  internal val certificateAndKeyPairStorage = CertificateAndKeyPairStorage(vertx, dbDirectory)
-  private val authService = AuthService(user, File(certificateAndKeyPairStorage.resolveKey("jwt"), "jwt.jceks"))
+  internal val storages = ServiceStorages(vertx, dbDirectory, mongoClient, mongoDatabase)
   private val adminService = AdminServiceImpl()
-  private val inputsStorage = NetworkParameterInputsStorage(dbDirectory, vertx)
-  private val signedNetworkMapStorage = SignedNetworkMapStorage(vertx, dbDirectory)
-  private val nodeInfoStorage = SignedNodeInfoStorage(vertx, dbDirectory)
-  private val signedNetworkParametersStorage = SignedNetworkParametersStorage(vertx, dbDirectory)
-  private lateinit var processor: NetworkMapServiceProcessor
-  internal val certificateManager = CertificateManager(vertx, certificateAndKeyPairStorage, certificateManagerConfig)
+  internal lateinit var processor: NetworkMapServiceProcessor
+  private val authService = AuthService(user, File(storages.certAndKeys.resolveKey("jwt"), "jwt.jceks"))
+  internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
 
   fun startup(): Future<Unit> {
     // N.B. Ordering is important here
-    return setupStorage()
+    return storages.setupStorage()
       .compose { startCertManager() }
       .compose { startProcessor() }
       .compose { startupBraid() }
@@ -116,7 +116,8 @@ class NetworkMapService(
 
   fun shutdown(): Future<Unit> {
     processor.stop()
-    return Future.succeededFuture()
+    mongoClient.close()
+    return Future.succeededFuture(Unit)
   }
 
   private fun startupBraid(): Future<Unit> {
@@ -126,7 +127,7 @@ class NetworkMapService(
       val result = Future.future<Unit>()
       val templateEngine = ResourceMvelTemplateEngine(
         cachingEnabled = true,
-        properties =  mapOf("location" to root),
+        properties = mapOf("location" to root),
         rootPath = "website/public/"
       )
       BraidConfig()
@@ -150,7 +151,7 @@ class NetworkMapService(
           .withPaths {
             group("network map") {
               unprotected {
-                get(NETWORK_MAP_ROOT, thisService::getNetworkMap)
+                get(NETWORK_MAP_ROOT, thisService::serveNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
                 post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
@@ -177,9 +178,10 @@ class NetworkMapService(
             group("admin") {
               unprotected {
                 post("$ADMIN_REST_ROOT/login", authService::login)
-                get("$ADMIN_REST_ROOT/whitelist", inputsStorage::serveWhitelist)
-                get("$ADMIN_REST_ROOT/notaries", thisService::serveNotaries)
-                get("$ADMIN_REST_ROOT/nodes", thisService::serveNodes)
+                get("$ADMIN_REST_ROOT/whitelist", processor::serveWhitelist)
+                get("$ADMIN_REST_ROOT/notaries", processor::serveNotaries)
+                get("$ADMIN_REST_ROOT/nodes", processor::serveNodes)
+                get("$ADMIN_REST_ROOT/network-parameters", processor::getCurrentNetworkParameters)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
@@ -191,20 +193,20 @@ class NetworkMapService(
                   route("/*").handler { context ->
                     templateEngine.handler(context, root)
                   }
-                  route("/*").handler {
-                    staticHandler.handle(it)
+                  route("/*").handler { context ->
+                    staticHandler.handle(context)
                   }
                 }
               }
               protected {
-                put("$ADMIN_REST_ROOT/whitelist", inputsStorage::appendWhitelist)
-                post("$ADMIN_REST_ROOT/whitelist", inputsStorage::replaceWhitelist)
-                delete("$ADMIN_REST_ROOT/whitelist", inputsStorage::clearWhitelist)
-                delete("$ADMIN_REST_ROOT/notaries/validating", thisService::deleteValidatingNotary)
-                delete("$ADMIN_REST_ROOT/notaries/nonValidating", thisService::deleteNonValidatingNotary)
-                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", thisService::deleteNode)
-                post("$ADMIN_REST_ROOT/notaries/validating", inputsStorage::postValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/notaries/nonValidating", inputsStorage::postNonValidatingNotaryNodeInfo)
+                put("$ADMIN_REST_ROOT/whitelist", processor::appendWhitelist)
+                post("$ADMIN_REST_ROOT/whitelist", processor::replaceWhitelist)
+                delete("$ADMIN_REST_ROOT/whitelist", processor::clearWhitelist)
+                delete("$ADMIN_REST_ROOT/notaries/validating", processor::deleteValidatingNotary)
+                delete("$ADMIN_REST_ROOT/notaries/nonValidating", processor::deleteNonValidatingNotary)
+                delete("$ADMIN_REST_ROOT/nodes/:nodeKey", processor::deleteNode)
+                post("$ADMIN_REST_ROOT/notaries/validating", processor::postValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
               }
             }
           }
@@ -224,8 +226,8 @@ class NetworkMapService(
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
-  fun getNetworkMap(context: RoutingContext) {
-    signedNetworkMapStorage.serve(NetworkMapServiceProcessor.NETWORK_MAP_KEY, context, cacheTimeout)
+  fun serveNetworkMap(context: RoutingContext) {
+    storages.networkMap.serve(ServiceStorages.NETWORK_MAP_KEY, context, cacheTimeout)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -281,62 +283,18 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "retrieve all nodeinfos", responseContainer = "List", response = SimpleNodeInfo::class)
-  fun serveNodes(context: RoutingContext) {
-    context.setNoCache()
-    nodeInfoStorage.getAll()
-      .onSuccess {
-        context.end(it.map {
-          val node = it.value.verified()
-          SimpleNodeInfo(it.key, node.addresses, node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) }, node.platformVersion)
-        })
-      }
-      .catch { context.end(it) }
-  }
-
-  @ApiOperation(value = "server set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
-  fun serveNotaries(routingContext: RoutingContext) {
-    inputsStorage.readNotaries()
-      .onSuccess {
-        val simpleNotaryInfos = it.map { SimpleNotaryInfo(File(it.first).name, it.second) }
-        routingContext.setNoCache().end(simpleNotaryInfos)
-      }
-      .catch {
-        routingContext.setNoCache().end(it)
-      }
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a node by its key")
-  fun deleteNode(nodeKey: String): Future<Unit> {
-    return nodeInfoStorage.delete(nodeKey)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a validating notary with the node key")
-  fun deleteValidatingNotary(nodeKey: String): Future<Unit> {
-    return inputsStorage.deleteNotary(nodeKey, true)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete a non-validating notary with the node key")
-  fun deleteNonValidatingNotary(nodeKey: String): Future<Unit> {
-    return inputsStorage.deleteNotary(nodeKey, false)
-  }
-
-  @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
   fun postAckNetworkParameters(signedSecureHash: Buffer): Future<Unit> {
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     val hash = signedParameterHash.verified()
-    return nodeInfoStorage.get(hash.toString())
+    return storages.nodeInfo.get(hash.toString())
       .onSuccess {
         logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
       }
       .catch {
         logger.warn("received acknowledgement from unknown node!")
       }
-      .mapEmpty<Unit>()
+      .mapUnit()
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -346,7 +304,7 @@ class NetworkMapService(
   )
   fun getNodeInfo(context: RoutingContext) {
     val hash = SecureHash.parse(context.request().getParam("hash"))
-    nodeInfoStorage.get(hash.toString())
+    storages.nodeInfo.get(hash.toString())
       .onSuccess { sni ->
         context.response().apply {
           setCacheControl(cacheTimeout)
@@ -366,7 +324,7 @@ class NetworkMapService(
     produces = MediaType.APPLICATION_OCTET_STREAM)
   fun getNetworkParameter(context: RoutingContext) {
     val hash = SecureHash.parse(context.request().getParam("hash"))
-    signedNetworkParametersStorage.get(hash.toString())
+    storages.networkParameters.get(hash.toString())
       .onSuccess { snp ->
         context.response().apply {
           setCacheControl(cacheTimeout)
@@ -423,27 +381,13 @@ class NetworkMapService(
 
   private fun startProcessor(): Future<Unit> {
     processor = NetworkMapServiceProcessor(
-      vertx,
-      dbDirectory,
-      inputsStorage,
-      nodeInfoStorage,
-      signedNetworkMapStorage,
-      signedNetworkParametersStorage,
-      certificateManager,
-      networkParamUpdateDelay,
-      networkMapQueuedUpdateDelay
+      vertx = vertx,
+      storages = storages,
+      certificateManager = certificateManager,
+      networkMapQueueDelay = networkMapQueuedUpdateDelay,
+      paramUpdateDelay = paramUpdateDelay
     )
     return processor.start()
-  }
-
-  private fun setupStorage(): Future<Unit> {
-    return all(
-      inputsStorage.makeDirs(),
-      signedNetworkParametersStorage.makeDirs(),
-      signedNetworkMapStorage.makeDirs(),
-      nodeInfoStorage.makeDirs(),
-      certificateAndKeyPairStorage.makeDirs()
-    ).mapEmpty()
   }
 
   private fun createHttpServerOptions(): HttpServerOptions {

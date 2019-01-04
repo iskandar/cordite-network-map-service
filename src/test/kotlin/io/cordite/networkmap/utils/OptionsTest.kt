@@ -40,7 +40,7 @@ class OptionsTest {
   @Test
   fun testOptions() {
     val options = Options()
-    assertEquals("default", options.addOption(UNSPECIFIED_STRING_NAME , "default").stringValue)
+    assertEquals("default", options.addOption(UNSPECIFIED_STRING_NAME, "default").stringValue)
     assertEquals(STRING_VALUE, options.addOption(STRING_NAME, "default").stringValue)
     assertEquals(INT_VALUE, options.addOption(INT_NAME, "0").stringValue)
     assertEquals(BOOL_VALUE, options.addOption(BOOL_NAME, "false").stringValue)

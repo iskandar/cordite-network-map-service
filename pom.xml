@@ -27,6 +27,7 @@
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
     <logback.version>1.2.3</logback.version>
+    <flapdoodle.version>2.1.1</flapdoodle.version>
   </properties>
 
   <repositories>
@@ -170,6 +171,31 @@
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
     </dependency>
+    <dependency>
+      <groupId>de.flapdoodle.embed</groupId>
+      <artifactId>de.flapdoodle.embed.mongo</artifactId>
+      <version>${flapdoodle.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>de.undercouch</groupId>
+      <artifactId>bson4jackson</artifactId>
+      <version>2.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.module</groupId>
+      <artifactId>jackson-module-kotlin</artifactId>
+      <version>2.9.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mongodb</groupId>
+      <artifactId>mongodb-driver-reactivestreams</artifactId>
+      <version>1.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.reactivex</groupId>
+      <artifactId>rxjava-reactive-streams</artifactId>
+      <version>1.2.1</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -211,12 +237,11 @@
             </goals>
             <configuration>
               <target>
-                <exec executable="npm" failonerror="true">
+                <exec executable="npm" failonerror="true" dir="website">
                   <arg value="install"/>
-                  <arg value="-g"/>
-                  <arg value="brunch@2.10.17"/>
                 </exec>
-                <exec executable="brunch" failonerror="true" dir="website">
+                <exec executable="npm" failonerror="true" dir="website">
+                  <arg value="run"/>
                   <arg value="build"/>
                 </exec>
               </target>

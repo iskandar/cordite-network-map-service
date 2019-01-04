@@ -12,7 +12,7 @@ stages:
 
 
 build:maven:
-  image: jimador/docker-jdk-8-maven-node
+#  image: jimador/docker-jdk-8-maven-node
   stage: build
   variables:
     MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
@@ -22,7 +22,9 @@ build:maven:
     - cat target/site/jacoco/index.html
 #    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
   tags:
-    - etb3 # should be shared runners to stop queuing
+#    - etb3 # should be shared runners to stop queuing
+    - script-maven
+    - script-npm
   cache:
     key: "$CI_JOB_NAME"
     paths:

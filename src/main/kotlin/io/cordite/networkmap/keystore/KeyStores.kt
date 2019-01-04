@@ -15,7 +15,7 @@
  */
 package io.cordite.networkmap.keystore
 
-import io.cordite.networkmap.storage.CertificateAndKeyPairStorage
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.net.JksOptions
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
