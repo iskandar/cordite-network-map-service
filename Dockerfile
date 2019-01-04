@@ -24,6 +24,8 @@ ENV NMS_DOORMAN=true
 ENV NMS_CERTMAN=true
 ENV NMS_PORT=8080
 ENV NMS_DB=db
+ENV NMS_MONGO_CONNECTION_STRING=mongodb://localhost:27017
+#ENV NMS_MONGOD_LOCATION=/opt/cordite/mongodb-linux-x86_64-amazon2-4.0.4/bin/mongod
 
 WORKDIR /opt/cordite
 

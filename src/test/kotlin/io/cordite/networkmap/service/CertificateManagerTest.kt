@@ -16,7 +16,8 @@
 package io.cordite.networkmap.service
 
 import io.cordite.networkmap.keystore.toKeyStore
-import io.cordite.networkmap.storage.CertificateAndKeyPairStorage
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
@@ -27,6 +28,8 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.save
 import org.junit.AfterClass
+import org.junit.ClassRule
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -36,6 +39,11 @@ import java.nio.file.Files
 class CertificateManagerTest {
   companion object {
     private val vertx = Vertx.vertx()
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     const val KEYSTORE_PASSWORD = "password"
     @JvmStatic
     @AfterClass
@@ -43,6 +51,10 @@ class CertificateManagerTest {
       vertx.close()
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun validateNodeInfoCertificates(context: TestContext) {

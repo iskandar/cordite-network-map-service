@@ -24,42 +24,42 @@ import io.vertx.core.json.JsonObject
 import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.MediaType
 
-fun HttpClient.futurePost(uri: String, json: JsonObject, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePost(uri: String, json: JsonObject, vararg headers: Pair<String, String>): Future<Buffer> {
   return futurePost(uri, json.encode(), *headers)
 }
 
-fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.POST, uri, body, *headers)
 }
 
-fun HttpClient.futurePost(uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePost(uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.POST, uri, body, *headers)
 }
 
-fun HttpClient.futurePut(uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePut(uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.PUT, uri, body, *headers)
 }
 
-fun HttpClient.futurePut(uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePut(uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.PUT, uri, body, *headers)
 }
 
-fun HttpClient.futurePut(uri: String, body: JsonObject, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futurePut(uri: String, body: JsonObject, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.PUT, uri, body.encode(), *headers)
 }
 
-fun HttpClient.futureGet(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futureGet(uri: String, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.GET, uri, "", *headers)
 }
 
-fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.DELETE, uri, "", *headers)
 }
 
-fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()
   this.request(method, uri)
-    .putHeader(HttpHeaders.CONTENT_LENGTH,  body.length().toString())
+    .putHeader(HttpHeaders.CONTENT_LENGTH, body.length().toString())
     .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
     .apply {
       headers.forEach {
@@ -83,10 +83,10 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vara
 }
 
 
-fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>) : Future<Buffer> {
+fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()
   this.request(method, uri)
-    .putHeader(HttpHeaders.CONTENT_LENGTH,  body.length.toString())
+    .putHeader(HttpHeaders.CONTENT_LENGTH, body.length.toString())
     .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
     .apply {
       headers.forEach {

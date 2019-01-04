@@ -16,14 +16,14 @@
 package io.cordite.networkmap.storage
 
 import com.google.common.io.Files
+import io.cordite.networkmap.storage.file.TextStorage
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
 
@@ -31,6 +31,10 @@ import java.io.File
 class StorageTest {
   companion object {
     private lateinit var vertx: Vertx
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
 
     @JvmStatic
     @BeforeClass
@@ -44,6 +48,10 @@ class StorageTest {
       vertx.close(context.asyncAssertSuccess())
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that storage creates parent directory`(context: TestContext) {
@@ -66,7 +74,7 @@ class StorageTest {
     textStorage.makeDirs()
       .compose { textStorage.put(key, value) }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(1, it.size)
         context.assertEquals(key, it.first())
       }
@@ -94,14 +102,14 @@ class StorageTest {
       .compose { textStorage.put(key1, "hello") }
       .compose { textStorage.put(key2, "world") }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(2, it.size)
         context.assertTrue(it.contains(key1))
         context.assertTrue(it.contains(key2))
       }
       .compose { textStorage.delete(key1) }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(1, it.size)
         context.assertFalse(it.contains(key1))
         context.assertTrue(it.contains(key2))
@@ -122,19 +130,19 @@ class StorageTest {
         }.all()
       }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(count, it.size)
       }
       .compose { textStorage.clear() }
       .compose { textStorage.getKeys() }
-      .onSuccess{
+      .onSuccess {
         context.assertEquals(0, it.size)
       }
       .setHandler(context.asyncAssertSuccess())
   }
 
 
-  private fun createStorageParentDir(storageDirectory:String): File {
+  private fun createStorageParentDir(storageDirectory: String): File {
     val tempDir = Files.createTempDir()
     tempDir.deleteOnExit()
     return File(tempDir, storageDirectory)

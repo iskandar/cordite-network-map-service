@@ -32,6 +32,7 @@ class CertificateRequestPayloadParser(private val certManContext: CertificateMan
     private const val BEGIN_CERTIFICATE_TOKEN = "-----BEGIN CERTIFICATE-----"
     private const val END_CERTIFICATE_TOKEN = "-----END CERTIFICATE-----"
   }
+
   private var pkixParams: PKIXParameters
   private var certFactory: CertificateFactory
 

@@ -15,16 +15,14 @@
  */
 package io.cordite.networkmap.service
 
-import io.cordite.networkmap.utils.SerializationTestEnvironment
-import io.cordite.networkmap.utils.driverWithCompatZone
-import io.cordite.networkmap.utils.getFreePort
-import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.testing.driver.DriverParameters
@@ -32,30 +30,38 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.net.URL
 import java.security.cert.X509Certificate
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
+    private val logger = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
-    val NETWORK_PARAM_UPDATE_DELAY = 1.millis
-    val NETWORK_MAP_QUEUE_DELAY = 1.millis
+    val NETWORK_PARAM_UPDATE_DELAY : Duration = Duration.ZERO
+    val NETWORK_MAP_QUEUE_DELAY : Duration = Duration.ZERO
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
+
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     init {
       SerializationTestEnvironment.init()
     }
   }
 
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()
   private val port = getFreePort()
   private val webRoot = DEFAULT_NETWORK_MAP_ROOT
-
   private lateinit var service: NetworkMapService
 
   @Before
@@ -64,27 +70,27 @@ class CordaNodeTest {
     // BUT we can't use the one used by the application
 
     vertx = Vertx.vertx()
-    val path = dbDirectory.absolutePath
-    println("db path: $path")
-    println("port   : $port")
-
-//    setupDefaultInputFiles(dbDirectory)
-
     this.service = NetworkMapService(dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
-      networkParamUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
-      webRoot = DEFAULT_NETWORK_MAP_ROOT,
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       tls = false,
-      vertx = vertx)
+      vertx = vertx,
+      webRoot = DEFAULT_NETWORK_MAP_ROOT,
+      mongoClient = TestDatabase.createMongoClient(),
+      mongoDatabase = TestDatabase.createUniqueDBName())
     service.startup().setHandler(context.asyncAssertSuccess())
   }
 
   @After
   fun after(context: TestContext) {
-    vertx.close(context.asyncAssertSuccess())
+    val async = context.async()
+    vertx.close {
+      context.assertTrue(it.succeeded())
+      async.complete()
+    }
   }
 
   @Test
@@ -94,12 +100,15 @@ class CordaNodeTest {
 
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
+    logger.info("starting up the driver")
     driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), {
       // TODO: register notaries
     }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
-      val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
-
+      logger.info("start up the node")
+      val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
+      logger.info("node started. going to sleep to wait for the NMS to update")
+      Thread.sleep(2000) // plenty of time for the NMS to synchronise
       // we'll directly access the network map and compare
       val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
@@ -115,7 +124,7 @@ class CordaNodeTest {
 
   private fun createNetworkMapClient(context: TestContext, rootCert: X509Certificate): NetworkMapClient {
     val async = context.async()
-    service.certificateAndKeyPairStorage.get(CertificateManager.NETWORK_MAP_CERT_KEY)
+    service.storages.certAndKeys.get(CertificateManager.NETWORK_MAP_CERT_KEY)
       .onSuccess {
         context.put<X509Certificate>("cert", it.certificate)
         async.complete()
