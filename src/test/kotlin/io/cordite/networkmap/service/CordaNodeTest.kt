@@ -29,6 +29,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import org.junit.*
 import org.junit.runner.RunWith
@@ -41,8 +42,8 @@ class CordaNodeTest {
   companion object {
     private val logger = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
-    val NETWORK_PARAM_UPDATE_DELAY : Duration = Duration.ZERO
-    val NETWORK_MAP_QUEUE_DELAY : Duration = Duration.ZERO
+    val NETWORK_PARAM_UPDATE_DELAY : Duration = 100.millis
+    val NETWORK_MAP_QUEUE_DELAY : Duration = 100.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
 
     @JvmField
@@ -131,6 +132,6 @@ class CordaNodeTest {
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    return NetworkMapClient(URL("http://localhost:$port$webRoot"), rootCert)
+    return NetworkMapClient(URL("http://localhost:$port$webRoot"), rootCert, MOCK_VERSION_INFO)
   }
 }
