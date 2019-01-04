@@ -41,7 +41,7 @@ class ChangeSetTest {
     assertEquals(networkParams.minimumPlatformVersion, newNetworkParams.minimumPlatformVersion)
     assertEquals(networkParams.whitelistedContractImplementations, newNetworkParams.whitelistedContractImplementations)
     assertEquals(networkParams.maxTransactionSize, newNetworkParams.maxTransactionSize)
-    assertTrue(networkParams.modifiedTime < newNetworkParams.modifiedTime)
+    assertTrue(networkParams.modifiedTime <= newNetworkParams.modifiedTime)
     assertEquals(1, newNetworkParams.notaries.size)
     assertEquals(notaryInfo, newNetworkParams.notaries.first())
   }
