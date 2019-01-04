@@ -33,13 +33,14 @@ import org.junit.*
 import org.junit.runner.RunWith
 import java.net.URL
 import java.security.cert.X509Certificate
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
     val CACHE_TIMEOUT = 1.millis
-    val NETWORK_PARAM_UPDATE_DELAY = 1.millis
-    val NETWORK_MAP_QUEUE_DELAY = 1.millis
+    val NETWORK_PARAM_UPDATE_DELAY : Duration = Duration.ZERO
+    val NETWORK_MAP_QUEUE_DELAY : Duration = Duration.ZERO
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
 
     @JvmField
@@ -103,6 +104,7 @@ class CordaNodeTest {
       val user = User("user1", "test", permissions = setOf())
       val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
 
+      Thread.sleep(2000) // plenty of time for the NMS to synchronise
       // we'll directly access the network map and compare
       val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
