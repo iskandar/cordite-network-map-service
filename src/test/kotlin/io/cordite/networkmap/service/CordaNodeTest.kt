@@ -22,6 +22,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.testing.driver.DriverParameters
@@ -38,6 +39,7 @@ import java.time.Duration
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
+    private val logger = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY : Duration = Duration.ZERO
     val NETWORK_MAP_QUEUE_DELAY : Duration = Duration.ZERO
@@ -98,12 +100,14 @@ class CordaNodeTest {
 
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
+    logger.info("starting up the driver")
     driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), {
       // TODO: register notaries
     }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
       val user = User("user1", "test", permissions = setOf())
-      val node = startNode(providedName = CordaX500Name("PartyA", "New York", "US"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
-
+      logger.info("start up the node")
+      val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
+      logger.info("node started. going to sleep to wait for the NMS to update")
       Thread.sleep(2000) // plenty of time for the NMS to synchronise
       // we'll directly access the network map and compare
       val nmc = createNetworkMapClient(context, rootCert)
