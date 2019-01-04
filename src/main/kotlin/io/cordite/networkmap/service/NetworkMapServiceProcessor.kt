@@ -98,9 +98,7 @@ class NetworkMapServiceProcessor(
 
       // TODO: optimise this to use the database, and avoid loading all nodes into memory
 
-      return execute {
-        storages.nodeInfo.getAll()
-      }
+        return storages.nodeInfo.getAll()
         .onSuccess { nodes ->
           // flatten the current nodes to Party -> PublicKey map
           val registered = nodes.flatMap { namedSignedNodeInfo ->
