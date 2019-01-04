@@ -15,12 +15,12 @@
  */
 package io.cordite.networkmap
 
+import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.service.CertificateManagerConfig
 import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
-import net.corda.core.utilities.loggerFor
 import kotlin.system.exitProcess
 
 

@@ -40,6 +40,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
@@ -298,7 +299,7 @@ class NetworkMapServiceTest {
 
 
   private fun createNetworkMapClient(): NetworkMapClient {
-    return NetworkMapClient(URL("http://localhost:$port$WEB_ROOT"), service.certificateManager.rootCertificateAndKeyPair.certificate)
+    return NetworkMapClient(URL("http://localhost:$port$WEB_ROOT"), service.certificateManager.rootCertificateAndKeyPair.certificate, MOCK_VERSION_INFO)
   }
 
   private fun createTempDir(): File {
