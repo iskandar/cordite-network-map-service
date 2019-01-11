@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>io.cordite.services</groupId>
   <artifactId>network-map-service</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-
   <name>network-map-service</name>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <kotlin.version>1.1.60</kotlin.version>
@@ -29,7 +27,6 @@
     <logback.version>1.2.3</logback.version>
     <flapdoodle.version>2.1.1</flapdoodle.version>
   </properties>
-
   <repositories>
     <repository>
       <id>1_central</id>
@@ -63,14 +60,12 @@
       <url>https://jitpack.io</url>
     </repository>
   </repositories>
-
   <licenses>
     <license>
       <name>The Apache License, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
-
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -240,7 +235,6 @@
       </exclusions>
     </dependency>
   </dependencies>
-
   <build>
     <sourceDirectory>src/main/kotlin</sourceDirectory>
     <testSourceDirectory>src/test/kotlin</testSourceDirectory>
@@ -255,44 +249,28 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
+        <groupId>com.github.mjeanroy</groupId>
+        <artifactId>node-maven-plugin</artifactId>
+        <version>0.2.0</version>
         <executions>
           <execution>
-            <id>clean-website</id>
+            <id>npm-clean</id>
             <phase>clean</phase>
             <goals>
-              <goal>run</goal>
+              <goal>clean</goal>
             </goals>
-            <configuration>
-              <target>
-                <delete dir="website/public"/>
-                <delete dir="website/node_modules"/>
-              </target>
-            </configuration>
           </execution>
           <execution>
-            <id>build-website</id>
+            <id>npm-build</id>
             <phase>generate-resources</phase>
             <goals>
-              <goal>run</goal>
+              <goal>install</goal>
+              <goal>build</goal>
             </goals>
-            <configuration>
-              <target>
-                <exec executable="npm" failonerror="true" dir="website">
-                  <arg value="install"/>
-                </exec>
-                <exec executable="npm" failonerror="true" dir="website">
-                  <arg value="run"/>
-                  <arg value="build"/>
-                </exec>
-              </target>
-            </configuration>
           </execution>
         </executions>
         <configuration>
-          <skip>${npm.skip}</skip>
+          <workingDirectory>website</workingDirectory>
         </configuration>
       </plugin>
       <plugin>
@@ -424,7 +402,6 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
 </project>
