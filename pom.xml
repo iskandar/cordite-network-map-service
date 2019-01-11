@@ -255,6 +255,13 @@
         <executions>
           <execution>
             <id>npm-clean</id>
+            <phase>pre-clean</phase>
+            <goals>
+              <goal>install</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>npm-install</id>
             <phase>clean</phase>
             <goals>
               <goal>clean</goal>
@@ -262,9 +269,8 @@
           </execution>
           <execution>
             <id>npm-build</id>
-            <phase>generate-resources</phase>
+            <phase>compile</phase>
             <goals>
-              <goal>install</goal>
               <goal>build</goal>
             </goals>
           </execution>
