@@ -69,6 +69,7 @@ package:docker:
     - docker
   only:
     - master # should be on all branches to stop master failing
+    - tags
 
 test:nms:
   image: docker:stable
@@ -80,6 +81,7 @@ test:nms:
     - docker
   only:
     - master # should be on all branches to stop master failing
+    - tags
 
 container_scanning:
   image: docker:stable
@@ -111,6 +113,7 @@ container_scanning:
     - docker
   only:
     - master
+    - tags
 
 # fails due to use of npm
 #sast:
@@ -154,6 +157,7 @@ dast:
     - docker
   only:
     - master
+    - tags
 
 dependency_scanning:
   stage: test
@@ -177,6 +181,7 @@ dependency_scanning:
     - docker
   only:
     - master
+    - tags
 
 release:docker:
   stage: release
@@ -200,3 +205,4 @@ release:docker:
     - docker
   only:
     - master
+    - tags
