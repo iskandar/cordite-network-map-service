@@ -126,6 +126,7 @@ These should be stored in the `<node-directory>/certificates`.
     + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
       be able to join the network
   + Create a Corda node
+  + Clean out the node if required by deleting the contents of the `certificates` and `additional-node-infos` folders, and the `persistence.mv.db` and `network-parameters` files 
   + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
     `compatibilityZoneURL="http://localhost:8080"`
   + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
