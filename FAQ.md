@@ -3,7 +3,8 @@
 ## Contents
 
 1. [Show me how to setup a simple network](#1-show-me-how-to-set-up-a-simple-network)
-1. [How do I setup TLS](#2-how-do-i-setup-tls)
+2. [How do I set up TLS](#2-how-do-i-setup-tls)
+3. [How do I add a node to a network run using Java?](#3-how-do-i-add-a-node-to-a-network-run-using-java)
 
 ## Questions
 
@@ -103,7 +104,7 @@ Install dependencies:
 
 Then build the project:
 ```bash 
-mvn clean install
+mvn clean install -DskipTests
 ```
 
 Execute the networkmap:
@@ -115,7 +116,7 @@ java -jar network-map-service.jar
 
 Then following the remaining instruction in the [docker case](#using-docker)
 
-### 2. How do I setup TLS?
+### 2. How do I set up TLS?
 
 Corda places certain requirements for connecting to any network map that's been secure with TLS.
 Notably it requires formal certificates from any of the existing well-know root certificate authorities, recognised by the JRE.
@@ -154,3 +155,17 @@ java \
 -jar target/network-map-service.jar
 ```
 
+### 3. How do I add a node to a network run using Java?
+
+  + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
+    + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
+      be able to join the network
+  + Create a Corda node
+  + Clean out the node if required by deleting the contents of the `certificates` and `additional-node-infos` folders, and the `persistence.mv.db` and `network-parameters` files 
+  + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
+    `compatibilityZoneURL="http://localhost:8080"`
+  + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
+    folder under `certificates/`
+  + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
+  + Start the node using `java -jar corda.jar`
+  + Visit the network map UI at `https://localhost:8080` to see the node
