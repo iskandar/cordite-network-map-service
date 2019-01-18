@@ -310,6 +310,8 @@ class CertificateManager(
     return ByteArrayOutputStream().apply {
       X509KeyStore(TRUST_STORE_PASSWORD).apply {
         setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
+        setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
+        setCertificate("networkmap", networkMapCertAndKeyPair.certificate)
       }.internal.store(this, TRUST_STORE_PASSWORD.toCharArray())
     }.toByteArray()
   }
