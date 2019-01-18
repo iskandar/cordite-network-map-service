@@ -113,6 +113,7 @@ class CertificateManager(
       val payload = certificateRequestPayloadParser.parse(context.bodyAsString)
       payload.verify()
       val x500Name = payload.x500Name
+      logger.info("generating certman jks files for $x500Name")
       val stream = generateJKSZipOutputStream(x500Name)
       val bytes = stream.toByteArray()
       context.response()
