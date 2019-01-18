@@ -24,6 +24,7 @@ import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
+import io.vertx.core.impl.NoStackTraceThrowable
 
 class MongoTextStorage(mongoClient: MongoClient,
                        database: String = MongoStorage.DEFAULT_DATABASE,
@@ -47,7 +48,10 @@ class MongoTextStorage(mongoClient: MongoClient,
   fun get(key: String): Future<String> = collection.find(KeyValue::key eq key)
     .first()
     .toFuture()
-    .map { it.value }
+    .map {
+      if (it == null) throw NoStackTraceThrowable("did not find value for key $key")
+      it.value
+    }
 
   fun getOrDefault(key: String, default: String): Future<String> = collection.find(KeyValue::key eq key)
     .first()

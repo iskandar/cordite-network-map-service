@@ -22,7 +22,6 @@ import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.nodeapi.internal.network.SignedNetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -54,17 +53,6 @@ class ParametersUpdateStorage(client: MongoClient, databaseName: String, bucketN
   }
 }
 
-
-class SignedNetworkMapStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
-  : AbstractMongoFileStorage<SignedNetworkMap>(client, databaseName, bucketName){
-  companion object {
-    const val DEFAULT_BUCKET_NAME = "network-map"
-  }
-
-  override fun deserialize(data: ByteArray): SignedNetworkMap {
-    return data.deserializeOnContext()
-  }
-}
 
 class SignedNetworkParametersStorage(client: MongoClient, databaseName: String, bucketName: String = DEFAULT_BUCKET_NAME)
   : AbstractMongoFileStorage<SignedNetworkParameters>(client, databaseName, bucketName){
