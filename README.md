@@ -14,7 +14,6 @@
 - [Doorman protocol](#doorman-protocol)
   * [Retrieving the NetworkMap `network-map-truststore.jks`](#retrieving-the-networkmap--network-map-truststorejks)
 - [Certman protocol](#certman-protocol)
-- [How do I add a node to a network run using Java?](#how-do-i-add-a-node-to-a-network-run-using-java)
 - [Releasing NMS](#releasing-nms)
 - [License](#license)
 
@@ -120,19 +119,6 @@ openssl dgst -sha256 -sign domain.key domain.crt | base64 | cat domain.crt - | c
 This essentially signs the certificate with your private key and sends _only_ the certificate and signature to the network-map. 
 If the certificate passes validation, the request returns a zip file of the keystores required by the node. 
 These should be stored in the `<node-directory>/certificates`.
-
-## How do I add a node to a network run using Java?
-  + Start the network map service with TLS disabled (`$ java -Dtls=false -jar target/network-map-service.jar`)
-    + If you don't disable TLS and you don't have a valid TLS certificate for the network map service, nodes will not 
-      be able to join the network
-  + Create a Corda node
-  + Point the node to your network map service by adding the following line to the node's `node.conf` file: 
-    `compatibilityZoneURL="http://localhost:8080"`
-  + Download the network root truststore from `http://localhost:8080/network-map/truststore` and place it in the node's 
-    folder under `certificates/`
-  + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
-  + Start the node using `java -jar corda.jar`
-  + Visit the network map UI at `https://localhost:8080` to see the node
 
 ## Releasing NMS
 
