@@ -31,12 +31,12 @@ WORKDIR /opt/cordite
 
 RUN yum install -y java-1.8.0-openjdk-headless shadow-utils.x86_64 \
   && yum clean all \
-  && mkdir -p /opt/cordite/db /opt/cordite/logs \
+  && mkdir -p /opt/cordite/db /opt/cordite/logs /home/cordite \
   && groupadd -g 1000 -r cordite \
   && useradd -r -u 1000 -g cordite cordite \
   && chgrp -R 0 /opt/cordite \
   && chmod -R g=u /opt/cordite \
-  && chown -R cordite:cordite /opt/cordite
+  && chown -R cordite:cordite /opt/cordite /home/cordite
 
 USER cordite
 
