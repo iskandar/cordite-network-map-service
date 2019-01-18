@@ -30,13 +30,14 @@ import java.io.FileOutputStream
 /**
  * Authentication service for the REST service
  */
-class AuthService(private val adminUser: InMemoryUser, private val jksFile: File) {
+class AuthService(private val adminUser: InMemoryUser) {
   companion object {
     val log = loggerFor<AuthService>()
   }
 
   private val jwtSecret = "secret"
   private var jwtAuth: JWTAuth? = null
+  private val jksFile: File = File.createTempFile("jwt","jks").also { it.deleteOnExit() }
 
   fun login(request: LoginRequest): String {
     if (jwtAuth == null) {
