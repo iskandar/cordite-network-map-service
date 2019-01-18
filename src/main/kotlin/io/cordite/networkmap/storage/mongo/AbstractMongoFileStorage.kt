@@ -54,7 +54,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
   }
 
   override fun put(key: String, value: T): Future<Unit> {
-    val bytes = value.serializeOnContext().let { ByteBuffer.wrap(it.bytes) }
+    val bytes = serialize(value)
     val stream = bucket.openUploadStream(key)
     return stream.write(bytes).toFuture()
       .compose { stream.close().toFuture() }
@@ -165,6 +165,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       }
   }
 
+  protected open fun serialize(value: T): ByteBuffer = value.serializeOnContext().let { ByteBuffer.wrap(it.bytes) }
   protected abstract fun deserialize(data: ByteArray): T
 
   fun migrate(src: Storage<T>) : Future<Unit> {

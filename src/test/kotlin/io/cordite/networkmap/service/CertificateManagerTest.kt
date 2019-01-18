@@ -15,11 +15,10 @@
  */
 package io.cordite.networkmap.service
 
+import com.mongodb.reactivestreams.client.MongoClient
 import io.cordite.networkmap.keystore.toKeyStore
-import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
-import io.cordite.networkmap.utils.JunitMDCRule
-import io.cordite.networkmap.utils.catch
-import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.storage.mongo.CertificateAndKeyPairStorage
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -27,10 +26,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.save
-import org.junit.AfterClass
-import org.junit.ClassRule
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
 import java.nio.file.Files
@@ -45,10 +41,23 @@ class CertificateManagerTest {
     val mdcClassRule = JunitMDCRule()
 
     const val KEYSTORE_PASSWORD = "password"
+    private lateinit var mongoClient: MongoClient
+
+    init {
+      SerializationTestEnvironment.init()
+    }
+
+    @JvmStatic
+    @BeforeClass
+    fun beforeClass() {
+      mongoClient = TestDatabase.createMongoClient()
+    }
+
     @JvmStatic
     @AfterClass
     fun after() {
       vertx.close()
+      mongoClient.close()
     }
   }
 
@@ -69,7 +78,7 @@ class CertificateManagerTest {
       certManStrictEVCerts = false)
     val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
     keyStoreDirectory.deleteOnExit()
-    val store = CertificateAndKeyPairStorage(vertx, keyStoreDirectory)
+    val store = CertificateAndKeyPairStorage(mongoClient, TestDatabase.createUniqueDBName())
     val certManager = CertificateManager(vertx, store, certificateManagerConfig)
     val async = context.async()
     certManager.init()
@@ -82,7 +91,7 @@ class CertificateManagerTest {
   }
 
   private fun createRootTrustStore(caCertAndKeyPair: CertificateAndKeyPair): File? {
-    val trustStore = caCertAndKeyPair.toKeyStore(KEYSTORE_PASSWORD)
+    val trustStore = caCertAndKeyPair.toKeyStore("cert", "key", KEYSTORE_PASSWORD)
     val trustStoreFile = File.createTempFile("truststore", ".jks")
     trustStoreFile.deleteOnExit()
     trustStore.save(trustStoreFile.toPath(), KEYSTORE_PASSWORD)

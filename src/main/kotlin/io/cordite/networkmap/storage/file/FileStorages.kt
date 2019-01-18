@@ -148,7 +148,7 @@ class CertificateAndKeyPairStorage(
 
   override fun serialize(value: CertificateAndKeyPair, location: File): Future<Unit> {
     location.mkdirs()
-    val ks = value.toKeyStore(password)
+    val ks = value.toKeyStore(DEFAULT_CERT_ALIAS, DEFAULT_KEY_ALIAS, password)
     val ba = with(ByteArrayOutputStream()) {
       ks.store(this, parray)
       this.toByteArray()

@@ -103,7 +103,7 @@ class NetworkMapService(
   internal val storages = ServiceStorages(vertx, dbDirectory, mongoClient, mongoDatabase)
   private val adminService = AdminServiceImpl()
   internal lateinit var processor: NetworkMapServiceProcessor
-  private val authService = AuthService(user, File(storages.certAndKeys.resolveKey("jwt"), "jwt.jceks"))
+  private val authService = AuthService(user)
   internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
 
   fun startup(): Future<Unit> {

@@ -15,7 +15,6 @@
  */
 package io.cordite.networkmap.keystore
 
-import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.net.JksOptions
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -42,10 +41,6 @@ fun KeyStore.toJksOptions(keyStorePassword: String): JksOptions {
   jksOptions.password = keyStorePassword
   jksOptions.value = buffer
   return jksOptions
-}
-
-fun CertificateAndKeyPair.toKeyStore(password: String): KeyStore {
-  return this.toKeyStore(CertificateAndKeyPairStorage.DEFAULT_CERT_ALIAS, CertificateAndKeyPairStorage.DEFAULT_KEY_ALIAS, password)
 }
 
 fun CertificateAndKeyPair.toKeyStore(certAlias: String, keyAlias: String, password: String, certPath: List<X509Certificate> = listOf()): KeyStore {

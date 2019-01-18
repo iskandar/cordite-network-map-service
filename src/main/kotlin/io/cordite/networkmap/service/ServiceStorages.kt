@@ -17,7 +17,6 @@ package io.cordite.networkmap.service
 
 import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.core.logging.loggerFor
-import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.storage.file.TextStorage
 import io.cordite.networkmap.storage.mongo.*
@@ -48,7 +47,7 @@ class ServiceStorages(
     const val NETWORK_MAP_KEY = "latest-network-map" // key for latest network map hash
   }
 
-  val certAndKeys = CertificateAndKeyPairStorage(vertx, dbDirectory)
+  val certAndKeys = CertificateAndKeyPairStorage(mongoClient, mongoDatabase)
   val input = NetworkParameterInputsStorage(dbDirectory, vertx)
   val networkMap = SignedNetworkMapStorage(mongoClient, mongoDatabase)
   val nodeInfo = SignedNodeInfoStorage(mongoClient, mongoDatabase)
@@ -64,7 +63,7 @@ class ServiceStorages(
       networkMap.migrate(io.cordite.networkmap.storage.file.SignedNetworkMapStorage(vertx, dbDirectory)),
       text.migrate(TextStorage(vertx, dbDirectory)),
       nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
-      certAndKeys.makeDirs()
+      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, dbDirectory))
     ).mapUnit()
   }
 
