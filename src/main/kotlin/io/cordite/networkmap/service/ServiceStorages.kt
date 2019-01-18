@@ -73,6 +73,10 @@ class ServiceStorages(
       }
   }
 
+  fun getNetworkParameters(hash: SecureHash) : Future<NetworkParameters> {
+    return networkParameters.get(hash.toString()).map { it.verified() }
+  }
+
   fun getCurrentNetworkParameters() : Future<NetworkParameters> {
     return getCurrentSignedNetworkParameters().map { it.verified() }
       .catch { err ->

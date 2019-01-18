@@ -340,7 +340,20 @@ class NetworkMapServiceProcessor(
   internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant): Future<Unit> {
     return execute {
       logger.info("updating network parameters")
-      storages.getCurrentNetworkParameters()
+      // we need a base version of the network parameters to apply our changes to
+      // the following mechanism is frankly not safe until
+      // a. we have formally named changesets
+      // b. we add routines for pessimistic locking
+
+      // never the less, we do our best - this should be sufficient for a single node network map service
+      // do we have a scheduled network map update?
+      storages.getParameterUpdateOrNull()
+        .compose { update ->
+          when (update) {
+            null -> storages.getCurrentNetworkParameters()
+            else -> storages.getNetworkParameters(update.newParametersHash)
+          }
+        }
         .map { update(it) } // apply changeset and sign
         .compose { newNetworkParameters ->
           storages.storeNetworkParameters(newNetworkParameters, certs)
