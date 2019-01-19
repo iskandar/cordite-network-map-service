@@ -257,7 +257,7 @@ class NetworkMapAdminInterfaceTest {
     val async = context.async()
     var np : NetworkParameters? = null
 
-    service.storages.networkMap.get(ServiceStorages.NETWORK_MAP_KEY)
+    service.processor.createNetworkMap()
       .map { it.verified().networkParameterHash.toString() }
       .compose { service.storages.networkParameters.get(it) }
       .map { np = it.verified() }

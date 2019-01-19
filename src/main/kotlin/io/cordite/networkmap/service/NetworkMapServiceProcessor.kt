@@ -40,9 +40,9 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.core.MediaType
 
 /**
@@ -51,13 +51,9 @@ import javax.ws.rs.core.MediaType
  * and rebuilds the set of files to be served by the server
  */
 class NetworkMapServiceProcessor(
-  private val vertx: Vertx,
+  vertx: Vertx,
   private val storages: ServiceStorages,
   private val certificateManager: CertificateManager,
-  /**
-   * how long a change to the network parameters will be queued (and signalled as such in the [NetworkMap.parametersUpdate]) before being applied
-   */
-  private val networkMapQueueDelay: Duration,
   val paramUpdateDelay: Duration
 ) {
   companion object {
@@ -77,15 +73,11 @@ class NetworkMapServiceProcessor(
 
   // we use a single thread to queue changes to the map, to ensure consistency
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
-  private var networkMapRebuildTimerId: Long? = null
   private lateinit var certs: CertificateAndKeyPair
 
   fun start(): Future<Unit> {
     certs = certificateManager.networkMapCertAndKeyPair
-    return execute {
-      createNetworkParameters()
-        .compose { createNetworkMap() }
-    }
+    return execute { createNetworkParameters().mapUnit() }
   }
 
   fun stop() {}
@@ -98,7 +90,7 @@ class NetworkMapServiceProcessor(
 
       // TODO: optimise this to use the database, and avoid loading all nodes into memory
 
-        return storages.nodeInfo.getAll()
+      return storages.nodeInfo.getAll()
         .onSuccess { nodes ->
           // flatten the current nodes to Party -> PublicKey map
           val registered = nodes.flatMap { namedSignedNodeInfo ->
@@ -124,7 +116,6 @@ class NetworkMapServiceProcessor(
         .compose {
           val hash = signedNodeInfo.raw.sha256()
           storages.nodeInfo.put(hash.toString(), signedNodeInfo)
-            .compose { scheduleNetworkMapRebuild() }
             .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
         }
         .catch { ex ->
@@ -272,7 +263,6 @@ class NetworkMapServiceProcessor(
   fun deleteNode(nodeKey: String): Future<Unit> {
     logger.info("deleting node $nodeKey")
     return storages.nodeInfo.delete(nodeKey)
-      .compose { createNetworkMap() }
   }
 
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
@@ -284,8 +274,8 @@ class NetworkMapServiceProcessor(
           SimpleNotaryInfo(it.identity.name.serialize().hash.toString(), it)
         }
       }
-      .onSuccess {
-        simpleNodeInfos -> routingContext.setNoCache().end(simpleNodeInfos)
+      .onSuccess { simpleNodeInfos ->
+        routingContext.setNoCache().end(simpleNodeInfos)
       }
       .catch {
         routingContext.setNoCache().end(it)
@@ -326,29 +316,8 @@ class NetworkMapServiceProcessor(
 
   // BEGIN: core functions
 
-  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = "") : Future<Unit> {
+  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = ""): Future<Unit> {
     return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay))
-  }
-
-  /**
-   * we use this function to schedule a rebuild of the network map
-   * we do this to avoid masses of network map rebuilds in the case of several nodes joining
-   * or DoS attack
-   */
-  private fun scheduleNetworkMapRebuild() : Future<Unit> {
-    logger.info("queuing network map rebuild in $networkMapQueueDelay")
-    // cancel the old timer
-    networkMapRebuildTimerId = networkMapRebuildTimerId?.let { vertx.cancelTimer(it); null }
-    // setup a timer to rebuild the network map
-    return if (networkMapQueueDelay == Duration.ZERO) {
-      createNetworkMap()
-    } else {
-      vertx.setTimer(Math.max(1, networkMapQueueDelay.toMillis())) {
-        // we'll queue this on the executor thread to ensure consistency
-        execute { createNetworkMap() }
-      }
-      succeededFuture(Unit)
-    }
   }
 
   private fun createNetworkParameters(): Future<SecureHash> {
@@ -368,82 +337,71 @@ class NetworkMapServiceProcessor(
       }
   }
 
-  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant) : Future<Unit> {
+  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant): Future<Unit> {
     return execute {
       logger.info("updating network parameters")
-      storages.getCurrentNetworkParameters()
+      // we need a base version of the network parameters to apply our changes to
+      // the following mechanism is frankly not safe until
+      // a. we have formally named changesets
+      // b. we add routines for pessimistic locking
+
+      // never the less, we do our best - this should be sufficient for a single node network map service
+      // do we have a scheduled network map update?
+      storages.getParameterUpdateOrNull()
+        .compose { update ->
+          when (update) {
+            null -> storages.getCurrentNetworkParameters()
+            else -> storages.getNetworkParameters(update.newParametersHash)
+          }
+        }
         .map { update(it) } // apply changeset and sign
         .compose { newNetworkParameters ->
           storages.storeNetworkParameters(newNetworkParameters, certs)
         }
         .compose { hash ->
           if (activation <= Instant.now()) {
-            storages.storeCurrentParametersHash(hash)
-              .compose { createNetworkMap() }
+            storages.storeCurrentParametersHash(hash).mapUnit()
           } else {
             storages.storeNextParametersUpdate(ParametersUpdate(hash, description, activation))
-              .compose { scheduleNetworkMapRebuild() }
           }
         }
     }
   }
 
-  private val uniqueIdFountain = AtomicInteger(1)
-  private fun createNetworkMap(): Future<Unit> {
-    val id = uniqueIdFountain.getAndIncrement()
-    logger.info("($id) creating network map")
-    // collect the inputs from disk
+  fun createNetworkMap(): Future<SignedNetworkMap> {
     val fNodes = storages.nodeInfo.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
     val fParamUpdate = storages.getParameterUpdateOrNull()
     val fLatestParamHash = storages.getCurrentNetworkParametersHash()
-
+      .catch {
+        logger.error("failed to ")
+      }
     // when all collected
     return all(fNodes, fParamUpdate, fLatestParamHash)
       .map {
-        logger.info("($id) building network map object")
-        // build the network map
+        val nodes = fNodes.result()
+        val paramUpdate = fParamUpdate.result()
+        val latestParamHash = fLatestParamHash.result()
+
         NetworkMap(
-          networkParameterHash = fLatestParamHash.result(),
-          parametersUpdate = fParamUpdate.result(),
-          nodeInfoHashes = fNodes.result()
-        ).also { nm -> logger.info("($id) the new map will be $nm")}
+          networkParameterHash = latestParamHash,
+          parametersUpdate = paramUpdate,
+          nodeInfoHashes = nodes
+        )
       }.compose { nm ->
-        val snm = nm.sign(certs)
-        storages.storeNetworkMap(snm)
-      }
-      .compose {
-        logger.info("($id) checking if parameter update needs to be scheduled")
-        storages.getParameterUpdateOrNull()
-          .compose { parametersUpdate ->
-            try {
-              if (parametersUpdate != null) {
-                val delay = Duration.between(Instant.now(), parametersUpdate.updateDeadline)
-                logger.info("($id) scheduling parameter update ${parametersUpdate.newParametersHash} '${parametersUpdate.description}' in $delay")
-                vertx.setTimer(Math.max(1, delay.toMillis())) {
-                  logger.info("($id) applying parameter update ${parametersUpdate.newParametersHash}")
-                  storages.storeCurrentParametersHash(parametersUpdate.newParametersHash)
-                    .compose { storages.resetNextParametersUpdate() }
-                    .compose { createNetworkMap() }
-                    .onSuccess { logger.info("($id) parameter update applied ${parametersUpdate.newParametersHash} '${parametersUpdate.description}'") }
-                    .catch { logger.error("($id) failed to apply parameter update ${parametersUpdate.newParametersHash} '${parametersUpdate.description}'", it) }
-                }
-              } else {
-                logger.info("($id) no parameters update scheduled")
-              }
-              succeededFuture(Unit)
-            } catch (err: Throwable) {
-              logger.error("($id) failed to schedule timer", err)
-              failedFuture<Unit>(err)
+        when {
+          nm.parametersUpdate != null && (Instant.now() >= nm.parametersUpdate!!.updateDeadline) -> {
+            storages.resetNextParametersUpdate().map {
+              nm.copy(
+                networkParameterHash = nm.parametersUpdate!!.newParametersHash,
+                parametersUpdate = null)
             }
           }
-          .recover {
-            logger.info("($id) no planned parameter update found - scheduling nothing")
-            succeededFuture(Unit)
+          else -> {
+            succeededFuture(nm)
           }
+        }
       }
-      .catch {
-        logger.error("($id) failed to create network map", it)
-      }
+      .map { nm -> nm.sign(certs) }
   }
 
   // END: core functions

@@ -227,7 +227,18 @@ class NetworkMapService(
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   fun serveNetworkMap(context: RoutingContext) {
-    storages.networkMap.serve(ServiceStorages.NETWORK_MAP_KEY, context, cacheTimeout)
+    processor.createNetworkMap()
+      .onSuccess { snm ->
+        context.response().apply {
+          setCacheControl(cacheTimeout)
+          putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+          end(Buffer.buffer(snm.serializeOnContext().bytes))
+        }
+      }
+      .catch {
+        logger.error("failed to create signed network map")
+        context.end(it)
+      }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -384,7 +395,6 @@ class NetworkMapService(
       vertx = vertx,
       storages = storages,
       certificateManager = certificateManager,
-      networkMapQueueDelay = networkMapQueuedUpdateDelay,
       paramUpdateDelay = paramUpdateDelay
     )
     return processor.start()
