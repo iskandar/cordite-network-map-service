@@ -413,15 +413,26 @@ class NetworkMapServiceProcessor(
           nodeInfoHashes = nodes
         )
       }.compose { nm ->
+        logger.trace("base for network-map is: $nm")
+        val now = Instant.now()
         when {
-          nm.parametersUpdate != null && (Instant.now() >= nm.parametersUpdate!!.updateDeadline) -> {
-            storages.resetNextParametersUpdate().map {
-              nm.copy(
-                networkParameterHash = nm.parametersUpdate!!.newParametersHash,
-                parametersUpdate = null)
-            }
+          nm.parametersUpdate != null && (now >= nm.parametersUpdate!!.updateDeadline) -> {
+            logger.trace("applying network parameters update ${nm.parametersUpdate!!.newParametersHash}")
+            storages.storeCurrentParametersHash(nm.parametersUpdate!!.newParametersHash)
+              .compose {
+                storages.resetNextParametersUpdate().map {
+                  nm.copy(
+                    networkParameterHash = nm.parametersUpdate!!.newParametersHash,
+                    parametersUpdate = null)
+                }
+              }
+          }
+          nm.parametersUpdate != null && (now < nm.parametersUpdate!!.updateDeadline) -> {
+            logger.trace("parameter update is in the future - using the base nm")
+            succeededFuture(nm)
           }
           else -> {
+            logger.trace("no network update")
             succeededFuture(nm)
           }
         }
