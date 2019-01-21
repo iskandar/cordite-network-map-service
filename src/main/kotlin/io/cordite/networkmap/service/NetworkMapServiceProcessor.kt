@@ -24,6 +24,7 @@ import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
+import io.swagger.annotations.ApiParam
 import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
@@ -43,6 +44,7 @@ import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.time.Duration
 import java.time.Instant
+import javax.ws.rs.QueryParam
 import javax.ws.rs.core.MediaType
 
 /**
@@ -218,7 +220,8 @@ class NetworkMapServiceProcessor(
   @ApiOperation(value = "serve whitelist", response = String::class)
   fun serveWhitelist(routingContext: RoutingContext) {
     logger.trace("serving current whitelist")
-    storages.getCurrentNetworkParameters()
+    createNetworkMap()
+      .compose { storages.getNetworkParameters(it.networkParameterHash) }
       .map {
         it.whitelistedContractImplementations
           .flatMap { entry ->
@@ -268,7 +271,8 @@ class NetworkMapServiceProcessor(
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {
     logger.trace("serving current notaries")
-    storages.getCurrentNetworkParameters()
+    createNetworkMap()
+      .compose { storages.getNetworkParameters(it.networkParameterHash)}
       .map { networkParameters ->
         networkParameters.notaries.map {
           SimpleNotaryInfo(it.identity.name.serialize().hash.toString(), it)
@@ -280,6 +284,22 @@ class NetworkMapServiceProcessor(
       .catch {
         routingContext.setNoCache().end(it)
       }
+  }
+
+  @ApiOperation(value = "serve a page of network parameters", response = NetworkParameters::class, responseContainer = "Map")
+  fun getAllNetworkParameters(@ApiParam(name = "pageSize", value = "the page size", defaultValue = "10")
+                              @QueryParam("pageSize")
+                              pageSize: Int,
+                              @ApiParam(name = "page", value = "the page to load", defaultValue = "1")
+                              @QueryParam("page")
+                              page: Int) : Future<Map<String, NetworkParameters>> {
+    return storages.networkParameters.getPage(page, pageSize)
+      .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() } }
+  }
+
+  @ApiOperation(value = "serve current network map as a JSON document", response = NetworkMap::class)
+  fun getCurrentNetworkMap() : Future<NetworkMap> {
+    return createNetworkMap()
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -307,6 +327,7 @@ class NetworkMapServiceProcessor(
     produces = MediaType.APPLICATION_JSON, response = NetworkParameters::class)
   fun getCurrentNetworkParameters(context: RoutingContext) {
     logger.trace("serving current network parameters")
+    createNetworkMap().compose { storages.getNetworkParameters(it.networkParameterHash) }
     storages.getCurrentNetworkParameters()
       .onSuccess { context.end(it) }
       .catch { context.end(it) }
@@ -368,7 +389,11 @@ class NetworkMapServiceProcessor(
     }
   }
 
-  fun createNetworkMap(): Future<SignedNetworkMap> {
+  fun createSignedNetworkMap(): Future<SignedNetworkMap> {
+    return createNetworkMap().map { nm -> nm.sign(certs) }
+  }
+
+  private fun createNetworkMap(): Future<NetworkMap> {
     val fNodes = storages.nodeInfo.getKeys().map { keys -> keys.map { key -> SecureHash.parse(key) } }
     val fParamUpdate = storages.getParameterUpdateOrNull()
     val fLatestParamHash = storages.getCurrentNetworkParametersHash()
@@ -401,7 +426,6 @@ class NetworkMapServiceProcessor(
           }
         }
       }
-      .map { nm -> nm.sign(certs) }
   }
 
   // END: core functions
