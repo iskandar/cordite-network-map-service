@@ -337,7 +337,7 @@ class NetworkMapServiceProcessor(
       }
   }
 
-  internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant): Future<Unit> {
+  internal fun updateNetworkParameters(changeFunction: (NetworkParameters) -> NetworkParameters, description: String, activation: Instant): Future<Unit> {
     return execute {
       logger.info("updating network parameters")
       // we need a base version of the network parameters to apply our changes to
@@ -354,7 +354,7 @@ class NetworkMapServiceProcessor(
             else -> storages.getNetworkParameters(update.newParametersHash)
           }
         }
-        .map { update(it) } // apply changeset and sign
+        .map { changeFunction(it) } // apply changeset and sign
         .compose { newNetworkParameters ->
           storages.storeNetworkParameters(newNetworkParameters, certs)
         }

@@ -43,7 +43,6 @@ class ServiceStorages(
     private val logger = loggerFor<ServiceStorages>()
     const val CURRENT_PARAMETERS = "current-parameters" // key for current network parameters hash
     const val NEXT_PARAMS_UPDATE = "next-params-update" // key for next params update hash
-    const val NETWORK_MAP_KEY = "latest-network-map" // key for latest network map hash
   }
 
   val certAndKeys = CertificateAndKeyPairStorage(mongoClient, mongoDatabase)
