@@ -181,7 +181,9 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", processor::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", processor::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", processor::serveNodes)
-                get("$ADMIN_REST_ROOT/network-parameters", processor::getCurrentNetworkParameters)
+                get("$ADMIN_REST_ROOT/network-parameters", processor::getAllNetworkParameters)
+                get("$ADMIN_REST_ROOT/network-parameters/current", processor::getCurrentNetworkParameters)
+                get("$ADMIN_REST_ROOT/network-map", processor::getCurrentNetworkMap)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
@@ -227,7 +229,7 @@ class NetworkMapService(
   @ApiOperation(value = "Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.",
     produces = MediaType.APPLICATION_OCTET_STREAM, response = Buffer::class)
   fun serveNetworkMap(context: RoutingContext) {
-    processor.createNetworkMap()
+    processor.createSignedNetworkMap()
       .onSuccess { snm ->
         context.response().apply {
           setCacheControl(cacheTimeout)

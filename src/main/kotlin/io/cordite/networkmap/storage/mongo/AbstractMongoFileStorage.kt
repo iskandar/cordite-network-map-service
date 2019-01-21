@@ -115,6 +115,23 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       }
   }
 
+  fun getPage(page: Int, pageSize: Int): Future<Map<String, T>> {
+    return bucket.find().skip(pageSize * (page - 1)).limit(pageSize)
+      .toObservable()
+      .map { it.filename }
+      .toList()
+      .toSingle()
+      .toFuture<List<String>>()
+      .compose { keys ->
+        keys.map { key ->
+          get(key).map { key to it }
+        }.all()
+      }
+      .map { pairs ->
+        pairs.toMap()
+      }
+  }
+
   override fun delete(key: String): Future<Unit> {
     return bucket.find(Filters.eq("filename", key)).first().toFuture()
       .compose { fileDescriptor ->

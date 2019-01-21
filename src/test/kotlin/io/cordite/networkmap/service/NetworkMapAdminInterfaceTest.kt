@@ -257,11 +257,11 @@ class NetworkMapAdminInterfaceTest {
     val async = context.async()
     var np : NetworkParameters? = null
 
-    service.processor.createNetworkMap()
+    service.processor.createSignedNetworkMap()
       .map { it.verified().networkParameterHash.toString() }
       .compose { service.storages.networkParameters.get(it) }
       .map { np = it.verified() }
-      .compose { client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/network-parameters") }
+      .compose { client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/network-parameters/current") }
       .map { Json.decodeValue(it, NetworkParameters::class.java) }
       .onSuccess { context.assertEquals(np, it) }
       .onSuccess { async.complete() }
