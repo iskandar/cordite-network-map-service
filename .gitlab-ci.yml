@@ -4,6 +4,8 @@ stages:
  - test
  - release
 
+variables:
+
 # For more information on Maven see
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Maven.gitlab-ci.yml
 
@@ -29,6 +31,36 @@ build:maven:
     key: "$CI_JOB_NAME"
     paths:
       - .m2/repository
+  only:
+    - master
+    - /^[0-9]+-.*$/
+  artifacts:
+    paths:
+      - target/network-map-service.jar
+      - target/site/jacoco/index.html
+
+build:maven-release:
+  #  image: jimador/docker-jdk-8-maven-node
+  stage: build
+  variables:
+    NMS_VERSION: $CI_COMMIT_REF_NAME
+    MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+    MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+  script:
+    - mvn versions:set -DnewVersion=${NMS_VERSION:1}
+    - mvn $MAVEN_CLI_OPTS clean license:check package
+    - cat target/site/jacoco/index.html
+  #    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+  tags:
+    #    - etb3 # should be shared runners to stop queuing
+    - script-maven
+    - script-npm
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .m2/repository
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   artifacts:
     paths:
       - target/network-map-service.jar

@@ -71,8 +71,6 @@ class NetworkMapWithTLSCertTest {
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-      networkMapQueuedUpdateDelay = Duration.ZERO,
-      paramUpdateDelay = Duration.ZERO,
       tls = true,
       certPath = certPath,
       keyPath = keyPath,
@@ -80,7 +78,8 @@ class NetworkMapWithTLSCertTest {
       hostname = "127.0.0.1",
       webRoot = NetworkMapServiceTest.WEB_ROOT,
       mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName()
+      mongoDatabase = TestDatabase.createUniqueDBName(),
+      paramUpdateDelay = Duration.ZERO
     )
 
     val completed = Future.future<Unit>()

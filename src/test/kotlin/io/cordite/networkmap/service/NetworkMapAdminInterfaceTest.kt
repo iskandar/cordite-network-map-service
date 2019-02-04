@@ -67,14 +67,13 @@ class NetworkMapAdminInterfaceTest {
         user = InMemoryUser.createUser("", "sa", ""),
         port = port,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
-        networkMapQueuedUpdateDelay = Duration.ZERO,
-        paramUpdateDelay = Duration.ZERO,
         tls = true,
         vertx = vertx,
         hostname = "127.0.0.1",
         webRoot = NetworkMapServiceTest.WEB_ROOT,
         mongoClient = TestDatabase.createMongoClient(),
-        mongoDatabase = TestDatabase.createUniqueDBName()
+        mongoDatabase = TestDatabase.createUniqueDBName(),
+        paramUpdateDelay = Duration.ZERO
       )
 
       service.startup().setHandler {
@@ -266,5 +265,23 @@ class NetworkMapAdminInterfaceTest {
       .onSuccess { context.assertEquals(np, it) }
       .onSuccess { async.complete() }
       .catch { context.fail(it) }
+  }
+
+  @Test
+  fun `that we can download build properties`(context: TestContext) {
+    val async = context.async()
+    client.get("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/build-properties")
+      .exceptionHandler {
+        context.fail(it)
+      }
+      .handler { response ->
+        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode())
+        response.bodyHandler { buffer ->
+          val properties = Json.decodeValue(buffer, Map::class.java)
+          context.assertTrue(properties.isNotEmpty())
+          async.complete()
+        }
+      }
+      .end()
   }
 }

@@ -49,28 +49,27 @@ open class NetworkMapApp {
       }
       val mongoClient = MongoStorage.connect(this)
       NetworkMapService(
-          dbDirectory = dbDirectory,
-          user = user,
-          port = port,
-          cacheTimeout = cacheTimeout,
-          paramUpdateDelay = paramUpdateDelay,
-          networkMapQueuedUpdateDelay = networkMapUpdateDelay,
-          tls = tls,
-          certPath = certPath,
-          keyPath = keyPath,
-          hostname = hostname,
-          webRoot = webRoot,
-          certificateManagerConfig = CertificateManagerConfig(
-              root = root,
-              doorManEnabled = enableDoorman,
-              certManEnabled = enableCertman,
-              certManPKIVerficationEnabled = pkix,
-              certManRootCAsTrustStoreFile = truststore,
-              certManRootCAsTrustStorePassword = trustStorePassword,
-              certManStrictEVCerts = strictEV
-          ),
-          mongoClient = mongoClient,
-          mongoDatabase = mongodDatabase
+        dbDirectory = dbDirectory,
+        user = user,
+        port = port,
+        cacheTimeout = cacheTimeout,
+        tls = tls,
+        certPath = certPath,
+        keyPath = keyPath,
+        hostname = hostname,
+        webRoot = webRoot,
+        certificateManagerConfig = CertificateManagerConfig(
+            root = root,
+            doorManEnabled = enableDoorman,
+            certManEnabled = enableCertman,
+            certManPKIVerficationEnabled = pkix,
+            certManRootCAsTrustStoreFile = truststore,
+            certManRootCAsTrustStorePassword = trustStorePassword,
+            certManStrictEVCerts = strictEV
+        ),
+        mongoClient = mongoClient,
+        mongoDatabase = mongodDatabase,
+        paramUpdateDelay = paramUpdateDelay
       ).startup().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())
