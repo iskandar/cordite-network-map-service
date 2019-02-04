@@ -14,6 +14,8 @@
  *    limitations under the License.
  */
 
+import React from 'react';
+
 export const Sidebar = (props) => {
   return(
     <div id="sidebar" className="column sidebar-component">
