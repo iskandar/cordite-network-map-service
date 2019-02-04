@@ -15,8 +15,6 @@
  */
 
 export const Sidebar = (props) => {
-  console.log("sidebar props", props);
-
   return(
     <div id="sidebar" className="column sidebar-component">
       <ul>
