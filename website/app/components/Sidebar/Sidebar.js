@@ -13,9 +13,10 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-import React from 'react';
 
 export const Sidebar = (props) => {
+  console.log("sidebar props", props);
+
   return(
     <div id="sidebar" className="column sidebar-component">
       <ul>
@@ -60,6 +61,12 @@ export const Sidebar = (props) => {
             SWAGGER
           </button>
         </li>
+      </ul>
+      <ul>
+        <li><span class='sidebar-property'>version: {props.buildProperties["nms.version"]}</span></li>            
+        <li><span class='sidebar-property'>branch: {props.buildProperties["scmBranch"]}</span></li>
+        <li><span class='sidebar-property'>commit: {props.buildProperties["buildNumber"]}</span></li>
+        <li><span class='sidebar-property'>timestamp: {props.buildProperties["timestamp"]}</span></li>
       </ul>
     </div>
   );

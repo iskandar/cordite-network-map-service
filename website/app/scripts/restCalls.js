@@ -69,6 +69,17 @@ export async function getNotaries() {
   return notaries;
 }
 
+export async function getBuildProperties() {
+  const response = await fetch(`${url}/admin/api/build-properties`, {
+    method: 'GET',
+    headers: {
+      'accept': 'application/json'
+    }
+  });
+  let properties = await response.json();
+  return properties;
+}
+
 export async function getBraidAPI(){
   const response = await fetch(`${url}/braid/api`,{
     method: 'GET',

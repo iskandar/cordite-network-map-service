@@ -63,7 +63,6 @@ class NetworkMapService(
   user: InMemoryUser,
   private val port: Int,
   private val cacheTimeout: Duration,
-  private val networkMapQueuedUpdateDelay: Duration,
   private val tls: Boolean = true,
   private val certPath: String = "",
   private val keyPath: String = "",
@@ -95,6 +94,7 @@ class NetworkMapService(
     }
   }
 
+  private val buildProperties = NMSProperties.acquireProperties()
   private val root = webRoot.dropLastWhile { it == '/' }
 
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
@@ -183,6 +183,7 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/nodes", processor::serveNodes)
                 get("$ADMIN_REST_ROOT/network-parameters", processor::getAllNetworkParameters)
                 get("$ADMIN_REST_ROOT/network-parameters/current", processor::getCurrentNetworkParameters)
+                get("$ADMIN_REST_ROOT/build-properties", thisService::serveProperties)
                 get("$ADMIN_REST_ROOT/network-map", processor::getCurrentNetworkMap)
                 router {
                   route("/").handler { context ->
@@ -387,6 +388,9 @@ class NetworkMapService(
       }
     }
   }
+
+  @ApiOperation(value = "get the build-time properties")
+  fun serveProperties() = buildProperties
 
   private fun startCertManager(): Future<Unit> {
     return certificateManager.init()

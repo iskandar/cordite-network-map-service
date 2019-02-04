@@ -43,7 +43,6 @@ class CordaNodeTest {
     private val logger = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY : Duration = 100.millis
-    val NETWORK_MAP_QUEUE_DELAY : Duration = 100.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
 
     @JvmField
@@ -75,13 +74,12 @@ class CordaNodeTest {
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
-      networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
-      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       tls = false,
       vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
       mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName())
+      mongoDatabase = TestDatabase.createUniqueDBName(),
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY)
     service.startup().setHandler(context.asyncAssertSuccess())
   }
 

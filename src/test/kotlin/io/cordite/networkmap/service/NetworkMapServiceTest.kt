@@ -143,8 +143,6 @@ class NetworkMapServiceTest {
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
-      networkMapQueuedUpdateDelay = NETWORK_MAP_QUEUE_DELAY,
-      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
       tls = false,
       vertx = vertx,
       webRoot = WEB_ROOT,
@@ -157,7 +155,8 @@ class NetworkMapServiceTest {
         certManRootCAsTrustStorePassword = null,
         certManStrictEVCerts = false),
       mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName()
+      mongoDatabase = TestDatabase.createUniqueDBName(),
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY
     )
 
     val completed = Future.future<Unit>()
