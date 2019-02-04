@@ -14,9 +14,9 @@
  *    limitations under the License.
  */
 
-export const Sidebar = (props) => {
-  console.log("sidebar props", props);
+import React from 'react';
 
+export const Sidebar = (props) => {
   return(
     <div id="sidebar" className="column sidebar-component">
       <ul>
@@ -63,10 +63,10 @@ export const Sidebar = (props) => {
         </li>
       </ul>
       <ul>
-        <li><span class='sidebar-property'>version: {props.buildProperties["nms.version"]}</span></li>            
-        <li><span class='sidebar-property'>branch: {props.buildProperties["scmBranch"]}</span></li>
-        <li><span class='sidebar-property'>commit: {props.buildProperties["buildNumber"]}</span></li>
-        <li><span class='sidebar-property'>timestamp: {props.buildProperties["timestamp"]}</span></li>
+        <li><span className='sidebar-property'>version: {props.buildProperties["nms.version"]}</span></li>
+        <li><span className='sidebar-property'>branch: {props.buildProperties["scmBranch"]}</span></li>
+        <li><span className='sidebar-property'>commit: {props.buildProperties["buildNumber"]}</span></li>
+        <li><span className='sidebar-property'>timestamp: {props.buildProperties["timestamp"]}</span></li>
       </ul>
     </div>
   );
