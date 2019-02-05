@@ -15,14 +15,16 @@
  */
 package io.cordite.networkmap.storage.file
 
+import io.cordite.networkmap.serialisation.WhitelistSet
 import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
 import rx.Observable
@@ -91,25 +93,21 @@ class NetworkParameterInputsStorage(parentDir: File,
     return publishSubject
   }
 
-  fun readWhiteList(): Future<Map<String, List<AttachmentId>>> {
-    try {
-      return vertx.fileSystem().readFile(whitelistPath.absolutePath)
+  fun readWhiteList(): Future<WhitelistSet> {
+    return try {
+      vertx.fileSystem().readFile(whitelistPath.absolutePath)
         .map {
-          it.toString().lines()
-            .parseToWhitelistPairs()
-            .groupBy { it.first } // group by the FQN of classes to List<Pair<String, SecureHash>>>
-            .mapValues { it.value.map { it.second } } // remap to FQN -> List<SecureHash>
-            .toMap() // and generate the final map
+          it.toString().parseWhitelist()
         }
         .onSuccess {
           log.info("retrieved whitelist")
         }
         .recover {
           log.warn("whitelist file not found at ${whitelistPath.absolutePath}")
-          Future.succeededFuture<Map<String, List<AttachmentId>>>(emptyMap())
+          succeededFuture(WhitelistSet())
         }
     } catch (err: Throwable) {
-      return Future.failedFuture(err)
+      Future.failedFuture(err)
     }
   }
 
