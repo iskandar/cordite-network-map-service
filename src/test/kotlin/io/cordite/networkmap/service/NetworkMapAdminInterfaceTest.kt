@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
@@ -173,7 +174,7 @@ class NetworkMapAdminInterfaceTest {
       }
       .onSuccess {
         whitelist = it.toString()
-        val lines = whitelist.toWhitelistPairs()
+        val lines = whitelist.parseWhitelist()
         context.assertNotEquals(0, lines.size)
       }
       .compose {
@@ -193,8 +194,10 @@ class NetworkMapAdminInterfaceTest {
       .compose {
         // append a set of white list items
         log.info("appending to whitelist")
-        val updated = whitelist.toWhitelistPairs().drop(1)
-        val newWhiteList = updated.toWhitelistText()
+        val wls = whitelist.parseWhitelist()
+        val keyToRemove = wls.keys.first()
+        val updated = wls - keyToRemove
+        val newWhiteList = updated.toString()
         client.futurePut("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist", newWhiteList, "Authorization" to key)
       }
       .compose {
@@ -202,7 +205,7 @@ class NetworkMapAdminInterfaceTest {
         client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess {
-        context.assertEquals(whitelist.toWhitelistPairs().size - 1, it.toString().toWhitelistPairs().size)
+        context.assertEquals(whitelist.parseWhitelist().size - 1, it.toString().parseWhitelist().size)
       }
       .compose {
         // set the complete whitelist
@@ -214,7 +217,7 @@ class NetworkMapAdminInterfaceTest {
         client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/whitelist")
       }
       .onSuccess {
-        context.assertEquals(whitelist.lines().sorted().parseToWhitelistPairs(), it.toString().lines().sorted().parseToWhitelistPairs())
+        context.assertEquals(whitelist.parseWhitelist(), it.toString().parseWhitelist())
       }
       .onSuccess {
         async.complete()

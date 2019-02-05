@@ -18,6 +18,7 @@ package io.cordite.networkmap.utils
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.service.NetworkMapServiceProcessor
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.storage.file.SignedNodeInfoStorage
@@ -81,7 +82,7 @@ private fun collectNodeInfos(vertx: Vertx) = File(SAMPLE_NODES).getFiles()
 
 private fun createWhitelistChanges(vertx: Vertx) =
   File(SAMPLE_INPUTS, NetworkParameterInputsStorage.WHITELIST_NAME).let { vertx.fileSystem().readFileBlocking(it.absolutePath).toString() }
-    .let { Change.ReplaceWhiteList(it.toWhiteList()) }
+    .let { Change.ReplaceWhiteList(it.parseWhitelist()) }
 
 private fun createNonValidatingNotaryChanges(vertx: Vertx): Sequence<Change> {
   return File(SAMPLE_INPUTS, NetworkParameterInputsStorage.DEFAULT_DIR_NON_VALIDATING_NOTARIES).getFiles()

@@ -15,6 +15,8 @@
  */
 package io.cordite.networkmap.changeset
 
+import io.cordite.networkmap.serialisation.WhitelistSet
+import io.cordite.networkmap.serialisation.toWhitelistSet
 import io.vertx.core.json.Json
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
@@ -73,21 +75,20 @@ sealed class Change : Function<NetworkParameters, NetworkParameters> {
       )
   }
 
-  data class AppendWhiteList(val whitelist: Map<String, List<AttachmentId>>) : Change() {
+  data class AppendWhiteList(val whitelist: WhitelistSet) : Change() {
     override fun apply(networkParameters: NetworkParameters): NetworkParameters {
-      val flattenedOldList = networkParameters.whitelistedContractImplementations.flatMap { entry -> entry.value.map { attachmentId -> entry.key to attachmentId} }
-      val flattenedNewList = whitelist.flatMap { entry -> entry.value.map { attachmentId -> entry.key to attachmentId} }
-      val joined = (flattenedOldList + flattenedNewList).distinct().groupBy({it.first}, {it.second})
+      val lhs = networkParameters.whitelistedContractImplementations.toWhitelistSet()
+      val amended = lhs + whitelist
       return networkParameters.copy(
-        whitelistedContractImplementations = joined,
+        whitelistedContractImplementations = amended.toCordaWhitelist(),
         modifiedTime = Instant.now()
       )
     }
   }
 
-  data class ReplaceWhiteList(val whitelist: Map<String, List<AttachmentId>>) : Change() {
+  data class ReplaceWhiteList(val whitelist: WhitelistSet) : Change() {
     override fun apply(networkParameters: NetworkParameters) = networkParameters.copy(
-      whitelistedContractImplementations = whitelist,
+      whitelistedContractImplementations = whitelist.toCordaWhitelist(),
       modifiedTime = Instant.now()
     )
   }

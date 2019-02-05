@@ -20,6 +20,7 @@ package io.cordite.networkmap.service
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.serialisation.deserializeOnContext
+import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -178,7 +179,7 @@ class NetworkMapServiceProcessor(
     logger.info("appending to whitelist:\n$append")
     return try {
       logger.info("web request to append to whitelist $append")
-      val parsed = append.toWhiteList()
+      val parsed = append.parseWhitelist()
       val updater = changeSet(Change.AppendWhiteList(parsed))
       updateNetworkParameters(updater, "admin appending to the whitelist")
         .onSuccess {
@@ -197,7 +198,7 @@ class NetworkMapServiceProcessor(
   fun replaceWhitelist(replacement: String): Future<Unit> {
     logger.info("replacing current whitelist with: \n$replacement")
     return try {
-      val parsed = replacement.toWhiteList()
+      val parsed = replacement.parseWhitelist()
       val updater = changeSet(Change.ReplaceWhiteList(parsed))
       updateNetworkParameters(updater, "admin replacing the whitelist").mapUnit()
     } catch (err: Throwable) {
