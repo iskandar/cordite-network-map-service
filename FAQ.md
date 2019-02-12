@@ -5,6 +5,7 @@
 1. [Show me how to setup a simple network](#1-show-me-how-to-set-up-a-simple-network)
 2. [How do I set up TLS](#2-how-do-i-setup-tls)
 3. [How do I add a node to a network run using Java?](#3-how-do-i-add-a-node-to-a-network-run-using-java)
+4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 
 ## Questions
 
@@ -179,3 +180,7 @@ java \
   + Register the node with the network map service using `java -jar corda.jar --initial-registration --network-root-truststore-password trustpass`
   + Start the node using `java -jar corda.jar`
   + Visit the network map UI at `https://localhost:8080` to see the node
+
+### 4. How do I join the Cordite Test network
+
+See this awesome [video from André van der Heijden](https://www.youtube.com/watch?v=lfk-QSiv3xc).
