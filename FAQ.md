@@ -10,93 +10,22 @@
 
 ### 1. Show me how to set up a simple network
 
-There's two ways you can start a full network:
+Steps:
 
-* [Using Docker](#using-docker)
-* [Using Java](#using-java)
+1.1 Start the NMS
+1.2 Prepare the Cordapp project
+1.3 Register the Nodes
+1.4 Designate the Notary
 
-Once the service is running, you will be able to use the Admin UI for accessing network map at `https://localhost:8080` 
-with username 'sa' and password 'admin'.
+#### 1.1 Start the NMS ...
 
-#### Using Docker
+##### ... the Docker way
+- `docker run -p 8080:8080 cordite/network-map:v0.3.6` 
+- check it's started using a browser http://localhost:8080
 
-Start the docker instance. 
+##### ... the Java way
 
-```bash
-docker run -p 8080:8080 cordite/network-map
-```
-
-This will start the server, without TLS, and with doorman and certman enabled.
-
-You should see the following output:
-
-```bash
-starting networkmap with the following options
-auth-password               - ****
-auth-username               - sa
-cache-timeout               - 2S
-certman                     - true
-certman-pkix                - false
-certman-strict-ev           - false
-certman-truststore          - 
-certman-truststore-password - 
-db                          - .db
-doorman                     - true
-hostname                    - 0.0.0.0
-network-map-delay           - 1S
-param-update-delay          - 10S
-port                        - 8080
-root-ca-name                - CN="<replace me>", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB
-tls                         - false
-tls-cert-path               - 
-tls-key-path                - 
-web-root                    - /
-...
-2018-11-20 15:43:22,680 INFO  i.b.braid.corda.CordaSockJSHandler - root API mount for braid: /braid/api/
-2018-11-20 15:43:22,681 INFO  i.b.braid.corda.CordaSockJSHandler - mounting braid service network to http://localhost:8080/braid/api/network/braid/*
-2018-11-20 15:43:22,681 INFO  i.b.braid.corda.CordaSockJSHandler - mounting braid service flows to http://localhost:8080/braid/api/flows/braid/*
-2018-11-20 15:43:22,681 INFO  i.b.braid.corda.CordaSockJSHandler - mounting braid service admin to http://localhost:8080/braid/api/admin/braid/*
-2018-11-20 15:43:22,695 INFO  i.b.braid.corda.rest.RestMounter - swagger json bound to http://localhost:8080/swagger/swagger.json
-2018-11-20 15:43:22,696 INFO  i.b.braid.corda.rest.RestMounter - Swagger UI bound to http://localhost:8080/swagger
-2018-11-20 15:43:23,228 INFO  i.b.braid.corda.rest.RestMounter - REST end point bound to http://localhost:8080/
-2018-11-20 15:43:23,352 INFO  BasicInfo - Braid server started on                 : http://localhost:8080/braid/api/
-2018-11-20 15:43:23,487 INFO  i.c.n.s.NetworkMapServiceProcessor - saving network map
-2018-11-20 15:43:23,506 INFO  io.cordite.networkmap.NetworkMapApp - started
-...
-
-```
-
-Assuming you have a cordapp project based on the [Kotlin template](https://github.com/corda/cordapp-template-kotlin)
-
-```bash
-
-# we'll setup PartyA to use the network
-cd build/nodes/PartyA
-
-# delete all certificates, all additionalNodeInfos, the database, the network parameters
-rm -rf persistence.mv.db nodeInfo-* network-parameters certificates additional-node-infos
-
-# append a line to point to the network map 
-echo "compatibilityZoneURL=\"http://localhost:8080\"\n" >> node.conf
-
-# download the network map trust store
-curl -o /var/tmp/network-truststore.jks http://localhost:8080//network-map/truststore
-
-# initialise the node through the doorman
-java -jar corda.jar --initial-registration --network-root-truststore /var/tmp/network-truststore.jks --network-root-truststore-password trustpass
-
-```
-
-If everything was successful you should see:
-
-```bash
-Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '/Users/fuzz/dev/cordapp-template-kotlin/build/nodes/PartyA/certificates', it is advised to backup the private keys and certificates.
-Corda node will now terminate.
-```
-
-#### Using Java
-
-Right now, this project doesn't deploy to a public repo (it will soon!). In the meantime ...
+Alternatively you can run it using traditional Java development tools.
 
 Install dependencies: 
 * JDK 8u181
@@ -114,7 +43,85 @@ cd target
 java -jar network-map-service.jar
 ```
 
-Then following the remaining instruction in the [docker case](#using-docker)
+#### 1.2. Prepare the Cordapp project
+- [ ] checkout the cordapp kotlin template (or any other cordapp project)
+    
+    ```bash
+    git clone git@github.com:corda/cordapp-template-kotlin.git
+    ```
+
+- [ ] ensure that your cordapp X509 names have the following fields: 
+  * `L` - Location
+  * `C` - Country
+  * `O` - Organisation
+  * `OU` - Organisation Unit
+- [ ] build the nodes:
+  
+  ```bash
+  ./gradlew clean deployNodes
+  ```
+  
+- [ ] add the `compatibilityZoneURL` to the node.config within each node directory 
+
+  ```bash
+  pushd build/nodes
+  for N in */; do
+        echo 'compatibilityZoneURL="http://localhost:8080"' >> $N/node.conf
+  done
+  popd
+  ```
+- [ ] ensure that all state is removed from the node directories
+  
+  ```bash
+  pushd build/nodes
+  for N in */; do
+        pushd $N
+        rm -rf network-parameters nodeInfo-* persistence.mv.db certificates/*
+        popd
+  done
+  popd
+  ```
+  
+#### 1.3. Register the nodes
+  - [ ] download the network truststore
+
+      ```bash 
+      curl http://localhost:8080/network-map/truststore -o ~/tmp/network-truststore.jks
+      ```
+  - [ ] for each node run initial registration
+
+    ```bash
+    pushd build/nodes
+    for N in */; do
+          pushd $N
+          java -jar corda.jar --initial-registration --network-root-truststore ~/tmp/network-truststore.jks --network-root-truststore-password trustpass
+          popd
+    done
+    popd
+    ```
+  - [ ] in each node directory, start the node:
+
+    ```bash
+    java -jar corda.jar
+    ```
+  
+  - [ ] check that nodes have been registered with the NMS [http://localhost:8080](http://localhost:8080)
+
+#### 1.4 Designate the notary
+- [ ] login to the NMS API and cache the token
+
+  ```bash
+  TOKEN=`curl -X POST "http://localhost:8080//admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  ```
+
+- [ ] Upload the notary
+
+    ```bash
+    pushd build/nodes/Notary
+    NODEINFO=`ls nodeInfo*`
+    curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8080//admin/api/notaries/validating
+    popd
+    ```
 
 ### 2. How do I set up TLS?
 
