@@ -17,6 +17,17 @@
 - [Releasing NMS](#releasing-nms)
 - [License](#license)
 
+## This software is not intended for production
+
+In addition to the [license terms](https://gitlab.com/cordite/cordite/blob/master/LICENSE) please note that whilst this software is actively used in test networks, it's not suitable for production.
+Amongst other factors, please be aware:
+
+1. Keys are not stored in a HSM and crypto operations are executed in-process.
+2. The doorman protocol implementation doesn't have the necessary KYC human workflow - all CSRs to the doorman are automatically accepted.
+3. The integration tests do not cover HA configurations for either the service or the database.
+4. There are several features of the API that as yet have not been surfaced to the front-end and hence the front-end is limited for production admin dashboard.
+5. The admin access control is not integrated with typical ACL services used by enterprise organisations (e.g. ActiveDirectory etc).
+
 ## Supported tags and respective Dockerfile links
 * `v0.3.3`, `latest` - latest stable release
 * `edge` - latest master build, unstable
