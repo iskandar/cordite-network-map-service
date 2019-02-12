@@ -12,10 +12,10 @@
 
 Steps:
 
-1.1 Start the NMS
-1.2 Prepare the Cordapp project
-1.3 Register the Nodes
-1.4 Designate the Notary
+* 1.1 Start the NMS
+* 1.2 Prepare the Cordapp project
+* 1.3 Register the Nodes
+* 1.4 Designate the Notary
 
 #### 1.1 Start the NMS ...
 
