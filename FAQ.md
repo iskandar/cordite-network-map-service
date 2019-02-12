@@ -17,11 +17,8 @@ Steps:
 * 1.3 Register the Nodes
 * 1.4 Designate the Notary
 
-Video of the following section being demonstrated on a laptop:
+Video of the following section being demonstrated on a laptop available [here](https://www.youtube.com/watch?v=NczNdVxEZyM).
 
-<figure class="video_container">
-  <iframe width="560" height="315" src="https://www.youtube.com/embed/NczNdVxEZyM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</figure>
 
 #### 1.1 Start the NMS ...
 
