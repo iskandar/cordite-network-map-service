@@ -16,6 +16,8 @@
 
 package io.cordite.networkmap.storage.mongo
 
+import com.mongodb.ConnectionString
+import com.mongodb.MongoClientSettings
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Indexes
 import com.mongodb.reactivestreams.client.MongoClient
@@ -50,7 +52,13 @@ object MongoStorage {
       nmsOptions.mongoConnectionString
     }
 
-    return MongoClients.create(connectionString)
+    val settings = MongoClientSettings.builder()
+      .applyConnectionString(ConnectionString(connectionString))
+      .applyToConnectionPoolSettings {
+        it.maxSize(10)
+      }.build()
+
+    return MongoClients.create(settings)
   }
 
   private fun startEmbeddedDatabase(nmsOptions: NMSOptions): String {
