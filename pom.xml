@@ -29,6 +29,8 @@
     <npm.skip>false</npm.skip>
     <logback.version>1.2.3</logback.version>
     <flapdoodle.version>2.1.1</flapdoodle.version>
+    <node.version>v8.6.0</node.version>
+    <npm.version>5.3.0</npm.version>
   </properties>
 
   <repositories>
@@ -281,39 +283,43 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>1.7.6</version>
+
         <executions>
           <execution>
-            <id>clean-website</id>
-            <phase>clean</phase>
+            <id>install node and npm</id>
             <goals>
-              <goal>run</goal>
+              <goal>install-node-and-npm</goal>
             </goals>
             <configuration>
-              <target>
-                <delete dir="website/public"/>
-                <delete dir="website/node_modules"/>
-              </target>
+              <!-- See https://nodejs.org/dist/ for node and npm versions -->
+              <nodeVersion>${node.version}</nodeVersion>
+              <npmVersion>${npm.version}</npmVersion>
+              <workingDirectory>website</workingDirectory>
             </configuration>
           </execution>
+
           <execution>
-            <id>build-website</id>
-            <phase>generate-resources</phase>
+            <id>npm install</id>
             <goals>
-              <goal>run</goal>
+              <goal>npm</goal>
             </goals>
             <configuration>
-              <target>
-                <exec executable="${npm.exe}" failonerror="true" dir="website">
-                  <arg value="install"/>
-                </exec>
-                <exec executable="${npm.exe}" failonerror="true" dir="website">
-                  <arg value="run"/>
-                  <arg value="build"/>
-                </exec>
-              </target>
+              <arguments>install</arguments>
+              <workingDirectory>website</workingDirectory>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>npm run build</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run build</arguments>
+              <workingDirectory>website</workingDirectory>
             </configuration>
           </execution>
         </executions>
