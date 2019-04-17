@@ -264,6 +264,20 @@
     </resources>
     <plugins>
       <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>website/public</directory>
+            </fileset>
+            <fileset>
+              <directory>website/node_modules</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
         <!-- Create the property $buildNumber holding the current Git revision -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>buildnumber-maven-plugin</artifactId>
