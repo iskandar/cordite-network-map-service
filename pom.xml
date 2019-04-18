@@ -427,6 +427,20 @@
         <version>2.6</version>
         <executions>
           <execution>
+            <id>dist</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/distribution.xml</descriptor>
+              </descriptors>
+              <finalName>${project.artifactId}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+          <execution>
             <id>make-assembly</id>
             <phase>package</phase>
             <goals>
