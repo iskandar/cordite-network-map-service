@@ -42,6 +42,7 @@ USER cordite
 
 VOLUME /opt/cordite/db /opt/cordite/logs
 
-COPY target/network-map-service.jar /opt/cordite/network-map-service.jar
+COPY target/network-map-service/lib/ /opt/cordite/lib/
+COPY target/network-map-service/network-map-service.jar /opt/cordite/network-map-service.jar
 
-CMD ["/usr/bin/java", "-jar", "/opt/cordite/network-map-service.jar"]
+CMD ["/usr/bin/java", "-cp", "/opt/cordite/network-map-service.jar:/opt/cordite/lib/*", "io.cordite.networkmap.NetworkMapApp"]
