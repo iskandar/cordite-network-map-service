@@ -80,7 +80,7 @@ java -jar network-map-service.jar
   pushd build/nodes
   for N in */; do
         pushd $N
-        rm -rf network-parameters nodeInfo-* persistence.mv.db certificates/*
+        rm -rf network-parameters nodeInfo-* persistence.mv.db certificates/* additional-node-infos/*
         popd
   done
   popd
