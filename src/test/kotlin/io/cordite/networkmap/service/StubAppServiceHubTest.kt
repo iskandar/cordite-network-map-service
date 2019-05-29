@@ -24,6 +24,7 @@ import net.corda.core.serialization.SerializeAsToken
 import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
+import java.util.function.Consumer
 
 class StubAppServiceHubTest {
   companion object {
@@ -51,6 +52,7 @@ class StubAppServiceHubTest {
       ignore { transactionVerifierService }
       ignore { validatedTransactions }
       ignore { vaultService }
+      ignore { networkParametersService }
       ignore { cordaService(SerializeAsToken::class.java) }
       ignore { jdbcSession() }
       ignore { loadState(StateRef(SecureHash.zeroHash, 0)) }
@@ -70,6 +72,10 @@ class StubAppServiceHubTest {
             return 0
           }
         })
+      }
+      ignore { withEntityManager { } }
+      ignore {
+        withEntityManager(Consumer { })
       }
     }
   }

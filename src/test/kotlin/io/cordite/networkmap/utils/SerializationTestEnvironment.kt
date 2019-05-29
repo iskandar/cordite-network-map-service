@@ -16,16 +16,27 @@
 package io.cordite.networkmap.utils
 
 import io.cordite.networkmap.serialisation.SerializationEnvironment
-import net.corda.core.serialization.internal._globalSerializationEnv
-import net.corda.testing.internal.setGlobalSerialization
+import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.utilities.loggerFor
+import net.corda.testing.internal.createTestSerializationEnv
 
-class SerializationTestEnvironment {
+class SerializationTestEnvironment : SerializationEnvironment() {
   companion object {
+    val log = loggerFor<SerializationTestEnvironment>()
     fun init() {
-      if (_globalSerializationEnv.get() == null) {
-        setGlobalSerialization(true)
-      }
-      SerializationEnvironment.init()
+      SerializationTestEnvironment().setup()
     }
+  }
+
+  override fun initialiseSerialisationEnvironment() {
+    if (nodeSerializationEnv == null) {
+      nodeSerializationEnv = createSerializationEnvironment()
+    } else {
+      log.warn("SERIALIZATION ENV ALREADY SET")
+    }
+  }
+
+  override fun createSerializationEnvironment(): net.corda.core.serialization.internal.SerializationEnvironment {
+    return createTestSerializationEnv()
   }
 }

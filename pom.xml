@@ -14,17 +14,17 @@
   <properties>
     <nms.version>${project.version}</nms.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <kotlin.version>1.1.60</kotlin.version>
+    <kotlin.version>1.2.71</kotlin.version>
     <junit.version>4.12</junit.version>
-    <vertx.version>3.5.1</vertx.version>
-    <corda.version>3.3-corda</corda.version>
+    <vertx.version>3.7.0</vertx.version>
+    <corda.version>4.1-RC03</corda.version>
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     <jar.name>network-map-service</jar.name>
     <log4j.version>2.11.1</log4j.version>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
-    <braid.version>3.3.1</braid.version>
+    <braid.version>4.1.0-SNAPSHOT</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
     <logback.version>1.2.3</logback.version>
@@ -56,7 +56,11 @@
       <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies</url>
     </repository>
     <repository>
-      <id>3_jitpack</id>
+      <id>3_r3</id>
+      <url>https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases</url>
+    </repository>
+    <repository>
+      <id>4_jitpack</id>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -64,6 +68,10 @@
         <enabled>true</enabled>
       </snapshots>
       <url>https://jitpack.io</url>
+    </repository>
+    <repository>
+      <id>5_jcenter</id>
+      <url>https://jcenter.bintray.com</url>
     </repository>
   </repositories>
 
@@ -365,7 +373,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.0</version>
+        <version>2.22.2</version>
       </plugin>
       <plugin>
         <groupId>com.mycila</groupId>

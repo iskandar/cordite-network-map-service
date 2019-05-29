@@ -17,7 +17,6 @@
 
 package io.cordite.networkmap.service
 
-import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
@@ -77,8 +76,6 @@ class NetworkMapService(
     certManRootCAsTrustStoreFile = null,
     certManRootCAsTrustStorePassword = null,
     certManStrictEVCerts = false),
-  val mongoClient: MongoClient,
-  val mongoDatabase: String,
   val paramUpdateDelay: Duration
 ) {
   companion object {
@@ -100,7 +97,7 @@ class NetworkMapService(
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
-  internal val storages = ServiceStorages(vertx, dbDirectory, mongoClient, mongoDatabase)
+  internal val storages = ServiceStorages(vertx, dbDirectory)
   private val adminService = AdminServiceImpl()
   internal lateinit var processor: NetworkMapServiceProcessor
   private val authService = AuthService(user)
@@ -116,7 +113,6 @@ class NetworkMapService(
 
   fun shutdown(): Future<Unit> {
     processor.stop()
-    mongoClient.close()
     return Future.succeededFuture(Unit)
   }
 
@@ -224,6 +220,10 @@ class NetworkMapService(
     } catch (err: Throwable) {
       return Future.failedFuture(err)
     }
+  }
+
+  internal fun addNotaryInfos(notaryInfos: List<NotaryInfo>) : Future<String> {
+    return processor.addNotaryInfos(notaryInfos)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

@@ -107,14 +107,18 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
     return read(key).recover { succeededFuture(default) }
   }
 
+  override fun getAll(keys: List<String>) : Future<Map<String, T>> {
+    return keys.map { key ->
+      read(key).map { key to it }
+    }.all()
+      .map { it.toMap() }
+  }
+
   override fun getAll(): Future<Map<String, T>> {
     return getKeys()
       .compose { keys ->
-        keys.map { key ->
-          read(key).map { key to it }
-        }.all()
+        getAll(keys)
       }
-      .map { it.toMap() }
   }
 
   override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {

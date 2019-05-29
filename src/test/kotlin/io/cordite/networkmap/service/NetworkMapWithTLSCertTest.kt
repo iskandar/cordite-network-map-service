@@ -37,7 +37,7 @@ class NetworkMapWithTLSCertTest {
     val mdcClassRule = JunitMDCRule()
 
     init {
-      SerializationTestEnvironment.init()
+//      SerializationTestEnvironment.init()
     }
   }
 
@@ -77,8 +77,6 @@ class NetworkMapWithTLSCertTest {
       vertx = vertx,
       hostname = "127.0.0.1",
       webRoot = NetworkMapServiceTest.WEB_ROOT,
-      mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName(),
       paramUpdateDelay = Duration.ZERO
     )
 

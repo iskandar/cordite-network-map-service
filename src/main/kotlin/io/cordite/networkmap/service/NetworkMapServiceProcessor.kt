@@ -166,12 +166,20 @@ class NetworkMapServiceProcessor(
     logger.info("adding validating notary")
     return try {
       val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
-      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), true)))
-      updateNetworkParameters(updater, "admin adding validating notary").map { "OK" }
+      addNotaryInfo(NotaryInfo(nodeInfo.legalIdentities.first(), true))
     } catch (err: Throwable) {
       logger.error("failed to add validating notary", err)
       Future.failedFuture(err)
     }
+  }
+
+  internal fun addNotaryInfo(notaryInfo: NotaryInfo): Future<String> {
+    return addNotaryInfos(listOf(notaryInfo))
+  }
+
+  internal fun addNotaryInfos(notaryInfos: List<NotaryInfo>): Future<String> {
+    val updater = changeSet(notaryInfos.map { Change.AddNotary(it) })
+    return updateNetworkParameters(updater, "admin adding notaries $notaryInfos").map { "OK" }
   }
 
   @ApiOperation(value = "append to the whitelist")
@@ -273,7 +281,7 @@ class NetworkMapServiceProcessor(
   fun serveNotaries(routingContext: RoutingContext) {
     logger.trace("serving current notaries")
     createNetworkMap()
-      .compose { storages.getNetworkParameters(it.networkParameterHash)}
+      .compose { storages.getNetworkParameters(it.networkParameterHash) }
       .map { networkParameters ->
         networkParameters.notaries.map {
           SimpleNotaryInfo(it.identity.name.serialize().hash.toString(), it)
@@ -293,13 +301,17 @@ class NetworkMapServiceProcessor(
                               pageSize: Int,
                               @ApiParam(name = "page", value = "the page to load", defaultValue = "1")
                               @QueryParam("page")
-                              page: Int) : Future<Map<String, NetworkParameters>> {
-    return storages.networkParameters.getPage(page, pageSize)
-      .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() } }
+                              page: Int): Future<Map<String, NetworkParameters>> {
+    assert(page > 0) { "page should be 1 or greater - received $page" }
+    assert(pageSize > 0) { "pageSize should 1 or greater - received $page" }
+    return storages.networkParameters.getKeys().map {
+      it.drop((page - 1) * pageSize)
+    }.compose { storages.networkParameters.getAll(it) }
+      .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() }}
   }
 
   @ApiOperation(value = "serve current network map as a JSON document", response = NetworkMap::class)
-  fun getCurrentNetworkMap() : Future<NetworkMap> {
+  fun getCurrentNetworkMap(): Future<NetworkMap> {
     return createNetworkMap()
   }
 

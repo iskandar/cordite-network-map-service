@@ -18,33 +18,25 @@ package io.cordite.networkmap.serialisation
 import com.fasterxml.jackson.databind.module.SimpleModule
 import io.vertx.core.json.Json
 import net.corda.client.jackson.JacksonSupport
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.SerializationFactoryImpl
 import java.security.PublicKey
 
-class SerializationEnvironment {
+open class SerializationEnvironment {
   companion object {
     private val log = loggerFor<SerializationEnvironment>()
 
-    init {
-      initialiseJackson()
-      initialiseSerialisationEnvironment()
-    }
-
     fun init() {
-      // implicit static causes one-time init of this class
+      SerializationEnvironment().setup()
     }
 
     @Suppress("DEPRECATION")
@@ -58,31 +50,35 @@ class SerializationEnvironment {
       Json.prettyMapper.registerModule(module)
     }
 
-    private fun initialiseSerialisationEnvironment() {
-      if (_globalSerializationEnv.get() != null) {
-        // special case when we're running in an integration test with a node
-        return
-      }
-
-      if (nodeSerializationEnv == null) {
-        val factory = NMSSerializationFactoryImpl("nms-factory").apply {
-          registerScheme(KryoClientSerializationScheme())
-          registerScheme(AMQPServerSerializationScheme(emptyList()))
-        }
-        val serializationEnv = SerializationEnvironmentImpl(
-          factory,
-          AMQP_P2P_CONTEXT
-        )
-        nodeSerializationEnv = serializationEnv
-      } else {
-        log.error("***** SERIALIZATION ENVIRONMENT ALREADY SET! ******")
-      }
-    }
   }
 
   private class NMSSerializationFactoryImpl(val name: String) : SerializationFactoryImpl()
-}
 
+  fun setup() {
+    initialiseJackson()
+    initialiseSerialisationEnvironment()
+  }
+
+  protected open fun initialiseSerialisationEnvironment() {
+    val serializationEnv = createSerializationEnvironment()
+    if (nodeSerializationEnv == null) {
+      log.info("setting node serialisation env")
+      nodeSerializationEnv = serializationEnv
+    } else {
+      log.error("***** SERIALIZATION ENVIRONMENT ALREADY SET! ******")
+    }
+  }
+
+  protected open fun createSerializationEnvironment(): net.corda.core.serialization.internal.SerializationEnvironment {
+    val factory = NMSSerializationFactoryImpl("nms-factory").apply {
+      registerScheme(AMQPServerSerializationScheme(emptyList()))
+    }
+    return net.corda.core.serialization.internal.SerializationEnvironment.with(
+      serializationFactory = factory,
+      p2pContext = AMQP_P2P_CONTEXT
+    )
+  }
+}
 
 fun <T : Any> T.serializeOnContext(): ByteSequence {
   return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {

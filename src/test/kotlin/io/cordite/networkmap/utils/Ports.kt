@@ -15,9 +15,15 @@
  */
 package io.cordite.networkmap.utils
 
+import net.corda.testing.driver.PortAllocation
 import java.net.ServerSocket
 
 fun getFreePort(): Int {
   return ServerSocket(0).use { it.localPort }
 }
 
+class FreePortAllocation : PortAllocation() {
+  override fun nextPort(): Int {
+    return ServerSocket(0).use { it.localPort }
+  }
+}

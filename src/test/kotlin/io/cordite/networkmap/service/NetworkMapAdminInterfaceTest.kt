@@ -26,7 +26,7 @@ import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import io.vertx.kotlin.core.json.JsonObject
+import io.vertx.kotlin.core.json.jsonObjectOf
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.loggerFor
 import org.junit.*
@@ -72,8 +72,6 @@ class NetworkMapAdminInterfaceTest {
         vertx = vertx,
         hostname = "127.0.0.1",
         webRoot = NetworkMapServiceTest.WEB_ROOT,
-        mongoClient = TestDatabase.createMongoClient(),
-        mongoDatabase = TestDatabase.createUniqueDBName(),
         paramUpdateDelay = Duration.ZERO
       )
 
@@ -121,7 +119,7 @@ class NetworkMapAdminInterfaceTest {
     var whitelist = ""
 
     log.info("logging in")
-    client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/login", JsonObject("user" to "sa", "password" to ""))
+    client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/login", jsonObjectOf("user" to "sa", "password" to ""))
       .onSuccess {
         key = "Bearer $it"
         log.info("key: $key")
@@ -243,21 +241,19 @@ class NetworkMapAdminInterfaceTest {
   @Test
   fun `that downloading a certificate from the doorman with unknown csr id returns no content`(context: TestContext) {
     val async = context.async()
-    client.get("${NetworkMapServiceTest.WEB_ROOT}/certificate/999")
-      .exceptionHandler {
-        context.fail(it)
-      }
-      .handler {
-        context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, it.statusCode())
-        async.complete()
-      }
-      .end()
+    @Suppress("DEPRECATION")
+    client.get("${NetworkMapServiceTest.WEB_ROOT}/certificate/999") {
+      context.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, it.statusCode())
+      async.complete()
+    }.exceptionHandler {
+      context.fail(it)
+    }.end()
   }
 
   @Test
   fun `that we can retrieve the current network parameters`(context: TestContext) {
     val async = context.async()
-    var np : NetworkParameters? = null
+    var np: NetworkParameters? = null
 
     service.processor.createSignedNetworkMap()
       .map { it.verified().networkParameterHash.toString() }
@@ -273,18 +269,16 @@ class NetworkMapAdminInterfaceTest {
   @Test
   fun `that we can download build properties`(context: TestContext) {
     val async = context.async()
-    client.get("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/build-properties")
-      .exceptionHandler {
-        context.fail(it)
+    @Suppress("DEPRECATION")
+    client.get("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/build-properties") { response ->
+      context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode())
+      response.bodyHandler { buffer ->
+        val properties = Json.decodeValue(buffer, Map::class.java)
+        context.assertTrue(properties.isNotEmpty())
+        async.complete()
       }
-      .handler { response ->
-        context.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode())
-        response.bodyHandler { buffer ->
-          val properties = Json.decodeValue(buffer, Map::class.java)
-          context.assertTrue(properties.isNotEmpty())
-          async.complete()
-        }
-      }
-      .end()
+    }.exceptionHandler {
+      context.fail(it)
+    }.end()
   }
 }
