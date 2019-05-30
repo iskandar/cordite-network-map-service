@@ -34,6 +34,7 @@ build:maven:
     paths:
       - target/network-map-service.jar
       - target/site/jacoco/index.html
+      - target/network-map-service/
 
 build:maven-release:
   image: jimador/docker-jdk-8-maven-node
