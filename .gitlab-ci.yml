@@ -57,7 +57,7 @@ build:maven-release:
     paths:
       - target/network-map-service.jar
       - target/site/jacoco/index.html
-      - target/network-map-service
+      - target/network-map-service/**
 
 #code_quality:
 #  stage: build
