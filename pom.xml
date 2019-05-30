@@ -24,7 +24,7 @@
     <log4j.version>2.11.1</log4j.version>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
-    <braid.version>4.1.0-SNAPSHOT</braid.version>
+    <braid.version>4.1.0-RC01</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
     <logback.version>1.2.3</logback.version>
