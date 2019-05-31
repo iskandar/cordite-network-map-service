@@ -358,6 +358,7 @@
             <exclude>build/**</exclude>
             <exclude>LICENSE</exclude>
             <exclude>**/.babelrc</exclude>
+            <exclude>website/public/**/*</exclude>
           </excludes>
           <includes>
             <include>**/*.kt</include>
