@@ -20,6 +20,7 @@
     <corda.version>4.1-RC03</corda.version>
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
+    <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
     <jar.name>network-map-service</jar.name>
     <log4j.version>2.11.1</log4j.version>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
@@ -305,51 +306,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>com.github.eirslett</groupId>
-        <artifactId>frontend-maven-plugin</artifactId>
-        <version>1.7.6</version>
-
-        <executions>
-          <execution>
-            <id>install node and npm</id>
-            <goals>
-              <goal>install-node-and-npm</goal>
-            </goals>
-            <configuration>
-              <!-- See https://nodejs.org/dist/ for node and npm versions -->
-              <nodeVersion>${node.version}</nodeVersion>
-              <npmVersion>${npm.version}</npmVersion>
-              <workingDirectory>website</workingDirectory>
-            </configuration>
-          </execution>
-
-          <execution>
-            <id>npm install</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>install</arguments>
-              <workingDirectory>website</workingDirectory>
-            </configuration>
-          </execution>
-
-          <execution>
-            <id>npm run build</id>
-            <goals>
-              <goal>npm</goal>
-            </goals>
-            <configuration>
-              <arguments>run build</arguments>
-              <workingDirectory>website</workingDirectory>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <skip>${npm.skip}</skip>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
         <version>${kotlin.version}</version>
@@ -452,7 +408,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.1.1</version>
         <executions>
           <execution>
             <id>dist</id>
@@ -466,6 +422,7 @@
               </descriptors>
               <finalName>${project.artifactId}</finalName>
               <appendAssemblyId>false</appendAssemblyId>
+              <archiveBaseDirectory>${project.basedir}</archiveBaseDirectory>
             </configuration>
           </execution>
           <execution>
@@ -485,6 +442,7 @@
               </descriptorRefs>
               <appendAssemblyId>false</appendAssemblyId>
               <finalName>${jar.name}</finalName>
+              <archiveBaseDirectory>${project.basedir}</archiveBaseDirectory>
             </configuration>
           </execution>
         </executions>
