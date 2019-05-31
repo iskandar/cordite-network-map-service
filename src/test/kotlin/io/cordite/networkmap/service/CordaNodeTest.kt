@@ -24,7 +24,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
@@ -41,7 +40,7 @@ import java.time.Duration
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
-    private val logger = loggerFor<CordaNodeTest>()
+    val log = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY : Duration = 100.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
@@ -96,22 +95,23 @@ class CordaNodeTest {
   fun `run node`(context: TestContext) {
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
-    logger.info("starting up the driver")
+    log.info("starting up the driver")
     val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), null, {
       service.addNotaryInfos(it)
     }, rootCert)
 
+    val portAllocation = FreePortAllocation()
     internalDriver(
-      portAllocation = PortAllocation.Incremental(13000),
+      portAllocation = portAllocation,
       compatibilityZone = zoneParams,
       notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
       notaryCustomOverrides = mapOf("devMode" to false),
       startNodesInProcess = true
     ) {
       val user = User("user1", "test", permissions = setOf())
-      logger.info("start up the node")
+      log.info("start up the node")
       val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false)).getOrThrow() as InProcessImpl
-      logger.info("node started. going to sleep to wait for the NMS to update")
+      log.info("node started. going to sleep to wait for the NMS to update")
       Thread.sleep(2000) // plenty of time for the NMS to synchronise
       val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
