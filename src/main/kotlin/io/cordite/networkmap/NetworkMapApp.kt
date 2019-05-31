@@ -18,7 +18,6 @@ package io.cordite.networkmap
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.service.CertificateManagerConfig
 import io.cordite.networkmap.service.NetworkMapService
-import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
 import kotlin.system.exitProcess
@@ -47,7 +46,6 @@ open class NetworkMapApp {
         println("failed to find truststore ${truststore.path}")
         exitProcess(-1)
       }
-      val mongoClient = MongoStorage.connect(this)
       NetworkMapService(
         dbDirectory = dbDirectory,
         user = user,
@@ -67,8 +65,6 @@ open class NetworkMapApp {
             certManRootCAsTrustStorePassword = trustStorePassword,
             certManStrictEVCerts = strictEV
         ),
-        mongoClient = mongoClient,
-        mongoDatabase = mongodDatabase,
         paramUpdateDelay = paramUpdateDelay
       ).startup().setHandler {
         if (it.failed()) {

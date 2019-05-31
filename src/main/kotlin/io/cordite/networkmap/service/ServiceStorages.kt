@@ -15,11 +15,8 @@
  */
 package io.cordite.networkmap.service
 
-import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.core.logging.loggerFor
-import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
-import io.cordite.networkmap.storage.file.TextStorage
-import io.cordite.networkmap.storage.mongo.*
+import io.cordite.networkmap.storage.file.*
 import io.cordite.networkmap.utils.all
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.mapUnit
@@ -34,10 +31,8 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.File
 
 class ServiceStorages(
-  private val vertx: Vertx,
-  private val dbDirectory: File,
-  mongoClient: MongoClient,
-  mongoDatabase: String
+  vertx: Vertx,
+  dbDirectory: File
 ) {
   companion object {
     private val logger = loggerFor<ServiceStorages>()
@@ -45,26 +40,38 @@ class ServiceStorages(
     const val NEXT_PARAMS_UPDATE = "next-params-update" // key for next params update hash
   }
 
-  val certAndKeys = CertificateAndKeyPairStorage(mongoClient, mongoDatabase)
+  val certAndKeys = CertificateAndKeyPairStorage(vertx, dbDirectory)
   val input = NetworkParameterInputsStorage(dbDirectory, vertx)
-  val nodeInfo = SignedNodeInfoStorage(mongoClient, mongoDatabase)
-  val networkParameters = SignedNetworkParametersStorage(mongoClient, mongoDatabase)
-  private val parameterUpdate = ParametersUpdateStorage(mongoClient, mongoDatabase)
-  val text = MongoTextStorage(mongoClient, mongoDatabase)
+  val nodeInfo = SignedNodeInfoStorage(vertx, dbDirectory)
+  val networkParameters = SignedNetworkParametersStorage(vertx, dbDirectory)
+  private val parameterUpdate = ParametersUpdateStorage(vertx, dbDirectory)
+  val text = TextStorage(vertx, dbDirectory)
 
   fun setupStorage(): Future<Unit> {
     return all(
+      certAndKeys.makeDirs(),
       input.makeDirs(),
-      networkParameters.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, dbDirectory)),
-      parameterUpdate.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, dbDirectory)),
-      // TODO: add something to clear down cached networkmaps on the filesystem from previous versions
-      text.migrate(TextStorage(vertx, dbDirectory)),
-      nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
-      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, dbDirectory))
+      nodeInfo.makeDirs(),
+      networkParameters.makeDirs(),
+      parameterUpdate.makeDirs(),
+      text.makeDirs()
+      /*, migrate()*/
     ).mapUnit()
   }
 
-  fun getCurrentNetworkParametersHash() : Future<SecureHash> {
+  // TODO: Re-enable when database solution has stabilised
+//  private fun migrate(): Future<Unit> {
+//    return all(
+//      networkParameters.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, dbDirectory)),
+//      parameterUpdate.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, dbDirectory)),
+//      // TODO: add something to clear down cached networkmaps on the filesystem from previous versions
+//      text.migrate(TextStorage(vertx, dbDirectory)),
+//      nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
+//      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, dbDirectory))
+//    ).mapUnit()
+//  }
+
+  fun getCurrentNetworkParametersHash(): Future<SecureHash> {
     return text.get(CURRENT_PARAMETERS)
       .map { SecureHash.parse(it) as SecureHash }
       .catch { err ->
@@ -72,44 +79,44 @@ class ServiceStorages(
       }
   }
 
-  fun getNetworkParameters(hash: SecureHash) : Future<NetworkParameters> {
+  fun getNetworkParameters(hash: SecureHash): Future<NetworkParameters> {
     return networkParameters.get(hash.toString()).map { it.verified() }
   }
 
-  fun getCurrentNetworkParameters() : Future<NetworkParameters> {
+  fun getCurrentNetworkParameters(): Future<NetworkParameters> {
     return getCurrentSignedNetworkParameters().map { it.verified() }
       .catch { err ->
         logger.error("failed to get current network parameters", err)
       }
   }
 
-  fun getCurrentSignedNetworkParameters() : Future<SignedNetworkParameters> {
+  fun getCurrentSignedNetworkParameters(): Future<SignedNetworkParameters> {
     return text.get(CURRENT_PARAMETERS).compose { key -> networkParameters.get(key) }
       .catch { err ->
         logger.error("failed to get current signed network parameters", err)
       }
   }
 
-  fun storeCurrentParametersHash(hash: SecureHash) : Future<SecureHash> {
+  fun storeCurrentParametersHash(hash: SecureHash): Future<SecureHash> {
     logger.info("storing current network parameters $hash")
     return text.put(CURRENT_PARAMETERS, hash.toString()).map { hash }
   }
 
-  fun storeNextParametersUpdate(parametersUpdate: ParametersUpdate) : Future<Unit> {
+  fun storeNextParametersUpdate(parametersUpdate: ParametersUpdate): Future<Unit> {
     logger.info("storing next parameter update $parametersUpdate")
     return parameterUpdate.put(NEXT_PARAMS_UPDATE, parametersUpdate)
   }
 
-  fun resetNextParametersUpdate() : Future<Unit> {
+  fun resetNextParametersUpdate(): Future<Unit> {
     logger.info("resetting next parameter update")
     return parameterUpdate.delete(NEXT_PARAMS_UPDATE)
   }
 
-  fun getParameterUpdateOrNull() : Future<ParametersUpdate?> {
+  fun getParameterUpdateOrNull(): Future<ParametersUpdate?> {
     return parameterUpdate.getOrNull(NEXT_PARAMS_UPDATE)
   }
 
-  fun storeNetworkParameters(newParams: NetworkParameters, certs: CertificateAndKeyPair) : Future<SecureHash> {
+  fun storeNetworkParameters(newParams: NetworkParameters, certs: CertificateAndKeyPair): Future<SecureHash> {
     val signed = newParams.sign(certs)
     val hash = signed.raw.hash
     logger.info("storing network parameters $hash with values $newParams")

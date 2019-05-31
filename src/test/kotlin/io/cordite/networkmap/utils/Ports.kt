@@ -15,9 +15,28 @@
  */
 package io.cordite.networkmap.utils
 
+import net.corda.testing.driver.PortAllocation
+import java.io.IOException
 import java.net.ServerSocket
+import java.util.*
 
 fun getFreePort(): Int {
   return ServerSocket(0).use { it.localPort }
 }
 
+class FreePortAllocation(val range: IntRange = 10_000 .. 30_000) : PortAllocation() {
+  companion object {
+    private const val RETRIES = 10
+  }
+  private val random = Random()
+  private val span = range.last - range.first
+  override fun nextPort(): Int {
+    return generateSequence { random.nextDouble() }.map { it -> (range.first + (span * it)).toInt() }.take(RETRIES).firstOrNull() { port ->
+      try {
+        ServerSocket(port).use { true }
+      } catch (err: IOException) {
+        false
+      }
+    } ?: error("failed to locate an unused port with $RETRIES retries")
+  }
+}

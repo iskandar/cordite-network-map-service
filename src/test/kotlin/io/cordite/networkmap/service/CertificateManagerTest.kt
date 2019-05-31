@@ -17,7 +17,7 @@ package io.cordite.networkmap.service
 
 import com.mongodb.reactivestreams.client.MongoClient
 import io.cordite.networkmap.keystore.toKeyStore
-import io.cordite.networkmap.storage.mongo.CertificateAndKeyPairStorage
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
@@ -42,6 +42,7 @@ class CertificateManagerTest {
 
     const val KEYSTORE_PASSWORD = "password"
     private lateinit var mongoClient: MongoClient
+    private val dbDirectory = createTempDir()
 
     init {
       SerializationTestEnvironment.init()
@@ -78,7 +79,7 @@ class CertificateManagerTest {
       certManStrictEVCerts = false)
     val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
     keyStoreDirectory.deleteOnExit()
-    val store = CertificateAndKeyPairStorage(mongoClient, TestDatabase.createUniqueDBName())
+    val store = CertificateAndKeyPairStorage(vertx, dbDirectory)
     val certManager = CertificateManager(vertx, store, certificateManagerConfig)
     val async = context.async()
     certManager.init()

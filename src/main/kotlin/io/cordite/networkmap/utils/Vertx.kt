@@ -143,7 +143,7 @@ fun <T> Vertx.executeBlocking(fn: () -> T): Future<T> {
       f.fail(err)
     }
   }) {
-    result.completer().handle(it)
+    result.handle(it)
   }
   return result
 }
@@ -155,7 +155,7 @@ fun <T> Future<T>.onSuccess(fn: (T) -> Unit): Future<T> {
       if (it.succeeded()) {
         fn(it.result())
       }
-      result.completer().handle(it)
+      result.handle(it)
     } catch (err: Throwable) {
       result.fail(err)
     }
@@ -170,7 +170,7 @@ fun <T> Future<T>.catch(fn: (Throwable) -> Unit): Future<T> {
       if (it.failed()) {
         fn(it.cause())
       }
-      result.completer().handle(it)
+      result.handle(it)
     } catch (err: Throwable) {
       result.fail(err)
     }
@@ -183,7 +183,7 @@ fun <T> Future<T>.finally(fn: (AsyncResult<T>) -> Unit): Future<T> {
   setHandler {
     try {
       fn(it)
-      result.completer().handle(it)
+      result.handle(it)
     } catch (err: Throwable) {
       result.fail(err)
     }
@@ -236,23 +236,23 @@ fun all(vararg futures: Future<*>): Future<List<*>> {
 }
 
 fun FileSystem.mkdirs(path: String): Future<Void> {
-  return withFuture { mkdirs(path, it.completer()) }
+  return withFuture { mkdirs(path, it) }
 }
 
 fun FileSystem.readFile(path: String): Future<Buffer> {
-  return withFuture { readFile(path, it.completer()) }
+  return withFuture { readFile(path, it) }
 }
 
 fun FileSystem.writeFile(path: String, byteArray: ByteArray): Future<Void> {
-  return withFuture { writeFile(path, Buffer.buffer(byteArray), it.completer()) }
+  return withFuture { writeFile(path, Buffer.buffer(byteArray), it) }
 }
 
 fun FileSystem.readDir(path: String): Future<List<String>> {
-  return withFuture { readDir(path, it.completer()) }
+  return withFuture { readDir(path, it) }
 }
 
 fun FileSystem.copy(from: String, to: String): Future<Void> {
-  return withFuture { copy(from, to, it.completer()) }
+  return withFuture { copy(from, to, it) }
 }
 
 fun FileSystem.readFiles(dirPath: String): Future<List<Pair<String, Buffer>>> {

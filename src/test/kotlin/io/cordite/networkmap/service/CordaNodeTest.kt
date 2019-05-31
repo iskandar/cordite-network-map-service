@@ -20,17 +20,17 @@ import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.internalServices
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
+import net.corda.testing.node.internal.internalDriver
 import org.junit.*
 import org.junit.runner.RunWith
 import java.net.URL
@@ -40,7 +40,7 @@ import java.time.Duration
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
   companion object {
-    private val logger = loggerFor<CordaNodeTest>()
+    val log = loggerFor<CordaNodeTest>()
     val CACHE_TIMEOUT = 1.millis
     val NETWORK_PARAM_UPDATE_DELAY : Duration = 100.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
@@ -51,6 +51,7 @@ class CordaNodeTest {
 
     init {
       SerializationTestEnvironment.init()
+      LogInitialiser.init()
     }
   }
 
@@ -77,8 +78,6 @@ class CordaNodeTest {
       tls = false,
       vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
-      mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName(),
       paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY)
     service.startup().setHandler(context.asyncAssertSuccess())
   }
@@ -94,21 +93,26 @@ class CordaNodeTest {
 
   @Test
   fun `run node`(context: TestContext) {
-    // in the vain hope to make the serialization context harmonious between two servers that really don't want to play in the same process
-    _globalSerializationEnv.set(null)
-
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
-    logger.info("starting up the driver")
-    driverWithCompatZone(SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), {
-      // TODO: register notaries
-    }, rootCert), DriverParameters(waitForAllNodesToFinish = false, isDebug = true, startNodesInProcess = true)) {
+    log.info("starting up the driver")
+    val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), null, {
+      service.addNotaryInfos(it)
+    }, rootCert)
+
+    val portAllocation = FreePortAllocation()
+    internalDriver(
+      portAllocation = portAllocation,
+      compatibilityZone = zoneParams,
+      notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
+      notaryCustomOverrides = mapOf("devMode" to false),
+      startNodesInProcess = true
+    ) {
       val user = User("user1", "test", permissions = setOf())
-      logger.info("start up the node")
-      val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user)).getOrThrow() as InProcessImpl
-      logger.info("node started. going to sleep to wait for the NMS to update")
+      log.info("start up the node")
+      val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false)).getOrThrow() as InProcessImpl
+      log.info("node started. going to sleep to wait for the NMS to update")
       Thread.sleep(2000) // plenty of time for the NMS to synchronise
-      // we'll directly access the network map and compare
       val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
       val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
@@ -130,6 +134,8 @@ class CordaNodeTest {
       }
       .setHandler(context.asyncAssertSuccess())
     async.awaitSuccess()
-    return NetworkMapClient(URL("http://localhost:$port$webRoot"), rootCert, MOCK_VERSION_INFO)
+    return NetworkMapClient(URL("http://localhost:$port$webRoot"), MOCK_VERSION_INFO).apply {
+      start(rootCert)
+    }
   }
 }

@@ -15,10 +15,7 @@
  */
 package io.cordite.networkmap.service
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.flows.FlowLogic
@@ -45,12 +42,14 @@ import java.math.BigInteger
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
+import java.util.function.Consumer
+import javax.persistence.EntityManager
 
 /**
  * A stub class to simulate the service hub - we need this for Braid Corda
  * Technically braid-corda's core could be moved to core
  */
-class StubAppServiceHub : AppServiceHub {
+class StubAppServiceHub() : AppServiceHub {
   companion object {
     private val NAME = CordaX500Name("Network Map Service", "London", "GB")
     private val partyAndCertificate = getTestPartyAndCertificate(Party(NAME, entropyToKeyPair(BigInteger.valueOf(40)).public))
@@ -95,7 +94,9 @@ class StubAppServiceHub : AppServiceHub {
   override val validatedTransactions: TransactionStorage
     get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
   override val vaultService: VaultService
-    get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+    get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates
+  override val networkParametersService: NetworkParametersService
+    get() = TODO("not implemented")
 
   override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
     TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -125,6 +126,18 @@ class StubAppServiceHub : AppServiceHub {
   }
 
   override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
+    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+  }
+
+  override fun loadContractAttachment(stateRef: StateRef): Attachment {
+    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+  }
+
+  override fun withEntityManager(block: Consumer<EntityManager>) {
+    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+  }
+
+  override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
     TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
   }
 }

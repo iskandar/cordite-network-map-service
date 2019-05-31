@@ -42,6 +42,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.junit.*
+import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -154,13 +155,11 @@ class NetworkMapServiceTest {
         certManRootCAsTrustStoreFile = null,
         certManRootCAsTrustStorePassword = null,
         certManStrictEVCerts = false),
-      mongoClient = TestDatabase.createMongoClient(),
-      mongoDatabase = TestDatabase.createUniqueDBName(),
       paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY
     )
 
     val completed = Future.future<Unit>()
-    service.startup().setHandler(completed.completer())
+    service.startup().setHandler(completed)
     completed
       .compose {  service.processor.initialiseWithTestData(vertx = vertx, includeNodes = false) }
       .setHandler(context.asyncAssertSuccess())
@@ -268,27 +267,27 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
 
-    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOT}/generate")
+    @Suppress("DEPRECATION")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOT}/generate") { it ->
+      if (it.isOkay()) {
+
+      } else {
+        context.fail("failed with ${it.statusMessage()}")
+      }
+      it.bodyHandler { body ->
+        ZipInputStream(ByteArrayInputStream(body.bytes)).use {
+          var entry = it.nextEntry
+          while (entry != null) {
+
+            entry = it.nextEntry
+          }
+          async.complete()
+        }
+      }
+    }
       .putHeader(HttpHeaders.CONTENT_LENGTH, payload.length.toString())
       .exceptionHandler {
         context.fail(it)
-      }
-      .handler { it ->
-        if (it.isOkay()) {
-
-        } else {
-          context.fail("failed with ${it.statusMessage()}")
-        }
-        it.bodyHandler { body ->
-          ZipInputStream(ByteArrayInputStream(body.bytes)).use {
-            var entry = it.nextEntry
-            while (entry != null) {
-
-              entry = it.nextEntry
-            }
-            async.complete()
-          }
-        }
       }
       .end(payload)
   }
@@ -298,7 +297,9 @@ class NetworkMapServiceTest {
 
 
   private fun createNetworkMapClient(): NetworkMapClient {
-    return NetworkMapClient(URL("http://localhost:$port$WEB_ROOT"), service.certificateManager.rootCertificateAndKeyPair.certificate, MOCK_VERSION_INFO)
+    return NetworkMapClient(URL("http://localhost:$port$WEB_ROOT"), MOCK_VERSION_INFO).apply {
+      start(service.certificateManager.rootCertificateAndKeyPair.certificate)
+    }
   }
 
   private fun createTempDir(): File {

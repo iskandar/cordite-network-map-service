@@ -76,7 +76,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
   override fun getOrNull(key: String): Future<T?> {
     return exists(key)
       .compose { exists ->
-        when  {
+        when {
           exists -> get(key)
           else -> succeededFuture()
         }
@@ -86,7 +86,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
   override fun getOrDefault(key: String, default: T): Future<T> {
     return exists(key)
       .compose { exists ->
-        when  {
+        when {
           exists -> get(key)
           else -> succeededFuture(default)
         }
@@ -98,20 +98,24 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       .toObservable()
       .map { it.filename }
       .toList()
-      .toSingle()
       .toFuture<List<String>>()
+  }
+
+  override fun getAll(keys: List<String>): Future<Map<String, T>> {
+    return keys.map { key ->
+      get(key).map { key to it }
+    }
+      .all()
+      .map { pairs ->
+        pairs.toMap()
+      }
   }
 
   override fun getAll(): Future<Map<String, T>> {
     // nominal implementation - very slow - considering speeding up
     return getKeys()
       .compose { keys ->
-        keys.map { key ->
-          get(key).map { key to it }
-        }.all()
-      }
-      .map { pairs ->
-        pairs.toMap()
+        getAll(keys)
       }
   }
 
@@ -120,7 +124,6 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       .toObservable()
       .map { it.filename }
       .toList()
-      .toSingle()
       .toFuture<List<String>>()
       .compose { keys ->
         keys.map { key ->
@@ -185,7 +188,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
   protected open fun serialize(value: T): ByteBuffer = value.serializeOnContext().let { ByteBuffer.wrap(it.bytes) }
   protected abstract fun deserialize(data: ByteArray): T
 
-  fun migrate(src: Storage<T>) : Future<Unit> {
+  fun migrate(src: Storage<T>): Future<Unit> {
     val name = this.javaClass.simpleName
     return src.getAll()
       .compose { keyedItems ->
