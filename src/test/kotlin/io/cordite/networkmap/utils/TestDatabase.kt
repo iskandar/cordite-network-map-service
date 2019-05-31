@@ -22,7 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object TestDatabase {
   private val fountain = AtomicInteger(1)
-  private val embeddedMongo = MongoStorage.startEmbeddedDatabase(createTempDir(), isDaemon = true)
+  private val embeddedMongo by lazy {
+    MongoStorage.startEmbeddedDatabase(createTempDir(), isDaemon = true)
+  }
   fun createMongoClient(): MongoClient = MongoClients.create(embeddedMongo.connectionString)
   fun createUniqueDBName() = "db-${fountain.getAndIncrement()}"
 }
