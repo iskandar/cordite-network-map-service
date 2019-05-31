@@ -20,8 +20,10 @@ import io.swagger.annotations.ApiModelProperty
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.AuthProvider
+import io.vertx.ext.auth.KeyStoreOptions
 import io.vertx.ext.auth.jwt.JWTAuth
-import io.vertx.ext.auth.jwt.JWTOptions
+import io.vertx.ext.auth.jwt.JWTAuthOptions
+import io.vertx.ext.jwt.JWTOptions
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.loggerFor
 import java.io.File
@@ -37,7 +39,7 @@ class AuthService(private val adminUser: InMemoryUser) {
 
   private val jwtSecret = "secret"
   private var jwtAuth: JWTAuth? = null
-  private val jksFile: File = File.createTempFile("jwt","jks").also { it.deleteOnExit() }
+  private val jksFile: File = File.createTempFile("jwt", "jks").also { it.deleteOnExit() }
 
   fun login(request: LoginRequest): String {
     if (jwtAuth == null) {
@@ -55,10 +57,14 @@ class AuthService(private val adminUser: InMemoryUser) {
   fun createAuthProvider(vertx: Vertx): AuthProvider {
     return jwtAuth ?: run {
       ensureJWTKeyStoreExists()
-      jwtAuth = JWTAuth.create(vertx, JsonObject().put("keyStore", JsonObject()
-        .put("path", this.jksFile.absolutePath)
-        .put("type", "jceks")
-        .put("password", jwtSecret)))
+      val jwtAuthOptions = JWTAuthOptions()
+        .setKeyStore(
+          KeyStoreOptions()
+            .setPath(this.jksFile.absolutePath)
+            .setPassword(jwtSecret)
+            .setType("jceks"))
+
+      jwtAuth = JWTAuth.create(vertx, jwtAuthOptions)
       jwtAuth!!
     }
   }

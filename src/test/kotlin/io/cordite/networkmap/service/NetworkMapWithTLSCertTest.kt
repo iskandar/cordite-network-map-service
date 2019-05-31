@@ -81,7 +81,7 @@ class NetworkMapWithTLSCertTest {
     )
 
     val completed = Future.future<Unit>()
-    service.startup().setHandler(completed.completer())
+    service.startup().setHandler(completed)
     completed
       .compose {  service.processor.initialiseWithTestData(vertx) }
       .setHandler(context.asyncAssertSuccess())

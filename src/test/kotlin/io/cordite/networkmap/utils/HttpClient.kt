@@ -58,7 +58,17 @@ fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>): 
 
 fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()
+  @Suppress("DEPRECATION")
   this.request(method, uri)
+  { response ->
+    if (response.failed) {
+      result.fail(response.statusMessage())
+    } else {
+      response.bodyHandler { buffer ->
+        result.complete(buffer)
+      }
+    }
+  }
     .putHeader(HttpHeaders.CONTENT_LENGTH, body.length().toString())
     .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
     .apply {
@@ -69,15 +79,6 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vara
     .exceptionHandler {
       result.fail(it)
     }
-    .handler { response ->
-      if (response.failed) {
-        result.fail(response.statusMessage())
-      } else {
-        response.bodyHandler { buffer ->
-          result.complete(buffer)
-        }
-      }
-    }
     .end(body)
   return result
 }
@@ -85,7 +86,17 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vara
 
 fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()
+  @Suppress("DEPRECATION")
   this.request(method, uri)
+  { response ->
+    if (response.failed) {
+      result.fail(response.statusMessage())
+    } else {
+      response.bodyHandler { buffer ->
+        result.complete(buffer)
+      }
+    }
+  }
     .putHeader(HttpHeaders.CONTENT_LENGTH, body.length.toString())
     .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
     .apply {
@@ -95,15 +106,6 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vara
     }
     .exceptionHandler {
       result.fail(it)
-    }
-    .handler { response ->
-      if (response.failed) {
-        result.fail(response.statusMessage())
-      } else {
-        response.bodyHandler { buffer ->
-          result.complete(buffer)
-        }
-      }
     }
     .end(body)
   return result

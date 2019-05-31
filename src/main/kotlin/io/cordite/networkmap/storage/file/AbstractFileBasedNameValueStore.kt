@@ -39,7 +39,7 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
   companion object {
     inline fun <reified T : Any> deserialize(file: File, vertx: Vertx): Future<T> {
       val result = Future.future<Buffer>()
-      vertx.fileSystem().readFile(file.absolutePath, result.completer())
+      vertx.fileSystem().readFile(file.absolutePath, result)
       return result.map {
         it.bytes.deserializeOnContext<T>()
       }
@@ -47,14 +47,14 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
 
     inline fun <reified T : Any> serialize(value: T, file: File, vertx: Vertx): Future<Unit> {
       val result = Future.future<Void>()
-      vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value.serializeOnContext().bytes), result.completer())
+      vertx.fileSystem().writeFile(file.absolutePath, Buffer.buffer(value.serializeOnContext().bytes), result)
       return result.map { Unit }
     }
   }
 
   fun makeDirs(): Future<Unit> {
     val result = future<Void>()
-    vertx.fileSystem().mkdirs(dir.absolutePath, result.completer())
+    vertx.fileSystem().mkdirs(dir.absolutePath, result)
     return result.map { Unit }
   }
 
@@ -70,7 +70,7 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
   override fun delete(key: String): Future<Unit> {
     val file = resolveKey(key)
     val result = future<Void>()
-    vertx.fileSystem().deleteRecursive(file.absolutePath, true, result.completer())
+    vertx.fileSystem().deleteRecursive(file.absolutePath, true, result)
     return result.map { Unit }
   }
 
@@ -88,11 +88,11 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
 
   override fun getKeys(): Future<List<String>> {
     val fExists = future<Boolean>()
-    vertx.fileSystem().exists(dir.absolutePath, fExists.completer())
+    vertx.fileSystem().exists(dir.absolutePath, fExists)
     return fExists.compose { exists ->
       if (exists) {
         val result = future<List<String>>()
-        vertx.fileSystem().readDir(dir.absolutePath, result.completer())
+        vertx.fileSystem().readDir(dir.absolutePath, result)
         result
       } else {
         succeededFuture<List<String>>(listOf())
@@ -138,7 +138,7 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
   override fun exists(key: String): Future<Boolean> {
     val file = resolveKey(key)
     val result = future<Boolean>()
-    vertx.fileSystem().exists(file.absolutePath, result.completer())
+    vertx.fileSystem().exists(file.absolutePath, result)
     return result
   }
 
@@ -154,7 +154,7 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
         result.fail(it.cause())
       } else {
         if (it.result()) {
-          deserialize(file).setHandler(result.completer())
+          deserialize(file).setHandler(result)
         } else {
           result.fail("could not find key $key")
         }

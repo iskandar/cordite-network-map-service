@@ -159,7 +159,7 @@ class NetworkMapServiceTest {
     )
 
     val completed = Future.future<Unit>()
-    service.startup().setHandler(completed.completer())
+    service.startup().setHandler(completed)
     completed
       .compose {  service.processor.initialiseWithTestData(vertx = vertx, includeNodes = false) }
       .setHandler(context.asyncAssertSuccess())
@@ -267,27 +267,27 @@ class NetworkMapServiceTest {
     val client = vertx.createHttpClient(HttpClientOptions().setDefaultHost("localhost").setDefaultPort(port))
     val async = context.async()
 
-    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOT}/generate")
+    @Suppress("DEPRECATION")
+    client.post("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.CERTMAN_REST_ROOT}/generate") { it ->
+      if (it.isOkay()) {
+
+      } else {
+        context.fail("failed with ${it.statusMessage()}")
+      }
+      it.bodyHandler { body ->
+        ZipInputStream(ByteArrayInputStream(body.bytes)).use {
+          var entry = it.nextEntry
+          while (entry != null) {
+
+            entry = it.nextEntry
+          }
+          async.complete()
+        }
+      }
+    }
       .putHeader(HttpHeaders.CONTENT_LENGTH, payload.length.toString())
       .exceptionHandler {
         context.fail(it)
-      }
-      .handler { it ->
-        if (it.isOkay()) {
-
-        } else {
-          context.fail("failed with ${it.statusMessage()}")
-        }
-        it.bodyHandler { body ->
-          ZipInputStream(ByteArrayInputStream(body.bytes)).use {
-            var entry = it.nextEntry
-            while (entry != null) {
-
-              entry = it.nextEntry
-            }
-            async.complete()
-          }
-        }
       }
       .end(payload)
   }

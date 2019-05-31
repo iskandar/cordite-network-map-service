@@ -172,13 +172,13 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
 
   override fun deserialize(location: File): Future<String> {
     val result = future<Buffer>()
-    vertx.fileSystem().readFile(location.absolutePath, result.completer())
+    vertx.fileSystem().readFile(location.absolutePath, result)
     return result.map { it.toString() }
   }
 
   override fun serialize(value: String, location: File): Future<Unit> {
     val result = future<Void>()
-    vertx.fileSystem().writeFile(location.absolutePath, Buffer.buffer(value), result.completer())
+    vertx.fileSystem().writeFile(location.absolutePath, Buffer.buffer(value), result)
     return result.map { Unit }
   }
 
