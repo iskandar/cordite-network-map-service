@@ -103,10 +103,6 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
       }
   }
 
-  override fun getOrDefault(key: String, default: T): Future<T> {
-    return read(key).recover { succeededFuture(default) }
-  }
-
   override fun getAll(keys: List<String>) : Future<Map<String, T>> {
     return keys.map { key ->
       read(key).map { key to it }
