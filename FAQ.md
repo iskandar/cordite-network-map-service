@@ -6,6 +6,7 @@
 2. [How do I set up TLS](#2-how-do-i-setup-tls)
 3. [How do I add a node to a network run using Java?](#3-how-do-i-add-a-node-to-a-network-run-using-java)
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
+5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
 
 ## Questions
 
@@ -184,3 +185,39 @@ java \
 ### 4. How do I join the Cordite Test network
 
 See this awesome [video from André van der Heijden](https://www.youtube.com/watch?v=lfk-QSiv3xc).
+
+### 5. How do I admin the embedded database
+
+> PLEASE READ THIS FIRST:
+> The embedded database is _ONLY_ for throwaway testing where the data is of no value. Please do NOT use in any other scenario.
+> Also please note that the support for the use of MongoDB may change in the future, with increasing demand for SQL support.
+
+1. In your container log you should see a line like this:
+```
+2019-06-01 04:04:52,842 INFO  i.c.n.storage.mongo.EmbeddedMongo - mongo database started on mongodb://mongo:mongo@localhost:41687 mounted on /opt/cordite/db/mongo
+```
+
+Note the port number. It will vary with each container. In this case: `41687`. 
+
+
+2. Shell into your container
+
+```
+docker exec -it <container-id> /bin/bash
+```
+
+3. Connect and authenticate to your local mongo database
+
+```
+~/.embedmongo/extracted/Linux-B64--4.0.4/extractmongo admin -u mongo -p mongo --port <mongod-port-from-step-1>
+```
+
+4. In the mongo shell, select the `nms` db
+
+```
+show databases
+use nms
+show collections
+# etc
+```
+
