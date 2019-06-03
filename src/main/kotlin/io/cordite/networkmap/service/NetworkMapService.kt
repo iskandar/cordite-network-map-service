@@ -50,7 +50,6 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.security.PublicKey
-import java.time.Duration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.ws.rs.core.HttpHeaders
@@ -58,26 +57,8 @@ import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
 
 class NetworkMapService(
-  dbDirectory: File,
-  user: InMemoryUser,
-  private val port: Int,
-  private val cacheTimeout: Duration,
-  private val tls: Boolean = true,
-  private val certPath: String = "",
-  private val keyPath: String = "",
-  private val vertx: Vertx = Vertx.vertx(),
-  private val hostname: String = "localhost",
-  webRoot: String = "/",
-  private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
-    root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
-    doorManEnabled = true,
-    certManEnabled = true,
-    certManPKIVerficationEnabled = false,
-    certManRootCAsTrustStoreFile = null,
-    certManRootCAsTrustStorePassword = null,
-    certManStrictEVCerts = false),
-  val paramUpdateDelay: Duration
-) {
+  private val nmsOptions: NMSOptions,
+  private val vertx: Vertx = Vertx.vertx()) {
   companion object {
     internal const val NETWORK_MAP_ROOT = "/network-map"
     internal const val ADMIN_REST_ROOT = "/admin/api"
@@ -91,16 +72,27 @@ class NetworkMapService(
     }
   }
 
+
+  private val certificateManagerConfig: CertificateManagerConfig = CertificateManagerConfig(
+    root = nmsOptions.rootCA,
+    doorManEnabled = nmsOptions.enableDoorman,
+    certManEnabled = nmsOptions.enableCertman,
+    certManPKIVerficationEnabled = nmsOptions.pkix,
+    certManRootCAsTrustStoreFile = nmsOptions.truststore,
+    certManRootCAsTrustStorePassword = nmsOptions.trustStorePassword,
+    certManStrictEVCerts = nmsOptions.strictEV)
+
+
   private val buildProperties = NMSProperties.acquireProperties()
-  private val root = webRoot.dropLastWhile { it == '/' }
+  private val root = nmsOptions.webRoot.dropLastWhile { it == '/' }
 
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
-  internal val storages = ServiceStorages(vertx, dbDirectory)
+  internal val storages = ServiceStorages.create(StorageType.FILE,vertx, nmsOptions.dbDirectory)
   private val adminService = AdminServiceImpl()
   internal lateinit var processor: NetworkMapServiceProcessor
-  private val authService = AuthService(user)
+  private val authService = AuthService(nmsOptions.authProvider)
   internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
 
   fun startup(): Future<Unit> {
@@ -128,7 +120,7 @@ class NetworkMapService(
       )
       BraidConfig()
         .withVertx(vertx)
-        .withPort(port)
+        .withPort(nmsOptions.port)
         .withAuthConstructor(authService::createAuthProvider)
         .withService("admin", adminService)
         .withRootPath(adminBraidRoot)
@@ -233,7 +225,7 @@ class NetworkMapService(
     processor.createSignedNetworkMap()
       .onSuccess { snm ->
         context.response().apply {
-          setCacheControl(cacheTimeout)
+          setCacheControl(nmsOptions.cacheTimeout)
           putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(snm.serializeOnContext().bytes))
         }
@@ -321,7 +313,7 @@ class NetworkMapService(
     storages.nodeInfo.get(hash.toString())
       .onSuccess { sni ->
         context.response().apply {
-          setCacheControl(cacheTimeout)
+          setCacheControl(nmsOptions.cacheTimeout)
           putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(sni.serializeOnContext().bytes))
         }
@@ -341,7 +333,7 @@ class NetworkMapService(
     storages.networkParameters.get(hash.toString())
       .onSuccess { snp ->
         context.response().apply {
-          setCacheControl(cacheTimeout)
+          setCacheControl(nmsOptions.cacheTimeout)
           putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
           end(Buffer.buffer(snp.serializeOnContext().bytes))
         }
@@ -401,32 +393,32 @@ class NetworkMapService(
       vertx = vertx,
       storages = storages,
       certificateManager = certificateManager,
-      paramUpdateDelay = paramUpdateDelay
+      paramUpdateDelay = nmsOptions.paramUpdateDelay
     )
     return processor.start()
   }
 
   private fun createHttpServerOptions(): HttpServerOptions {
-    val serverOptions = HttpServerConfig.defaultServerOptions().setHost(hostname).setSsl(tls)
+    val serverOptions = HttpServerConfig.defaultServerOptions().setHost(nmsOptions.hostname).setSsl(nmsOptions.tls)
 
     return when {
-      !tls -> serverOptions
-      certPath.isNotBlank() && keyPath.isNotBlank() -> {
-        logger.info("using cert file $certPath")
-        logger.info("using key file $keyPath")
-        if (!File(certPath).exists()) {
-          val msg = "cert path does not exist: $certPath"
+      !nmsOptions.tls -> serverOptions
+      nmsOptions.certPath.isNotBlank() && nmsOptions.keyPath.isNotBlank() -> {
+        logger.info("using cert file $nmsOptions.certPath")
+        logger.info("using key file $nmsOptions.keyPath")
+        if (!File(nmsOptions.certPath).exists()) {
+          val msg = "cert path does not exist: $nmsOptions.certPath"
           logger.error(msg)
           throw RuntimeException(msg)
         }
 
-        if (!File(keyPath).exists()) {
-          val msg = "key path does not exist: $keyPath"
+        if (!File(nmsOptions.keyPath).exists()) {
+          val msg = "key path does not exist: ${nmsOptions.keyPath}"
           logger.error(msg)
           throw RuntimeException(msg)
         }
 
-        val jksOptions = CertsToJksOptionsConverter(certPath, keyPath).createJksOptions()
+        val jksOptions = CertsToJksOptionsConverter(nmsOptions.certPath, nmsOptions.keyPath).createJksOptions()
         serverOptions.setKeyStoreOptions(jksOptions)
       }
       else -> {

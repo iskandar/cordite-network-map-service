@@ -16,7 +16,6 @@
 package io.cordite.networkmap
 
 import io.bluebank.braid.core.logging.loggerFor
-import io.cordite.networkmap.service.CertificateManagerConfig
 import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
@@ -46,27 +45,7 @@ open class NetworkMapApp {
         println("failed to find truststore ${truststore.path}")
         exitProcess(-1)
       }
-      NetworkMapService(
-        dbDirectory = dbDirectory,
-        user = user,
-        port = port,
-        cacheTimeout = cacheTimeout,
-        tls = tls,
-        certPath = certPath,
-        keyPath = keyPath,
-        hostname = hostname,
-        webRoot = webRoot,
-        certificateManagerConfig = CertificateManagerConfig(
-            root = root,
-            doorManEnabled = enableDoorman,
-            certManEnabled = enableCertman,
-            certManPKIVerficationEnabled = pkix,
-            certManRootCAsTrustStoreFile = truststore,
-            certManRootCAsTrustStorePassword = trustStorePassword,
-            certManStrictEVCerts = strictEV
-        ),
-        paramUpdateDelay = paramUpdateDelay
-      ).startup().setHandler {
+      NetworkMapService(this).startup().setHandler {
         if (it.failed()) {
           logger.error("failed to complete setup", it.cause())
         } else {
@@ -74,5 +53,6 @@ open class NetworkMapApp {
         }
       }
     }
+
   }
 }

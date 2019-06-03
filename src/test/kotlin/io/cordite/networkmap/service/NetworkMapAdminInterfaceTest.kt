@@ -64,16 +64,17 @@ class NetworkMapAdminInterfaceTest {
       vertx = Vertx.vertx()
 
       val async = context.async()
-      this.service = NetworkMapService(dbDirectory = dbDirectory,
-        user = InMemoryUser.createUser("", "sa", ""),
+      val nmsOptions = NMSOptions(
+        dbDirectory = dbDirectory,
+        user = InMemoryUser("", "sa", ""),
         port = port,
         cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
         tls = true,
-        vertx = vertx,
         hostname = "127.0.0.1",
         webRoot = NetworkMapServiceTest.WEB_ROOT,
         paramUpdateDelay = Duration.ZERO
       )
+      this.service = NetworkMapService(nmsOptions)
 
       service.startup().setHandler {
         when {

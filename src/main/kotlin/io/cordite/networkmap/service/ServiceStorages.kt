@@ -17,10 +17,8 @@ package io.cordite.networkmap.service
 
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.Storage
-import io.cordite.networkmap.storage.file.*
-import io.cordite.networkmap.utils.all
+import io.cordite.networkmap.storage.file.FileServiceStorages
 import io.cordite.networkmap.utils.catch
-import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.sign
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -32,34 +30,32 @@ import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.io.File
 
-class ServiceStorages(
-  vertx: Vertx,
-  dbDirectory: File
-) {
+enum class StorageType {
+  FILE,
+  MONGO
+}
+
+abstract class ServiceStorages {
   companion object {
+
+    fun create(storageType: StorageType, vertx: Vertx, dbDirectory: File) : ServiceStorages {
+      return when (storageType) {
+        StorageType.FILE -> FileServiceStorages(vertx, dbDirectory)
+        else -> error("unsupported type $storageType")
+      }
+    }
     private val logger = loggerFor<ServiceStorages>()
     const val CURRENT_PARAMETERS = "current-parameters" // key for current network parameters hash
     const val NEXT_PARAMS_UPDATE = "next-params-update" // key for next params update hash
   }
 
-  val certAndKeys : Storage<CertificateAndKeyPair> = CertificateAndKeyPairStorage(vertx, dbDirectory)
-  val input = NetworkParameterInputsStorage(dbDirectory, vertx)
-  val nodeInfo : Storage<SignedNodeInfo> = SignedNodeInfoStorage(vertx, dbDirectory)
-  val networkParameters : Storage<SignedNetworkParameters> = SignedNetworkParametersStorage(vertx, dbDirectory)
-  private val parameterUpdate : Storage<ParametersUpdate> = ParametersUpdateStorage(vertx, dbDirectory)
-  val text = TextStorage(vertx, dbDirectory)
+  abstract val certAndKeys : Storage<CertificateAndKeyPair>
+  abstract val nodeInfo : Storage<SignedNodeInfo>
+  abstract val networkParameters : Storage<SignedNetworkParameters>
+  protected abstract val parameterUpdate : Storage<ParametersUpdate>
+  abstract val text : Storage<String>
 
-  fun setupStorage(): Future<Unit> {
-    return all(
-      (certAndKeys as CertificateAndKeyPairStorage).makeDirs(),
-      input.makeDirs(),
-      (nodeInfo as SignedNodeInfoStorage).makeDirs(),
-      (networkParameters as SignedNetworkParametersStorage).makeDirs(),
-      (parameterUpdate as ParametersUpdateStorage).makeDirs(),
-      text.makeDirs()
-      /*, migrate()*/
-    ).mapUnit()
-  }
+  abstract fun setupStorage(): Future<Unit>
 
   // TODO: Re-enable when database solution has stabilised
 //  private fun migrate(): Future<Unit> {
