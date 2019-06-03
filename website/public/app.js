@@ -1,2 +1,3539 @@
-!function(){"use strict";var e="undefined"==typeof global?self:global;if("function"!=typeof e.require){var t={},a={},n={},r={}.hasOwnProperty,l=/^\.\.?(\/|$)/,o=function(e,t){for(var a,n=[],r=(l.test(t)?e+"/"+t:t).split("/"),o=0,s=r.length;o<s;o++)a=r[o],".."===a?n.pop():"."!==a&&""!==a&&n.push(a);return n.join("/")},s=function(e){return e.split("/").slice(0,-1).join("/")},i=function(t){return function(a){var n=o(s(t),a);return e.require(n,t)}},u=function(e,t){var n=h&&h.createHot(e),r={id:e,exports:{},hot:n};return a[e]=r,t(r.exports,i(e),r),r.exports},c=function(e){return n[e]?c(n[e]):e},d=function(e,t){return c(o(s(e),t))},f=function(e,n){null==n&&(n="/");var l=c(e);if(r.call(a,l))return a[l].exports;if(r.call(t,l))return u(l,t[l]);throw new Error("Cannot find module '"+e+"' from '"+n+"'")};f.alias=function(e,t){n[t]=e};var m=/\.[^.\/]+$/,p=/\/index(\.[^\/]+)?$/,g=function(e){if(m.test(e)){var t=e.replace(m,"");r.call(n,t)&&n[t].replace(m,"")!==t+"/index"||(n[t]=e)}if(p.test(e)){var a=e.replace(p,"");r.call(n,a)||(n[a]=e)}};f.register=f.define=function(e,n){if(e&&"object"==typeof e)for(var l in e)r.call(e,l)&&f.register(l,e[l]);else t[e]=n,delete a[e],g(e)},f.list=function(){var e=[];for(var a in t)r.call(t,a)&&e.push(a);return e};var h=e._hmr&&new e._hmr(d,f,t,a);f._cache=a,f.hmr=h&&h.wrap,f.brunch=!0,e.require=f}}(),function(){var e;"undefined"==typeof window?this:window;require.register("clusterStyle.json",function(e,t,a){a.exports=[{anchor:[25,25],height:26,textColor:"#FFFFFF",url:"png/ping.png",width:26},{height:28,textColor:"#FFFFFF",url:"png/ping.png",width:28},{height:33,textColor:"#FFFFFF",url:"png/ping.png",width:33},{height:39,textColor:"#FFFFFF",url:"png/ping.png",width:39},{height:45,textColor:"#FFFFFF",url:"png/ping.png",width:45}]}),require.register("components/DisplayBraid/DisplayBraid.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.DisplayBraid=void 0;var r=t("babel-runtime/core-js/json/stringify"),l=n(r),o=t("react"),s=n(o);e.DisplayBraid=function(e){return s["default"].createElement("div",{className:"display-braid-component column"},s["default"].createElement("div",{className:"card"},s["default"].createElement("div",{className:"card-title"},s["default"].createElement("h2",null,"Braid API"),s["default"].createElement("div",{className:"clearfix"},s["default"].createElement("pre",null,(0,l["default"])(e.json,null,2))))))}}),require.register("components/Map/MyMap.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),t("whatwg-fetch");var r=t("react"),l=n(r),o=t("recompose"),s=t("react-google-maps"),i=t("react-google-maps/lib/components/addons/MarkerClusterer"),u=t("mapStyle.json"),c=n(u),d=t("clusterStyle.json"),f=n(d),m=(0,o.compose)((0,o.withProps)({googleMapURL:"https://maps.googleapis.com/maps/api/js?key=AIzaSyC4QrPK-xamnJwHo-CFW0XzeDj4INbsQYU&v=3.exp&libraries=geometry,drawing,places",loadingElement:l["default"].createElement("div",{className:"map-load-component"}),containerElement:l["default"].createElement("div",{className:"map-container-component"}),mapElement:l["default"].createElement("div",{className:"map-component"}),imagePath:"png/cf.png"}),(0,o.withState)("zoom","onZoomChange",2),(0,o.withHandlers)(function(e){var t={map:void 0};return{onMarkerClustererClick:function(){return function(e){console.log(e)}},setZoom:function(){},onMapMounted:function(){return function(e){t.map=e}},onZoomChanged:function(e,a){var n=e.onZoomChange;return function(){n(t.map.getZoom())}}}}),s.withScriptjs,s.withGoogleMap)(function(e){return l["default"].createElement(s.GoogleMap,{zoom:e.zoom,defaultCenter:{lat:53,lng:0},defaultOptions:{styles:c["default"],fullscreenControl:!1,mapTypeControl:!1,maxZoom:10,minZoom:2,streetViewControl:!1},ref:e.onMapMounted,onZoomChanged:e.onZoomChanged},l["default"].createElement(i.MarkerClusterer,{averageCenter:!0,clusterClass:"cluster cluster-component",enableRetinaIcons:!0,gridSize:60,maxZoom:10,minimumClusterSize:1,onClick:e.onMarkerClustererClick,styles:f["default"],anch:!0},e.markers.map(function(e,t){return l["default"].createElement(s.Marker,{key:t,position:{lat:e.lat,lng:e.lng},icon:"png/node.png"})})))}),p=function(e){return l["default"].createElement("div",{className:"row grid-responsive"},l["default"].createElement("div",{className:"column page-heading"},l["default"].createElement("div",{className:"large-card"},l["default"].createElement(m,{markers:e.nodes}))))};e["default"]=p}),require.register("components/Metrics/Metrics.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Metrics=void 0;var r=t("babel-runtime/core-js/object/keys"),l=n(r),o=t("react"),s=n(o),i=(e.Metrics=function(e){return s["default"].createElement("div",{className:"row grid-responsive metrics-component"},s["default"].createElement(i,{nodes:e.nodes}),s["default"].createElement(i,{notaries:e.notaries}))},function(e){var t=(0,l["default"])(e)[0],a="";return"notaries"===t&&(a="Node"),s["default"].createElement("div",{className:"m-component column"},s["default"].createElement("div",{className:"card"},s["default"].createElement("div",{className:"card-title"},s["default"].createElement("h2",{className:"float-left"},t+" "+a+" #"),s["default"].createElement("div",{className:"badge background-primary float-right"},e[t].length),s["default"].createElement("div",{className:"clearfix"}))))})}),require.register("components/Modal/Modal.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.DeleteModal=e.LogoutModal=e.LoginModal=void 0;var r=t("react"),l=n(r),o=t("containers/Login/Login"),s=function(e){sessionStorage.clear(),e()},i=(e.LoginModal=function(e){return l["default"].createElement("div",{className:"modal-component "+(e.style?"on":""),"data-link":"default",onClick:function(t){return e.toggleModal(t)}},l["default"].createElement(o.LoginContainer,{nmsLogin:e.nmsLogin,toggleModal:e.toggleModal,setAdmin:e.setAdmin}))},e.LogoutModal=function(e){return l["default"].createElement("div",{className:"modal-component "+(e.style?"on":""),"data-link":"default",onClick:function(t){return e.toggleModal(t)}},l["default"].createElement("div",{className:"lm-container"},l["default"].createElement("div",{className:"lm-middle"},l["default"].createElement(u,null),l["default"].createElement(d,null),l["default"].createElement(f,{toggleModal:e.toggleModal,setAdmin:e.setAdmin}))))},e.DeleteModal=function(e){return l["default"].createElement("div",{className:"modal-component "+(e.style?"on":""),"data-link":"default",onClick:function(t){return e.toggleModal(t)}},l["default"].createElement("div",{className:"lm-container"},l["default"].createElement("div",{className:"lm-middle"},l["default"].createElement(i,null),l["default"].createElement(c,{node:e.selectedNode}),l["default"].createElement("div",{className:"lm-footer"},l["default"].createElement("button",{className:"btn pull-right","data-btn":!0,onClick:function(t){e.deleteNode(),e.toggleModal()}},"Yes"),l["default"].createElement("button",{className:"btn pull-right","data-btn":"cancel",onClick:function(t){return e.toggleModal()}},"No")))))},function(e){return l["default"].createElement("div",{className:"lm-title"},l["default"].createElement("span",{className:"fa fa-trash"}),l["default"].createElement("strong",null,"     Delete Node"))}),u=function(e){return l["default"].createElement("div",{className:"lm-title"},l["default"].createElement("span",{className:"fa fa-sign-out"}),l["default"].createElement("strong",null," LOG OUT?"))},c=function(e){return l["default"].createElement("div",{className:"lm-content"},l["default"].createElement("p",{className:"node-id"},e.node.O),l["default"].createElement("p",{className:"node-id"},"for node ",e.node.nodeKey),l["default"].createElement("p",null,"Are you sure you want to delete this node?"))},d=function(e){return l["default"].createElement("div",{className:"lm-content"},l["default"].createElement("p",null,"Are you sure you want to log out?"),l["default"].createElement("p",null,"Press No if you want to continue work. Press Yes to logout current user."))},f=function(e){return l["default"].createElement("div",{className:"lm-footer"},l["default"].createElement("button",{className:"btn pull-right","data-btn":!0,onClick:function(t){e.setAdmin(!1),s(e.toggleModal)}},"Yes"),l["default"].createElement("button",{className:"btn pull-right","data-btn":"cancel",onClick:function(t){return e.toggleModal()}},"No"))}}),require.register("components/Nav/Nav.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Nav=void 0;var r=t("babel-runtime/core-js/object/get-prototype-of"),l=n(r),o=t("babel-runtime/helpers/classCallCheck"),s=n(o),i=t("babel-runtime/helpers/createClass"),u=n(i),c=t("babel-runtime/helpers/possibleConstructorReturn"),d=n(c),f=t("babel-runtime/helpers/inherits"),m=n(f),p=t("react"),g=n(p),h=(e.Nav=function(e){return g["default"].createElement("div",{className:"navbar nav-component"},g["default"].createElement("div",{className:"row"},g["default"].createElement(h,null),g["default"].createElement(b,{icon:"gitlab",link:"https://gitlab.com/cordite/cordite",toggleModal:function(e){return console.log("click")}}),g["default"].createElement(b,{icon:sessionStorage.corditeAccessToken?"sign-out":"sign-in",link:"#",toggleModal:e.toggleModal})))},function(e){return g["default"].createElement("div",{className:"page-title-component column column-80 col-site-title"},g["default"].createElement("a",{href:"#",className:"site-title float-left"},g["default"].createElement("img",{src:"png/logo-watermark.png",alt:"logo"})))}),b=(function(e){function t(e){(0,s["default"])(this,t);var a=(0,d["default"])(this,(t.__proto__||(0,l["default"])(t)).call(this,e));return a.state={value:""},a.handleChange=a.handleChange.bind(a),a}return(0,m["default"])(t,e),(0,u["default"])(t,[{key:"handleChange",value:function(e){this.setState({value:e.target.value})}},{key:"render",value:function(){var e=this;return g["default"].createElement("div",{className:"search-component column column-40 col-search"},g["default"].createElement("a",{href:"#",className:"search-btn fa fa-search"}),g["default"].createElement("input",{type:"text",name:"",value:this.state.value,onChange:function(t){return e.handleChange(t)},placeholder:"Search..."}))}}]),t}(g["default"].Component),function(e){return g["default"].createElement("div",{className:"icon-component column column-10"},g["default"].createElement("a",{href:"javascript:void(0)","data-link":e.icon,onClick:function(t){return e.toggleModal(t)}},g["default"].createElement("em",{className:"fa fa-"+e.icon})))})}),require.register("components/Sidebar/Sidebar.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Sidebar=void 0;var r=t("react"),l=n(r),o=(e.Sidebar=function(e){return l["default"].createElement("div",{id:"sidebar",className:"column sidebar-component"},l["default"].createElement("ul",null,e.navOptions[0].map(function(t,a){return l["default"].createElement("li",{key:a},l["default"].createElement(o,{title:t.title,icon:t.icon,handleBtn:e.handleBtn}))},{props:e})),l["default"].createElement("h5",{className:"title-override"},"APIs"),l["default"].createElement("ul",null,e.navOptions[1].map(function(e,t){return l["default"].createElement("li",{key:t},l["default"].createElement(o,{title:e.title,icon:e.icon,handleBtn:this.props.handleBtn}))},{props:e}),l["default"].createElement("li",{key:Math.floor(100*Math.random())+7},l["default"].createElement("button",{className:"sidebar-button-component","data-btn":"swagger",onClick:function(t){return e.handleBtn(t)}},l["default"].createElement("svg",{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 305.5 305.7",id:"Layer_1"},l["default"].createElement("circle",{cx:"152.8",cy:"152.8",r:"142"}),l["default"].createElement("path",{d:"M305.5 153c.9 83.3-69.5 153.1-153.5 152.7C70.5 305.3-.5 237.4 0 151.8.5 69.2 69.4-.6 154.2 0c82.4.6 152.2 69.4 151.3 153zm-69.4-.1c-11.6 7.1-15.5 18.1-16.5 30.2-.8 9.1-.8 18.3-1.1 27.4-.3 10.5-2.6 13.3-12.9 13.1-5.2-.1-6.4 1.6-6.3 6.6.3 14.4.1 14.4 14.6 12.9 14-1.4 21.2-7.6 24.3-21.4 1.1-5 1.5-10.1 1.8-15.3.5-8.9.4-17.9 1.2-26.9.9-10.4 5.7-14.7 16-15.4 2.8-.2 3.9-1.2 3.8-3.9-.1-4.5-.2-9 0-13.5.2-3.8-1.1-5.3-5.1-5.3-7.5 0-11.5-2.9-13.5-10.1-1.3-4.6-2-9.4-2.3-14.2-.6-9.3-.4-18.6-1.1-27.9-1.5-18-11.1-26.7-29.2-26.8-10.3-.1-10.3-.1-10.3 10.6 0 8.6 0 8.6 8.7 8.9 6.3.2 8.7 1.7 9.6 7.8.9 6.5.5 13.3.9 19.9 1 16.2.9 32.8 17.4 43.3zm-166.4-.1c11.3-7.4 15.7-17.8 16.4-30 .6-9.1.4-18.3 1.1-27.4.8-10.2 1.8-14 13.2-13.3 5.3.3 6.4-2 5.7-6.4-.1-.7 0-1.3 0-2 0-11.5 0-11.5-11.8-11.2-16.8.4-27 10.2-27.9 26.9-.5 10.1-.7 20.3-1 30.4-.4 14.5-4.1 19-17.9 21.9-1.2.2-2.7 2.3-2.8 3.7-.4 4.5 0 9-.2 13.5-.2 3.9 1.1 5.3 5.1 5.3 7.1 0 11.6 3.2 13.5 9.6 1.2 4.2 2 8.7 2.2 13.2.6 9.5.6 18.9 1.1 28.4 1.2 22 15.8 30.6 39.6 26.8v-9.4c0-8.8 0-8.8-8.9-9.2-6.2-.3-8.4-1.8-9.1-8.1-.8-7.9-.5-15.9-1.1-23.9-.8-14.8-2.5-29.4-17.2-38.8zm40-12.3c-7.1 0-12.8 5.6-12.7 12.5.1 6.8 5.6 12.1 12.5 12.1 7.3 0 12.7-5.4 12.7-12.4-.2-6.7-5.7-12.2-12.5-12.2zm43.1 24.6c7.3 0 12.3-4.8 12.3-12 .1-7.5-4.9-12.6-12.2-12.7-7.3 0-12.5 5.3-12.4 12.6.1 7.1 5.1 12.1 12.3 12.1zm43.2 0c6.9 0 12.9-5.6 12.9-12.2s-5.9-12.4-12.8-12.4-12.7 5.8-12.6 12.5c.1 6.6 5.8 12.1 12.5 12.1z"})),"SWAGGER"))),l["default"].createElement("hr",null),l["default"].createElement("form",{action:"https://groups.io/g/cordite-nms/signup?u=4408289288444521305",method:"post",target:"_blank"},l["default"].createElement("div",null,l["default"].createElement("h6",null,"Subscribe to NMS discussion"),l["default"].createElement("br",null),l["default"].createElement("input",{id:"email",type:"email",name:"email",placeholder:"email address",required:"true"}),l["default"].createElement("div",{style:{position:"absolute",left:"-5000px"},"aria-hidden":"true"},l["default"].createElement("input",{type:"text",name:"b_4408289288444521305",tabIndex:"-1",value:""})),l["default"].createElement("button",{className:"sidebar-button-component",id:"groupsio-embedded-subscribe",type:"submit",value:"Subscribe",name:"subscribe"},l["default"].createElement("svg",{xmlns:"http://www.w3.org/2000/svg",viewBox:"0 0 493.497 493.497",id:"Layer_1"},l["default"].createElement("circle",{cx:"152.8",cy:"152.8",r:"142"}),l["default"].createElement("path",{d:"M444.556,85.218H48.942C21.954,85.218,0,107.171,0,134.16v225.177c0,26.988,21.954,48.942,48.942,48.942h395.613  c26.988,0,48.941-21.954,48.941-48.942V134.16C493.497,107.171,471.544,85.218,444.556,85.218z M460.87,134.16v225.177  c0,2.574-0.725,4.924-1.793,7.09L343.74,251.081l117.097-117.097C460.837,134.049,460.87,134.096,460.87,134.16z M32.628,359.336  V134.16c0-0.064,0.033-0.11,0.033-0.175l117.097,117.097L34.413,366.426C33.353,364.26,32.628,361.911,32.628,359.336z   M251.784,296.902c-2.692,2.691-7.378,2.691-10.07,0L62.667,117.846h368.172L251.784,296.902z M172.827,274.152l45.818,45.819  c7.512,7.511,17.493,11.645,28.104,11.645c10.61,0,20.592-4.134,28.104-11.645l45.82-45.819l101.49,101.499H71.327L172.827,274.152z  "}))," Submit"))),l["default"].createElement("hr",null),l["default"].createElement("ul",null,l["default"].createElement("li",null,l["default"].createElement("span",{className:"sidebar-property"},"version: ",e.buildProperties["nms.version"])),l["default"].createElement("li",null,l["default"].createElement("span",{className:"sidebar-property"},"branch: ",e.buildProperties.scmBranch)),l["default"].createElement("li",null,l["default"].createElement("span",{className:"sidebar-property"},"commit: ",e.buildProperties.buildNumber)),l["default"].createElement("li",null,l["default"].createElement("span",{className:"sidebar-property"},"timestamp: ",e.buildProperties.timestamp))))},function(e){return l["default"].createElement("button",{className:"sidebar-button-component","data-btn":e.title,onClick:function(t){return e.handleBtn(t)}},l["default"].createElement("em",{className:"fa "+e.icon}),e.title.toUpperCase())})}),require.register("components/Spinner/Spinner.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Spinner=void 0;var r=t("react"),l=n(r);e.Spinner=function(){return l["default"].createElement("div",{className:"spinner-component"},l["default"].createElement("div",{className:"double-bounce1"}),l["default"].createElement("div",{className:"double-bounce2"}))}}),require.register("components/Table/Table.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Table=void 0;var r=t("babel-runtime/core-js/array/from"),l=n(r),o=t("react"),s=n(o),i=t("prop-types"),u=n(i),c=e.Table=function(e){var t=e.headersList,a=e.rowData,n=e.sortTable,r=e.admin,l=e.toggleModal;return s["default"].createElement("div",{className:"row grid-responsive mt-2"},s["default"].createElement("div",{className:"column "},s["default"].createElement("div",{className:"card"},s["default"].createElement("div",{className:"card-block"},s["default"].createElement("div",{className:"table-component"},s["default"].createElement("table",null,s["default"].createElement(d,{headersList:t,sortTable:n,admin:r}),s["default"].createElement(f,{headersList:t,rowData:a,toggleModal:l,admin:r})))))))},d=function(e){var t=e.headersList,a=e.sortTable,n=e.admin,r=function(e){a(e)};return s["default"].createElement("thead",null,s["default"].createElement("tr",null,s["default"].createElement("th",null,"Node"),(0,l["default"])(t.values()).map(function(e,t){return s["default"].createElement("th",{key:t,"data-header":e,onClick:function(e){return r(e)}},e,s["default"].createElement("img",{src:"png/sort.png","data-header":e}))}),n?s["default"].createElement("th",null,"Controls"):null))},f=function(e){var t=e.headersList,a=e.rowData,n=e.toggleModal,r=e.admin,l=a.map(function(e,a){return s["default"].createElement(m,{key:a,node:e,headersList:t,toggleModal:n,admin:r})});return s["default"].createElement("tbody",null,l)},m=function(e){var t=e.node,a=e.headersList,n=e.toggleModal,r=e.admin,l=[];return a.forEach(function(e,a){t.hasOwnProperty(a)?l.push(t[a]):l.push("")}),s["default"].createElement("tr",{className:"table-row-component"},s["default"].createElement("td",null,s["default"].createElement(p,{tooltip:t.nodeKey}),t.nodeKey.slice(0,3)+"..."+t.nodeKey.substr(-3)),l.map(function(e,t){var a=void 0;return a="boolean"==typeof e?s["default"].createElement("td",{className:e.toString(),key:t}):s["default"].createElement("td",{key:t},e.toString())}),r?s["default"].createElement("td",{key:9},s["default"].createElement("button",{className:"wibble","data-link":"delete",onClick:function(e){n(e,t)}},s["default"].createElement("em",{className:"fa fa-trash"}))):null)},p=function(e){return s["default"].createElement("div",{className:"table-tooltip-component"},e.tooltip)};c.propTypes={headersList:u["default"].object.isRequired,rowData:u["default"].array.isRequired},d.propTypes={headersList:u["default"].object.isRequired},f.propTypes={rowData:u["default"].array.isRequired},m.propTypes={nodes:u["default"].object}}),require.register("containers/App/App.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0});var r=t("babel-runtime/core-js/object/get-prototype-of"),l=n(r),o=t("babel-runtime/helpers/classCallCheck"),s=n(o),i=t("babel-runtime/helpers/createClass"),u=n(i),c=t("babel-runtime/helpers/possibleConstructorReturn"),d=n(c),f=t("babel-runtime/helpers/inherits"),m=n(f),p=t("react"),g=n(p),h=t("containers/Default/Default"),b=n(h),y=t("containers/Login/Login"),v=t("scripts/restCalls"),E=t("components/Modal/Modal"),N=function(e){function t(e){(0,s["default"])(this,t);var a=(0,d["default"])(this,(t.__proto__||(0,l["default"])(t)).call(this,e));return a.state={admin:!!sessionStorage.corditeAccessToken,status:"done",subDomain:"default",style:!1,modal:""},a.NMSLogin=a.NMSLogin.bind(a),a.toggleModal=a.toggleModal.bind(a),a.setAdmin=a.setAdmin.bind(a),a.deleteNode=a.deleteNode.bind(a),a}return(0,m["default"])(t,e),(0,u["default"])(t,[{key:"NMSLogin",value:function(e){return(0,v.login)(e).then(function(){return(0,v.checkAuth)()}).then(function(e){return 200!=e?"fail":"success"})["catch"](function(e){return console.log(e)})}},{key:"toggleModal",value:function(e,t){e?e.target.dataset.link&&this.setState({modal:e.target.dataset.link||"",style:!this.state.style,selectedNode:t?t:null}):this.setState({modal:"",style:!this.state.style})}},{key:"setAdmin",value:function(e){this.setState({admin:e})}},{key:"deleteNode",value:function(){var e=this;(0,v.deleteNodes)(this.state.selectedNode.nodeKey).then(function(t){return e.setState({selectedNode:null})})}},{key:"render",value:function(){var e=null;switch(this.state.subDomain){case"login":e=g["default"].createElement(y.Login,{nmsLogin:this.NMSLogin});break;case"default":e=g["default"].createElement(b["default"],{toggleModal:this.toggleModal,admin:this.state.admin});break;default:e=g["default"].createElement(y.Login,{nmsLogin:this.nmsLogin})}var t=null;switch(this.state.modal){case"sign-in":t=g["default"].createElement(E.LoginModal,{toggleModal:this.toggleModal,style:this.state.style,nmsLogin:this.NMSLogin,setAdmin:this.setAdmin});break;case"sign-out":t=g["default"].createElement(E.LogoutModal,{toggleModal:this.toggleModal,style:this.state.style,setAdmin:this.setAdmin});break;case"delete":t=g["default"].createElement(E.DeleteModal,{toggleModal:this.toggleModal,style:this.state.style,setAdmin:this.setAdmin,selectedNode:this.state.selectedNode,deleteNode:this.deleteNode});break;default:t=""}return g["default"].createElement("div",{className:"app-component"},"done"==this.state.status?e:"",t)}}]),t}(g["default"].Component);e["default"]=N}),require.register("containers/Default/Default.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0});var r=t("babel-runtime/regenerator"),l=n(r),o=t("babel-runtime/helpers/asyncToGenerator"),s=n(o),i=t("babel-runtime/core-js/object/get-prototype-of"),u=n(i),c=t("babel-runtime/helpers/classCallCheck"),d=n(c),f=t("babel-runtime/helpers/createClass"),m=n(f),p=t("babel-runtime/helpers/possibleConstructorReturn"),g=n(p),h=t("babel-runtime/helpers/inherits"),b=n(h),y=t("react"),v=n(y),E=t("containers/Page/Page"),N=t("components/Nav/Nav"),w=t("components/Sidebar/Sidebar"),k=t("scripts/restCalls"),M=t("scripts/processData"),_=t("scripts/headersList"),C=t("navOptions.json"),j=n(C),T=function(e){function t(e){(0,d["default"])(this,t);var a=(0,g["default"])(this,(t.__proto__||(0,u["default"])(t)).call(this,e));return a.getData=(0,s["default"])(l["default"].mark(function n(){var e,t,a;return l["default"].wrap(function(n){for(;;)switch(n.prev=n.next){case 0:return n.next=2,(0,k.getNotaries)();case 2:return e=n.sent,n.next=5,(0,k.getNodes)();case 5:return t=n.sent,n.next=8,(0,k.getBuildProperties)();case 8:return a=n.sent,n.next=11,(0,M.mutateNodes)(t);case 11:t=n.sent,t=(0,M.isNotary)(t,e),t=(0,M.sortNodes)("Organisational Unit",t,_.headersList),this.setState({nodes:t,notaries:e,buildProperties:a});case 15:case"end":return n.stop()}},n,this)})),a.handleBtn=function(e,t){var n=e.target.dataset.btn;switch(n.toLowerCase()){case"swagger":window.location=document.baseURI+"swagger/";break;case"dashboard":a.setState({page:"home"});break;case"braid":(0,k.getBraidAPI)().then(function(e){a.setState({braid:e,page:"braid"})})}},a.state={nodes:[],notaries:[],page:"home",braid:{},buildProperties:{}},a.getData=a.getData.bind(a),a.sortTable=a.sortTable.bind(a),a}return(0,b["default"])(t,e),(0,m["default"])(t,[{key:"componentDidMount",value:function(){this.getData()}},{key:"sortTable",value:function(e){var t=(0,M.sortNodes)(e.target.dataset.header,this.state.nodes,_.headersList);this.setState({nodes:t})}},{key:"render",value:function(){return v["default"].createElement("div",{className:"default-component"},v["default"].createElement(N.Nav,{toggleModal:this.props.toggleModal}),v["default"].createElement("div",{className:"row"},this.props.admin?v["default"].createElement(w.Sidebar,{navOptions:j["default"],buildProperties:this.state.buildProperties,handleBtn:this.handleBtn}):"",v["default"].createElement("section",{id:"main-content",className:"column"+(this.props.admin?" column-offset-20":"")},v["default"].createElement(E.Page,{headersList:_.headersList,nodes:this.state.nodes,notaries:this.state.notaries,page:this.state.page,sortTable:this.sortTable,json:this.state.braid,toggleModal:this.props.toggleModal,admin:this.props.admin,getData:this.getData}))))}}]),t}(v["default"].Component);e["default"]=T}),require.register("containers/Login/Login.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.LoginContainer=e.Login=void 0;var r=t("babel-runtime/regenerator"),l=n(r),o=t("babel-runtime/helpers/asyncToGenerator"),s=n(o),i=t("babel-runtime/core-js/object/get-prototype-of"),u=n(i),c=t("babel-runtime/helpers/classCallCheck"),d=n(c),f=t("babel-runtime/helpers/createClass"),m=n(f),p=t("babel-runtime/helpers/possibleConstructorReturn"),g=n(p),h=t("babel-runtime/helpers/inherits"),b=n(h),y=t("react"),v=n(y),E=(e.Login=function(e){return v["default"].createElement("div",{className:"login-component"},v["default"].createElement(E,e))},e.LoginContainer=function(e){return v["default"].createElement("div",{className:"login-container-component"},v["default"].createElement(N,{title:"Cordite stats"}),v["default"].createElement(w,{nmsLogin:e.nmsLogin,toggleModal:e.toggleModal,setAdmin:e.setAdmin}),v["default"].createElement(k,null))}),N=function(e){return v["default"].createElement("div",{className:"login-logo-component"})},w=function(e){return v["default"].createElement("div",{className:"login-main-component"},v["default"].createElement(M,{title:"Welcome, Please login"}),v["default"].createElement(_,{nmsLogin:e.nmsLogin,toggleModal:e.toggleModal,setAdmin:e.setAdmin}))},k=function(){return v["default"].createElement("div",{className:"login-footer-component"},v["default"].createElement("div",{className:"brand-copyright"},"© 2018 Cordite"),v["default"].createElement("div",{className:"footer-links"},v["default"].createElement("a",{href:"#"},"About")," | ",v["default"].createElement("a",{href:"#"},"Privacy")," | ",v["default"].createElement("a",{href:"#"},"Contact Us")))},M=function(e){return v["default"].createElement("div",{className:"login-title-component"},e.title)},_=function(e){function t(e){(0,d["default"])(this,t);var a=(0,g["default"])(this,(t.__proto__||(0,u["default"])(t)).call(this,e));return a.handleClick=function(){var e=(0,s["default"])(l["default"].mark(function t(e){var a,n;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:if(e.preventDefault(),"cancel"!=e.target.dataset.btn){t.next=4;break}return this.props.toggleModal(),t.abrupt("return");case 4:return a={user:this.state.user,password:this.state.password},t.next=7,this.props.nmsLogin(a);case 7:n=t.sent,"fail"==n?this.setState({error:"error"}):(this.props.setAdmin(!0),this.props.toggleModal());case 9:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),a.state={user:"",password:"",error:""},a.handleChange=a.handleChange.bind(a),a.handleClick=a.handleClick.bind(a),a}return(0,b["default"])(t,e),(0,m["default"])(t,[{key:"handleChange",value:function(e){e.preventDefault();var t=e.target,a=t.type,n=t.value;switch(a){case"text":this.setState({user:n,error:""});break;case"password":this.setState({password:n,error:""})}}},{key:"render",value:function(){return v["default"].createElement("form",{className:"login-form-component"},v["default"].createElement(C,{placeholder:"Username",value:this.state.value,handleChange:this.handleChange}),v["default"].createElement(j,{placeholder:"Password",value:this.state.value,handleChange:this.handleChange}),v["default"].createElement(x,{error:this.state.error}),v["default"].createElement(T,{onClick:this.handleClick}))}}]),t}(v["default"].Component),C=function(e){var t=e.placeholder,a=e.value,n=e.handleChange;return v["default"].createElement("div",{className:"form-text-input-component"},v["default"].createElement("input",{autoFocus:"true",className:"form-control",placeholder:t,value:a,type:"text",onChange:function(e){return n(e)}}))},j=function(e){var t=e.placeholder,a=e.value,n=e.handleChange;return v["default"].createElement("div",{className:"form-password-component"},v["default"].createElement("input",{className:"form-control",placeholder:t,value:a,type:"password",onChange:function(e){return n(e)}}))},T=function(e){var t=e.onClick;return v["default"].createElement("div",{className:"form-buttons-component"},v["default"].createElement("a",{href:"#",className:"btn"},"Forgot your password?"),v["default"].createElement("button",{className:"btn",onClick:function(e){return t(e)}},"Log In"),v["default"].createElement("button",{className:"btn","data-btn":"cancel",onClick:function(e){return t(e)}},"Cancel"))},x=function(e){return v["default"].createElement("div",{className:"form-error-component "+e.error},"Username/password is invalid")}}),require.register("containers/Page/Page.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Page=void 0;var r=t("babel-runtime/core-js/object/keys"),l=n(r),o=t("react"),s=n(o),i=t("prop-types"),u=n(i),c=t("containers/Pages/Home/Home"),d=t("containers/Pages/Swagger/Swagger"),f=t("containers/Pages/Braid/Braid"),m={home:c.Home,swagger:d.Swagger,braid:f.Braid},p=e.Page=function(e){var t=m[e.page];return s["default"].createElement(t,e)};p.propTypes={page:u["default"].oneOf((0,l["default"])(m)).isRequired}}),require.register("containers/Pages/Braid/Braid.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Braid=void 0;var r=t("react"),l=n(r),o=t("prop-types"),s=(n(o),t("components/DisplayBraid/DisplayBraid")),i=e.Braid=function(e){var t=e.json;return l["default"].createElement("section",{className:"braid-component"},l["default"].createElement(s.DisplayBraid,{json:t}))};i.propTypes={}}),require.register("containers/Pages/Home/Home.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Home=void 0;var r=t("react"),l=n(r),o=t("prop-types"),s=n(o),i=(t("components/Nav/Nav"),t("components/Table/Table")),u=t("components/Map/MyMap"),c=n(u),d=t("components/Metrics/Metrics"),f=e.Home=function(e){var t=e.nodes,a=e.notaries,n=e.headersList,r=e.sortTable;return l["default"].createElement("section",{className:"home-component"},l["default"].createElement(c["default"],{nodes:t}),l["default"].createElement(d.Metrics,{nodes:t,notaries:a}),l["default"].createElement(i.Table,{headersList:n,rowData:t,sortTable:r,toggleModal:e.toggleModal,admin:e.admin}))};f.propTypes={headersList:s["default"].object.isRequired,nodes:s["default"].array.isRequired,notaries:s["default"].array.isRequired}}),require.register("containers/Pages/Swagger/Swagger.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.Swagger=void 0;var r=t("react"),l=n(r);e.Swagger=function(e){return console.log(document.baseURI),l["default"].createElement("div",{className:"swagger-component"},l["default"].createElement("iframe",{title:"Swagger API",src:"{ document.baseURI }swagger/#/admin/post_admin_api_login"}))}}),require.register("initialize.js",function(e,t,a){"use strict";function n(e){
-return e&&e.__esModule?e:{"default":e}}t("babel-polyfill"),t("whatwg-fetch");var r=t("react"),l=n(r),o=t("react-dom"),s=n(o),i=t("containers/App/App"),u=n(i),c=function(e){s["default"].render(l["default"].createElement(e,null),document.querySelector("#app"))};document.addEventListener("DOMContentLoaded",function(){c(u["default"])})}),require.register("mapStyle.json",function(e,t,a){a.exports=[{elementType:"geometry",stylers:[{color:"#a1dcd3"}]},{elementType:"labels.icon",stylers:[{visibility:"off"}]},{elementType:"labels.text.fill",stylers:[{color:"rgba(0, 0, 0, 0)"}]},{elementType:"labels.text.stroke",stylers:[{color:""},{visibility:"off"}]},{featureType:"administrative",elementType:"geometry",stylers:[{color:"#FFFFFF"}]},{featureType:"administrative.country",elementType:"labels.text.fill",stylers:[{color:"#999999"},{visibility:"off"}]},{featureType:"administrative.province",elementType:"labels.text.fill",stylers:[{color:"#999999"},{visibility:"off"}]},{featureType:"administrative.land_parcel",stylers:[{visibility:"off"}]},{featureType:"administrative.land_parcel",elementType:"labels",stylers:[{visibility:"off"}]},{featureType:"administrative.locality",elementType:"labels.text.fill",stylers:[{color:"#bdbdbd"},{visibility:"off"}]},{featureType:"administrative.neighborhood",stylers:[{visibility:"off"}]},{featureType:"administrative.neighborhood",elementType:"labels",stylers:[{visibility:"off"}]},{featureType:"poi",stylers:[{visibility:"off"}]},{featureType:"poi",elementType:"labels",stylers:[{visibility:"off"}]},{featureType:"poi",elementType:"labels.text",stylers:[{visibility:"off"}]},{featureType:"poi",elementType:"labels.text.fill",stylers:[{color:"#757575"}]},{featureType:"poi.park",elementType:"geometry",stylers:[{color:"#181818"}]},{featureType:"poi.park",elementType:"labels.text.fill",stylers:[{color:"#616161"}]},{featureType:"poi.park",elementType:"labels.text.stroke",stylers:[{color:"#1b1b1b"}]},{featureType:"road",stylers:[{visibility:"off"}]},{featureType:"road",elementType:"geometry.fill",stylers:[{color:"#2c2c2c"}]},{featureType:"road",elementType:"labels",stylers:[{visibility:"off"}]},{featureType:"road",elementType:"labels.icon",stylers:[{visibility:"off"}]},{featureType:"road",elementType:"labels.text.fill",stylers:[{color:"#8a8a8a"}]},{featureType:"road.arterial",elementType:"geometry",stylers:[{color:"#373737"}]},{featureType:"road.highway",elementType:"geometry",stylers:[{color:"#3c3c3c"}]},{featureType:"road.highway.controlled_access",elementType:"geometry",stylers:[{color:"#4e4e4e"}]},{featureType:"road.local",elementType:"labels.text.fill",stylers:[{color:"#616161"}]},{featureType:"transit",stylers:[{visibility:"off"}]},{featureType:"transit",elementType:"labels.text.fill",stylers:[{color:"#757575"}]},{featureType:"water",elementType:"geometry",stylers:[{color:"#FFFFFF"}]},{featureType:"water",elementType:"labels.text",stylers:[{visibility:"off"}]},{featureType:"water",elementType:"labels.text.fill",stylers:[{color:"#3d3d3d"}]}]}),require.register("navOptions.json",function(e,t,a){a.exports=[[{title:"dashboard",icon:"fa-desktop"}],[{title:"Braid",icon:"fa-random"}]]}),require.register("scripts/geoCode.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.nodesLatLong=e.lookupLatLong=void 0;var r=t("babel-runtime/core-js/map"),l=n(r),o=t("babel-runtime/regenerator"),s=n(o),i=t("babel-runtime/helpers/asyncToGenerator"),u=n(i),c=e.lookupLatLong=function(){var e=(0,u["default"])(s["default"].mark(function t(e){var a,n,r,l;return s["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return a={address:""+e.city,key:d,region:e.country.toLowerCase()},f.search=new URLSearchParams(a),t.next=4,fetch(f);case 4:return n=t.sent,t.next=7,n.status;case 7:if(r=t.sent,200!==r){t.next=15;break}return t.next=11,n.json();case 11:return l=t.sent,t.abrupt("return",l.results[0].geometry.location);case 15:return t.abrupt("return",n.statusText);case 16:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),d=(e.nodesLatLong=function(){var e=(0,u["default"])(s["default"].mark(function t(e){var a,n,r;return s["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:a=new l["default"],t.t0=s["default"].keys(e);case 2:if((t.t1=t.t0()).done){t.next=10;break}return n=t.t1.value,t.next=6,c(e[n]);case 6:r=t.sent,a.set(""+e[n].city+e[n].country,{lat:r.lat,lng:r.lng}),t.next=2;break;case 10:return t.abrupt("return",a);case 11:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),"AIzaSyC4QrPK-xamnJwHo-CFW0XzeDj4INbsQYU"),f=new URL("https://maps.googleapis.com/maps/api/geocode/json")}),require.register("scripts/headersList.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.headersList=void 0;var r=t("babel-runtime/core-js/map"),l=n(r),o="OU",s="O",i="L",u="C",c="N";e.headersList=new l["default"]([[o,"Organisational Unit"],[s,"Organisation"],[i,"Location"],[u,"Country"],[c,"Notary"]])}),require.register("scripts/jwtProcess.js",function(e,t,a){"use strict";Object.defineProperty(e,"__esModule",{value:!0});var n=function(e){var t=e.split("."),a=JSON.parse(atob(t[1]));return a.exp};e.checkToken=function(e){var t=Date.now();return Math.floor(t/1e3)<=n(e)}}),require.register("scripts/processData.js",function(e,t,a){"use strict";function n(e){if(e&&e.__esModule)return e;var t={};if(null!=e)for(var a in e)Object.prototype.hasOwnProperty.call(e,a)&&(t[a]=e[a]);return t["default"]=e,t}function r(e){return e&&e.__esModule?e:{"default":e}}function l(e,t){for(var a in e.parties)t.push(o(e.nodeKey,e.parties[a]));return t}function o(e,t){var a={};return a=s(t,a),a=i(t,a),a.nodeKey=e,a}function s(e,t){var a=e.name.split(",");for(var n in a){a[n]=a[n].trim();var r=a[n].split("=");t[r[0]]=r[1]}return t}function i(e,t){return t.key=e.key,t}function u(e){var t=e.filter(c);return t}function c(e,t,a){for(var n=0;n<t;n++)if(a[n].city===a[t].city&&a[n].country===a[t].country)return!1;return!0}function d(e){var t=new h["default"];return e.forEach(function(e){t.set(e.notaryInfo.identity.owningKey,e.notaryInfo.identity.owningKey)}),t}function f(e,t,a){return e.hasOwnProperty(e,t)&&e[t]?e[t]:a}Object.defineProperty(e,"__esModule",{value:!0}),e.sortNodes=e.isNotary=e.geoCodeNodes=e.getLocations=e.getHeaders=e.parseNodes=e.mutateNodes=void 0;var m=t("babel-runtime/helpers/slicedToArray"),p=r(m),g=t("babel-runtime/core-js/map"),h=r(g),b=t("babel-runtime/core-js/get-iterator"),y=r(b),v=t("babel-runtime/regenerator"),E=r(v),N=t("babel-runtime/helpers/asyncToGenerator"),w=r(N),k=(e.mutateNodes=function(){var e=(0,w["default"])(E["default"].mark(function t(e){var a,n,r;return E["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return a=C(e),n=j(a),t.next=4,M.nodesLatLong(n);case 4:return r=t.sent,a=T(a,r),t.abrupt("return",a);case 7:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),t("scripts/geoCode")),M=n(k),_={sortCiteria:""},C=e.parseNodes=function(e){var t=[],a=!0,n=!1,r=void 0;try{for(var o,s=(0,y["default"])(e);!(a=(o=s.next()).done);a=!0){var i=o.value;t=l(i,t)}}catch(u){n=!0,r=u}finally{try{!a&&s["return"]&&s["return"]()}finally{if(n)throw r}}return t},j=(e.getHeaders=function(e){var t=[];if(console.log(e),0==e.size)return t;var a=!0,n=!1,r=void 0;try{for(var l,o=(0,y["default"])(e.values());!(a=(l=o.next()).done);a=!0){var s=l.value;t.push(s)}}catch(i){n=!0,r=i}finally{try{!a&&o["return"]&&o["return"]()}finally{if(n)throw r}}return t},e.getLocations=function(e){var t=[];for(var a in e){var n={city:e[a].L,country:e[a].C};t.push(n)}return t=u(t)}),T=e.geoCodeNodes=function(e,t){var a=e;return a=a.map(function(e,a){var n=""+e.L+e.C;return e.lat=t.get(n).lat,e.lng=t.get(n).lng,e})};e.isNotary=function(e,t){var a=d(t);for(var n in e)a.get(e[n].key)?e[n].N=!0:e[n].N=!1;return e},e.sortNodes=function(e,t,a){var n=void 0,r=!0,l=!1,o=void 0;try{for(var s,i=(0,y["default"])(a);!(r=(s=i.next()).done);r=!0){var u=s.value,c=(0,p["default"])(u,2),d=c[0],m=c[1];m===e&&(n=d)}}catch(g){l=!0,o=g}finally{try{!r&&i["return"]&&i["return"]()}finally{if(l)throw o}}return n===_.sortCiteria?t.reverse():(_.sortCiteria=n,t.sort(function(e,t){var a=f(e,n,""),r=f(t,n,"");return a.localeCompare(r)}),t)};Array.prototype.equals=function(e){if(!e)return!1;if(this.length!=e.length)return console.log("in here"),!1;for(var t=0;t<this.length;t++)if(this[t].key!=e[t].key)return!1;return!0},Object.defineProperty(Array.prototype,"equals",{enumerable:!1})}),require.register("scripts/restCalls.js",function(e,t,a){"use strict";function n(e){return e&&e.__esModule?e:{"default":e}}Object.defineProperty(e,"__esModule",{value:!0}),e.deleteNodes=e.getBraidAPI=e.getBuildProperties=e.getNotaries=e.getNodes=e.checkAuth=e.login=void 0;var r=t("babel-runtime/regenerator"),l=n(r),o=t("babel-runtime/core-js/json/stringify"),s=n(o),i=t("babel-runtime/helpers/asyncToGenerator"),u=n(i),c=(e.login=function(){var e=(0,u["default"])(l["default"].mark(function t(e){var a,n;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,fetch(d+"/admin/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:(0,s["default"])(e)});case 2:return a=t.sent,t.next=5,a.status;case 5:if(n=t.sent,200!==n){t.next=12;break}return t.next=9,a.text();case 9:sessionStorage.corditeAccessToken=t.sent,t.next=13;break;case 12:console.log(a);case 13:return t.abrupt("return",a);case 14:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),e.checkAuth=function(){var e=(0,u["default"])(l["default"].mark(function t(){var e,a;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return e=403,a=sessionStorage.corditeAccessToken,a&&(0,c.checkToken)(a)&&(e=200),t.abrupt("return",e);case 4:case"end":return t.stop()}},t,this)}));return function(){return e.apply(this,arguments)}}(),e.getNodes=function(){var e=(0,u["default"])(l["default"].mark(function t(){var e,a,n;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return e=sessionStorage.corditeAccessToken,t.next=3,fetch(d+"/admin/api/nodes",{method:"GET",headers:{accept:"application/json",Authorization:"Bearer "+e}});case 3:return a=t.sent,t.next=6,a.json();case 6:return n=t.sent,t.abrupt("return",n);case 8:case"end":return t.stop()}},t,this)}));return function(){return e.apply(this,arguments)}}(),e.getNotaries=function(){var e=(0,u["default"])(l["default"].mark(function t(){var e,a;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,fetch(d+"/admin/api/notaries",{method:"GET",headers:{accept:"application/json",Authorization:"Bearer "+sessionStorage.corditeAccessToken}});case 2:return e=t.sent,t.next=5,e.json();case 5:return a=t.sent,t.abrupt("return",a);case 7:case"end":return t.stop()}},t,this)}));return function(){return e.apply(this,arguments)}}(),e.getBuildProperties=function(){var e=(0,u["default"])(l["default"].mark(function t(){var e,a;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,fetch(d+"/admin/api/build-properties",{method:"GET",headers:{accept:"application/json"}});case 2:return e=t.sent,t.next=5,e.json();case 5:return a=t.sent,t.abrupt("return",a);case 7:case"end":return t.stop()}},t,this)}));return function(){return e.apply(this,arguments)}}(),e.getBraidAPI=function(){var e=(0,u["default"])(l["default"].mark(function t(){var e,a;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,fetch(d+"/braid/api",{method:"GET",headers:{accept:"application/json",Authorization:"Bearer "+sessionStorage.corditeAccessToken}});case 2:return e=t.sent,t.next=5,e.json();case 5:return a=t.sent,t.abrupt("return",a);case 7:case"end":return t.stop()}},t,this)}));return function(){return e.apply(this,arguments)}}(),e.deleteNodes=function(){var e=(0,u["default"])(l["default"].mark(function t(e){var a;return l["default"].wrap(function(t){for(;;)switch(t.prev=t.next){case 0:return t.next=2,fetch(d+"/admin/api/nodes/"+e,{method:"DELETE",headers:{accept:"application/json",Authorization:"Bearer "+sessionStorage.corditeAccessToken}});case 2:return a=t.sent,t.abrupt("return",a);case 4:case"end":return t.stop()}},t,this)}));return function(t){return e.apply(this,arguments)}}(),t("scripts/jwtProcess")),d=document.baseURI}),require.register("templates/google.analytics.pug",function(e,t,a){function n(e){var t="";return t+="<script></script>"}a.exports=n}),require.register("templates/head.pug",function(e,t,a){function n(e){var t,a="";return a=a+'<head><base href="${location}/"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+pug.escape(null==(t="NMS")?"":t)+'</title><link rel="icon" href="png/favicon/favicon.ico" sizes="16x16 24x24 32x32 64x64" type="image/vnd.microsoft.icon"><link rel="stylesheet" href="app.css"><link href="https://fonts.googleapis.com/css?family=Montserrat:300,300i,400,400i,500,500i,600,600i,700" rel="stylesheet"><meta name="title" content="Cordite Stats"><meta name="navigation-title" content=""><meta name="description" content=""><meta name="keywords" content=""><meta property="og:title" content="Cordite Stats"><meta property="og:type" content="website"><meta property="og:image" content="jpg/logo-watermark-og.jpg"><meta property="og:url" content=""><meta property="og:description" content=""><meta name="twitter:description" content="CorditeStats"><meta name="twitter:image:src" content="jpg/logo-watermark-og.jpg"><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="@jchrisjones"><meta name="twitter:site" content="@we_are_cordite"><meta name="twitter:label1" value="Network Mapping Service"><meta name="twitter:data1" value="View nodes on the cordite network."><meta name="theme-color" content="#0A2F64"><meta name="msapplication-navbutton-color" content="#0A2F64"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="apple-touch-icon" href="png/apple-touch/touch-icon-iphone.png"><link rel="apple-touch-icon" sizes="152x152" href="png/apple-touch/touch-icon-ipad.png"><link rel="apple-touch-icon" sizes="180x180" href="png/apple-touch/touch-icon-iphone-retina.png"><link rel="apple-touch-icon" sizes="167x167" href="png/apple-touch/touch-icon-ipad-retina.png"><link rel="icon" sizes="192x192" href="png/android/192x192_icon.png"><link rel="manifest" href="manifest.json"></head>'}a.exports=n}),require.alias("buffer/index.js","buffer"),require.alias("node-browser-modules/node_modules/process/browser.js","process"),e=require("process"),require.register("___globals___",function(e,t,a){})}(),require("___globals___");
+(function() {
+  'use strict';
+
+  var globals = typeof global === 'undefined' ? self : global;
+  if (typeof globals.require === 'function') return;
+
+  var modules = {};
+  var cache = {};
+  var aliases = {};
+  var has = {}.hasOwnProperty;
+
+  var expRe = /^\.\.?(\/|$)/;
+  var expand = function(root, name) {
+    var results = [], part;
+    var parts = (expRe.test(name) ? root + '/' + name : name).split('/');
+    for (var i = 0, length = parts.length; i < length; i++) {
+      part = parts[i];
+      if (part === '..') {
+        results.pop();
+      } else if (part !== '.' && part !== '') {
+        results.push(part);
+      }
+    }
+    return results.join('/');
+  };
+
+  var dirname = function(path) {
+    return path.split('/').slice(0, -1).join('/');
+  };
+
+  var localRequire = function(path) {
+    return function expanded(name) {
+      var absolute = expand(dirname(path), name);
+      return globals.require(absolute, path);
+    };
+  };
+
+  var initModule = function(name, definition) {
+    var hot = hmr && hmr.createHot(name);
+    var module = {id: name, exports: {}, hot: hot};
+    cache[name] = module;
+    definition(module.exports, localRequire(name), module);
+    return module.exports;
+  };
+
+  var expandAlias = function(name) {
+    return aliases[name] ? expandAlias(aliases[name]) : name;
+  };
+
+  var _resolve = function(name, dep) {
+    return expandAlias(expand(dirname(name), dep));
+  };
+
+  var require = function(name, loaderPath) {
+    if (loaderPath == null) loaderPath = '/';
+    var path = expandAlias(name);
+
+    if (has.call(cache, path)) return cache[path].exports;
+    if (has.call(modules, path)) return initModule(path, modules[path]);
+
+    throw new Error("Cannot find module '" + name + "' from '" + loaderPath + "'");
+  };
+
+  require.alias = function(from, to) {
+    aliases[to] = from;
+  };
+
+  var extRe = /\.[^.\/]+$/;
+  var indexRe = /\/index(\.[^\/]+)?$/;
+  var addExtensions = function(bundle) {
+    if (extRe.test(bundle)) {
+      var alias = bundle.replace(extRe, '');
+      if (!has.call(aliases, alias) || aliases[alias].replace(extRe, '') === alias + '/index') {
+        aliases[alias] = bundle;
+      }
+    }
+
+    if (indexRe.test(bundle)) {
+      var iAlias = bundle.replace(indexRe, '');
+      if (!has.call(aliases, iAlias)) {
+        aliases[iAlias] = bundle;
+      }
+    }
+  };
+
+  require.register = require.define = function(bundle, fn) {
+    if (bundle && typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has.call(bundle, key)) {
+          require.register(key, bundle[key]);
+        }
+      }
+    } else {
+      modules[bundle] = fn;
+      delete cache[bundle];
+      addExtensions(bundle);
+    }
+  };
+
+  require.list = function() {
+    var list = [];
+    for (var item in modules) {
+      if (has.call(modules, item)) {
+        list.push(item);
+      }
+    }
+    return list;
+  };
+
+  var hmr = globals._hmr && new globals._hmr(_resolve, require, modules, cache);
+  require._cache = cache;
+  require.hmr = hmr && hmr.wrap;
+  require.brunch = true;
+  globals.require = require;
+})();
+
+(function() {
+var global = typeof window === 'undefined' ? this : window;
+var process;
+var __makeRelativeRequire = function(require, mappings, pref) {
+  var none = {};
+  var tryReq = function(name, pref) {
+    var val;
+    try {
+      val = require(pref + '/node_modules/' + name);
+      return val;
+    } catch (e) {
+      if (e.toString().indexOf('Cannot find module') === -1) {
+        throw e;
+      }
+
+      if (pref.indexOf('node_modules') !== -1) {
+        var s = pref.split('/');
+        var i = s.lastIndexOf('node_modules');
+        var newPref = s.slice(0, i).join('/');
+        return tryReq(name, newPref);
+      }
+    }
+    return none;
+  };
+  return function(name) {
+    if (name in mappings) name = mappings[name];
+    if (!name) return;
+    if (name[0] !== '.' && pref) {
+      var val = tryReq(name, pref);
+      if (val !== none) return val;
+    }
+    return require(name);
+  }
+};
+require.register("clusterStyle.json", function(exports, require, module) {
+module.exports = [
+  {   
+    "anchor": [25,25],
+    "height": 26,
+    "textColor": "#FFFFFF",
+    "url": "png/ping.png",
+    "width": 26
+  },
+  {   
+    "height": 28,
+    "textColor": "#FFFFFF",
+    "url": "png/ping.png",
+    "width": 28
+  },
+  {   
+    "height": 33,
+    "textColor": "#FFFFFF",
+    "url": "png/ping.png",
+    "width": 33
+  },
+  {   
+
+    "height": 39,
+    "textColor": "#FFFFFF",
+    "url": "png/ping.png",
+    "width": 39
+  },
+  {   
+    "height": 45,
+    "textColor": "#FFFFFF",
+    "url": "png/ping.png",
+    "width": 45
+  }
+];
+});
+
+require.register("components/DisplayBraid/DisplayBraid.js", function(exports, require, module) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.DisplayBraid = undefined;
+
+var _stringify = require("babel-runtime/core-js/json/stringify");
+
+var _stringify2 = _interopRequireDefault(_stringify);
+
+var _react = require("react");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var DisplayBraid = exports.DisplayBraid = function DisplayBraid(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "display-braid-component column" },
+    _react2.default.createElement(
+      "div",
+      { className: "card" },
+      _react2.default.createElement(
+        "div",
+        { className: "card-title" },
+        _react2.default.createElement(
+          "h2",
+          null,
+          "Braid API"
+        ),
+        _react2.default.createElement(
+          "div",
+          { className: "clearfix" },
+          _react2.default.createElement(
+            "pre",
+            null,
+            (0, _stringify2.default)(props.json, null, 2)
+          )
+        )
+      )
+    )
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+});
+
+;require.register("components/Map/MyMap.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+require('whatwg-fetch');
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _recompose = require('recompose');
+
+var _reactGoogleMaps = require('react-google-maps');
+
+var _MarkerClusterer = require('react-google-maps/lib/components/addons/MarkerClusterer');
+
+var _mapStyle = require('mapStyle.json');
+
+var _mapStyle2 = _interopRequireDefault(_mapStyle);
+
+var _clusterStyle = require('clusterStyle.json');
+
+var _clusterStyle2 = _interopRequireDefault(_clusterStyle);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var MapWithAMarkerClusterer = (0, _recompose.compose)((0, _recompose.withProps)({
+  googleMapURL: "https://maps.googleapis.com/maps/api/js?key=AIzaSyC4QrPK-xamnJwHo-CFW0XzeDj4INbsQYU&v=3.exp&libraries=geometry,drawing,places",
+  loadingElement: _react2.default.createElement('div', { className: 'map-load-component' }),
+  containerElement: _react2.default.createElement('div', { className: 'map-container-component' }),
+  mapElement: _react2.default.createElement('div', { className: 'map-component' }),
+  imagePath: "png/cf.png"
+}), (0, _recompose.withState)('zoom', 'onZoomChange', 2), (0, _recompose.withHandlers)(function (props) {
+  var refs = {
+    map: undefined
+  };
+
+  return {
+    onMarkerClustererClick: function onMarkerClustererClick() {
+      return function (markerClusterer) {
+        //const clickedMarkers = markerClusterer.getMarkers()
+        // console.log(`Current clicked markers length: ${clickedMarkers.length}`)
+        // console.log(clickedMarkers)
+        console.log(markerClusterer);
+      };
+    },
+    setZoom: function setZoom() {},
+    onMapMounted: function onMapMounted() {
+      return function (ref) {
+        refs.map = ref;
+      };
+    },
+    onZoomChanged: function onZoomChanged(_ref, zoom) {
+      var onZoomChange = _ref.onZoomChange;
+      return function () {
+        onZoomChange(refs.map.getZoom());
+      };
+    }
+  };
+}), _reactGoogleMaps.withScriptjs, _reactGoogleMaps.withGoogleMap)(function (props) {
+  return _react2.default.createElement(
+    _reactGoogleMaps.GoogleMap,
+    {
+      zoom: props.zoom,
+      defaultCenter: { lat: 53, lng: 0 },
+      defaultOptions: {
+        styles: _mapStyle2.default,
+        fullscreenControl: false,
+        mapTypeControl: false,
+        maxZoom: 10,
+        minZoom: 2,
+        streetViewControl: false
+      },
+      ref: props.onMapMounted,
+      onZoomChanged: props.onZoomChanged
+    },
+    _react2.default.createElement(
+      _MarkerClusterer.MarkerClusterer,
+      {
+        averageCenter: true,
+        clusterClass: 'cluster cluster-component',
+        enableRetinaIcons: true,
+        gridSize: 60,
+        maxZoom: 10,
+        minimumClusterSize: 1,
+        onClick: props.onMarkerClustererClick,
+        styles: _clusterStyle2.default,
+        anch: true
+      },
+      props.markers.map(function (marker, index) {
+        return _react2.default.createElement(_reactGoogleMaps.Marker, {
+          key: index,
+          position: { lat: marker.lat, lng: marker.lng },
+          icon: "png/node.png"
+        });
+      })
+    )
+  );
+}); /*
+     *   Copyright 2018, Cordite Foundation.
+     *
+     *    Licensed under the Apache License, Version 2.0 (the "License");
+     *    you may not use this file except in compliance with the License.
+     *    You may obtain a copy of the License at
+     *
+     *      http://www.apache.org/licenses/LICENSE-2.0
+     *
+     *    Unless required by applicable law or agreed to in writing, software
+     *    distributed under the License is distributed on an "AS IS" BASIS,
+     *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     *    See the License for the specific language governing permissions and
+     *    limitations under the License.
+     */
+
+
+var DemoApp = function DemoApp(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'row grid-responsive' },
+    _react2.default.createElement(
+      'div',
+      { className: 'column page-heading' },
+      _react2.default.createElement(
+        'div',
+        { className: 'large-card' },
+        _react2.default.createElement(MapWithAMarkerClusterer, { markers: props.nodes })
+      )
+    )
+  );
+};
+
+exports.default = DemoApp;
+});
+
+;require.register("components/Metrics/Metrics.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Metrics = undefined;
+
+var _keys = require('babel-runtime/core-js/object/keys');
+
+var _keys2 = _interopRequireDefault(_keys);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Metrics = exports.Metrics = function Metrics(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'row grid-responsive metrics-component' },
+    _react2.default.createElement(Metric, { nodes: props.nodes }),
+    _react2.default.createElement(Metric, { notaries: props.notaries })
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+
+
+var Metric = function Metric(props) {
+  var node = (0, _keys2.default)(props)[0];
+  var additions = '';
+  if (node === 'notaries') {
+    additions = 'Node';
+  }
+  return _react2.default.createElement(
+    'div',
+    { className: 'm-component column' },
+    _react2.default.createElement(
+      'div',
+      { className: 'card' },
+      _react2.default.createElement(
+        'div',
+        { className: 'card-title' },
+        _react2.default.createElement(
+          'h2',
+          { className: 'float-left' },
+          node + " " + additions + " #"
+        ),
+        _react2.default.createElement(
+          'div',
+          { className: 'badge background-primary float-right' },
+          props[node].length
+        ),
+        _react2.default.createElement('div', { className: 'clearfix' })
+      )
+    )
+  );
+};
+});
+
+;require.register("components/Modal/Modal.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.DeleteModal = exports.LogoutModal = exports.LoginModal = undefined;
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _Login = require('containers/Login/Login');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var loggingOut = function loggingOut(toggleModal) {
+  sessionStorage.clear();
+  toggleModal();
+};
+
+var LoginModal = exports.LoginModal = function LoginModal(props) {
+  return _react2.default.createElement(
+    'div',
+    {
+      className: 'modal-component ' + (props.style ? 'on' : ''),
+      'data-link': 'default',
+      onClick: function onClick(e) {
+        return props.toggleModal(e);
+      } },
+    _react2.default.createElement(_Login.LoginContainer, {
+      nmsLogin: props.nmsLogin,
+      toggleModal: props.toggleModal,
+      setAdmin: props.setAdmin })
+  );
+};
+
+var LogoutModal = exports.LogoutModal = function LogoutModal(props) {
+  return _react2.default.createElement(
+    'div',
+    {
+      className: 'modal-component ' + (props.style ? 'on' : ''),
+      'data-link': 'default',
+      onClick: function onClick(e) {
+        return props.toggleModal(e);
+      } },
+    _react2.default.createElement(
+      'div',
+      { className: 'lm-container' },
+      _react2.default.createElement(
+        'div',
+        { className: 'lm-middle' },
+        _react2.default.createElement(ModalTitle, null),
+        _react2.default.createElement(ModalContent, null),
+        _react2.default.createElement(ModalButtonGroup, {
+          toggleModal: props.toggleModal,
+          setAdmin: props.setAdmin
+        })
+      )
+    )
+  );
+};
+
+var DeleteModal = exports.DeleteModal = function DeleteModal(props) {
+  return _react2.default.createElement(
+    'div',
+    {
+      className: 'modal-component ' + (props.style ? 'on' : ''),
+      'data-link': 'default',
+      onClick: function onClick(e) {
+        return props.toggleModal(e);
+      } },
+    _react2.default.createElement(
+      'div',
+      { className: 'lm-container' },
+      _react2.default.createElement(
+        'div',
+        { className: 'lm-middle' },
+        _react2.default.createElement(ModalTitleDelete, null),
+        _react2.default.createElement(ModalContentDelete, { node: props.selectedNode }),
+        _react2.default.createElement(
+          'div',
+          { className: 'lm-footer' },
+          _react2.default.createElement(
+            'button',
+            {
+              className: 'btn pull-right',
+              'data-btn': true,
+              onClick: function onClick(e) {
+                props.deleteNode();props.toggleModal();
+              } },
+            'Yes'
+          ),
+          _react2.default.createElement(
+            'button',
+            {
+              className: 'btn pull-right',
+              'data-btn': 'cancel',
+              onClick: function onClick(e) {
+                return props.toggleModal();
+              } },
+            'No'
+          )
+        )
+      )
+    )
+  );
+};
+
+var ModalTitleDelete = function ModalTitleDelete(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'lm-title' },
+    _react2.default.createElement('span', { className: 'fa fa-trash' }),
+    _react2.default.createElement(
+      'strong',
+      null,
+      '     Delete Node'
+    )
+  );
+};
+
+var ModalTitle = function ModalTitle(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'lm-title' },
+    _react2.default.createElement('span', { className: 'fa fa-sign-out' }),
+    _react2.default.createElement(
+      'strong',
+      null,
+      ' LOG OUT?'
+    )
+  );
+};
+
+var ModalContentDelete = function ModalContentDelete(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'lm-content' },
+    _react2.default.createElement(
+      'p',
+      { className: 'node-id' },
+      props.node.O
+    ),
+    _react2.default.createElement(
+      'p',
+      { className: 'node-id' },
+      'for node ',
+      props.node.nodeKey
+    ),
+    _react2.default.createElement(
+      'p',
+      null,
+      'Are you sure you want to delete this node?'
+    )
+  );
+};
+
+var ModalContent = function ModalContent(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'lm-content' },
+    _react2.default.createElement(
+      'p',
+      null,
+      'Are you sure you want to log out?'
+    ),
+    _react2.default.createElement(
+      'p',
+      null,
+      'Press No if you want to continue work. Press Yes to logout current user.'
+    )
+  );
+};
+
+var ModalButtonGroup = function ModalButtonGroup(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'lm-footer' },
+    _react2.default.createElement(
+      'button',
+      {
+        className: 'btn pull-right',
+        'data-btn': true,
+        onClick: function onClick(e) {
+          props.setAdmin(false);loggingOut(props.toggleModal);
+        } },
+      'Yes'
+    ),
+    _react2.default.createElement(
+      'button',
+      {
+        className: 'btn pull-right',
+        'data-btn': 'cancel',
+        onClick: function onClick(e) {
+          return props.toggleModal();
+        } },
+      'No'
+    )
+  );
+};
+});
+
+;require.register("components/Nav/Nav.js", function(exports, require, module) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Nav = undefined;
+
+var _getPrototypeOf = require("babel-runtime/core-js/object/get-prototype-of");
+
+var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
+
+var _classCallCheck2 = require("babel-runtime/helpers/classCallCheck");
+
+var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
+
+var _createClass2 = require("babel-runtime/helpers/createClass");
+
+var _createClass3 = _interopRequireDefault(_createClass2);
+
+var _possibleConstructorReturn2 = require("babel-runtime/helpers/possibleConstructorReturn");
+
+var _possibleConstructorReturn3 = _interopRequireDefault(_possibleConstructorReturn2);
+
+var _inherits2 = require("babel-runtime/helpers/inherits");
+
+var _inherits3 = _interopRequireDefault(_inherits2);
+
+var _react = require("react");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Nav = exports.Nav = function Nav(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "navbar nav-component" },
+    _react2.default.createElement(
+      "div",
+      { className: "row" },
+      _react2.default.createElement(PageTitle, null),
+      _react2.default.createElement(Icon, {
+        icon: "gitlab",
+        link: "https://gitlab.com/cordite/cordite",
+        toggleModal: function toggleModal(e) {
+          return console.log('click');
+        } }),
+      _react2.default.createElement(Icon, {
+        icon: sessionStorage['corditeAccessToken'] ? "sign-out" : "sign-in",
+        link: "#",
+        toggleModal: props.toggleModal })
+    )
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+
+
+var PageTitle = function PageTitle(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "page-title-component column column-80 col-site-title" },
+    _react2.default.createElement(
+      "a",
+      { href: "#", className: "site-title float-left" },
+      _react2.default.createElement("img", { src: "png/logo-watermark.png", alt: "logo" })
+    )
+  );
+};
+
+var Search = function (_React$Component) {
+  (0, _inherits3.default)(Search, _React$Component);
+
+  function Search(props) {
+    (0, _classCallCheck3.default)(this, Search);
+
+    var _this = (0, _possibleConstructorReturn3.default)(this, (Search.__proto__ || (0, _getPrototypeOf2.default)(Search)).call(this, props));
+
+    _this.state = {
+      value: ""
+    };
+
+    _this.handleChange = _this.handleChange.bind(_this);
+    return _this;
+  }
+
+  (0, _createClass3.default)(Search, [{
+    key: "handleChange",
+    value: function handleChange(e) {
+      this.setState({ value: e.target.value });
+    }
+  }, {
+    key: "render",
+    value: function render() {
+      var _this2 = this;
+
+      return _react2.default.createElement(
+        "div",
+        { className: "search-component column column-40 col-search" },
+        _react2.default.createElement("a", {
+          href: "#",
+          className: "search-btn fa fa-search" }),
+        _react2.default.createElement("input", {
+          type: "text",
+          name: "",
+          value: this.state.value,
+          onChange: function onChange(e) {
+            return _this2.handleChange(e);
+          },
+          placeholder: "Search..." })
+      );
+    }
+  }]);
+  return Search;
+}(_react2.default.Component);
+
+var User = function User(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "column column-30" },
+    _react2.default.createElement(
+      "div",
+      { className: "user-section" },
+      _react2.default.createElement(
+        "a",
+        { href: "#" },
+        _react2.default.createElement("img", { src: "http://via.placeholder.com/50x50", alt: "profile photo", className: "circle float-left profile-photo", width: "50", height: "auto" }),
+        _react2.default.createElement(
+          "div",
+          { className: "username" },
+          _react2.default.createElement(
+            "h4",
+            null,
+            "Jane Donovan"
+          ),
+          _react2.default.createElement(
+            "p",
+            null,
+            "Administrator"
+          )
+        )
+      )
+    )
+  );
+};
+
+var SvgLinks = function SvgLinks(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "svg-icon-component column column-10" },
+    _react2.default.createElement(
+      "svg",
+      {
+        xmlns: "http://www.w3.org/2000/svg",
+        viewBox: "0 0 305.5 305.7",
+        id: "Layer_1" },
+      _react2.default.createElement("circle", {
+        cx: "152.8",
+        cy: "152.8",
+        r: "142" }),
+      _react2.default.createElement("path", {
+        d: "M305.5 153c.9 83.3-69.5 153.1-153.5 152.7C70.5 305.3-.5 237.4 0 151.8.5 69.2 69.4-.6 154.2 0c82.4.6 152.2 69.4 151.3 153zm-69.4-.1c-11.6 7.1-15.5 18.1-16.5 30.2-.8 9.1-.8 18.3-1.1 27.4-.3 10.5-2.6 13.3-12.9 13.1-5.2-.1-6.4 1.6-6.3 6.6.3 14.4.1 14.4 14.6 12.9 14-1.4 21.2-7.6 24.3-21.4 1.1-5 1.5-10.1 1.8-15.3.5-8.9.4-17.9 1.2-26.9.9-10.4 5.7-14.7 16-15.4 2.8-.2 3.9-1.2 3.8-3.9-.1-4.5-.2-9 0-13.5.2-3.8-1.1-5.3-5.1-5.3-7.5 0-11.5-2.9-13.5-10.1-1.3-4.6-2-9.4-2.3-14.2-.6-9.3-.4-18.6-1.1-27.9-1.5-18-11.1-26.7-29.2-26.8-10.3-.1-10.3-.1-10.3 10.6 0 8.6 0 8.6 8.7 8.9 6.3.2 8.7 1.7 9.6 7.8.9 6.5.5 13.3.9 19.9 1 16.2.9 32.8 17.4 43.3zm-166.4-.1c11.3-7.4 15.7-17.8 16.4-30 .6-9.1.4-18.3 1.1-27.4.8-10.2 1.8-14 13.2-13.3 5.3.3 6.4-2 5.7-6.4-.1-.7 0-1.3 0-2 0-11.5 0-11.5-11.8-11.2-16.8.4-27 10.2-27.9 26.9-.5 10.1-.7 20.3-1 30.4-.4 14.5-4.1 19-17.9 21.9-1.2.2-2.7 2.3-2.8 3.7-.4 4.5 0 9-.2 13.5-.2 3.9 1.1 5.3 5.1 5.3 7.1 0 11.6 3.2 13.5 9.6 1.2 4.2 2 8.7 2.2 13.2.6 9.5.6 18.9 1.1 28.4 1.2 22 15.8 30.6 39.6 26.8v-9.4c0-8.8 0-8.8-8.9-9.2-6.2-.3-8.4-1.8-9.1-8.1-.8-7.9-.5-15.9-1.1-23.9-.8-14.8-2.5-29.4-17.2-38.8zm40-12.3c-7.1 0-12.8 5.6-12.7 12.5.1 6.8 5.6 12.1 12.5 12.1 7.3 0 12.7-5.4 12.7-12.4-.2-6.7-5.7-12.2-12.5-12.2zm43.1 24.6c7.3 0 12.3-4.8 12.3-12 .1-7.5-4.9-12.6-12.2-12.7-7.3 0-12.5 5.3-12.4 12.6.1 7.1 5.1 12.1 12.3 12.1zm43.2 0c6.9 0 12.9-5.6 12.9-12.2s-5.9-12.4-12.8-12.4-12.7 5.8-12.6 12.5c.1 6.6 5.8 12.1 12.5 12.1z"
+      })
+    )
+  );
+};
+
+var Icon = function Icon(props) {
+  return _react2.default.createElement(
+    "div",
+    { className: "icon-component column column-10" },
+    _react2.default.createElement(
+      "a",
+      {
+        href: "javascript:void(0)",
+        "data-link": props.icon,
+        onClick: function onClick(e) {
+          return props.toggleModal(e);
+        } },
+      _react2.default.createElement("em", { className: "fa fa-" + props.icon })
+    )
+  );
+};
+});
+
+;require.register("components/Sidebar/Sidebar.js", function(exports, require, module) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Sidebar = undefined;
+
+var _react = require("react");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Sidebar = exports.Sidebar = function Sidebar(props) {
+  return _react2.default.createElement(
+    "div",
+    { id: "sidebar", className: "column sidebar-component" },
+    _react2.default.createElement(
+      "ul",
+      null,
+      props.navOptions[0].map(function (option, index) {
+        return _react2.default.createElement(
+          "li",
+          { key: index },
+          _react2.default.createElement(NavLink, { title: option.title, icon: option.icon, handleBtn: props.handleBtn })
+        );
+      }, { props: props })
+    ),
+    _react2.default.createElement(
+      "h5",
+      { className: "title-override" },
+      "APIs"
+    ),
+    _react2.default.createElement(
+      "ul",
+      null,
+      props.navOptions[1].map(function (option, index) {
+        return _react2.default.createElement(
+          "li",
+          { key: index },
+          _react2.default.createElement(NavLink, { title: option.title, icon: option.icon, handleBtn: this.props.handleBtn })
+        );
+      }, { props: props }),
+      _react2.default.createElement(
+        "li",
+        { key: Math.floor(Math.random() * 100) + 7 },
+        _react2.default.createElement(
+          "button",
+          {
+            className: "sidebar-button-component",
+            "data-btn": "swagger",
+            onClick: function onClick(e) {
+              return props.handleBtn(e);
+            } },
+          _react2.default.createElement(
+            "svg",
+            {
+              xmlns: "http://www.w3.org/2000/svg",
+              viewBox: "0 0 305.5 305.7",
+              id: "Layer_1" },
+            _react2.default.createElement("circle", {
+              cx: "152.8",
+              cy: "152.8",
+              r: "142" }),
+            _react2.default.createElement("path", {
+              d: "M305.5 153c.9 83.3-69.5 153.1-153.5 152.7C70.5 305.3-.5 237.4 0 151.8.5 69.2 69.4-.6 154.2 0c82.4.6 152.2 69.4 151.3 153zm-69.4-.1c-11.6 7.1-15.5 18.1-16.5 30.2-.8 9.1-.8 18.3-1.1 27.4-.3 10.5-2.6 13.3-12.9 13.1-5.2-.1-6.4 1.6-6.3 6.6.3 14.4.1 14.4 14.6 12.9 14-1.4 21.2-7.6 24.3-21.4 1.1-5 1.5-10.1 1.8-15.3.5-8.9.4-17.9 1.2-26.9.9-10.4 5.7-14.7 16-15.4 2.8-.2 3.9-1.2 3.8-3.9-.1-4.5-.2-9 0-13.5.2-3.8-1.1-5.3-5.1-5.3-7.5 0-11.5-2.9-13.5-10.1-1.3-4.6-2-9.4-2.3-14.2-.6-9.3-.4-18.6-1.1-27.9-1.5-18-11.1-26.7-29.2-26.8-10.3-.1-10.3-.1-10.3 10.6 0 8.6 0 8.6 8.7 8.9 6.3.2 8.7 1.7 9.6 7.8.9 6.5.5 13.3.9 19.9 1 16.2.9 32.8 17.4 43.3zm-166.4-.1c11.3-7.4 15.7-17.8 16.4-30 .6-9.1.4-18.3 1.1-27.4.8-10.2 1.8-14 13.2-13.3 5.3.3 6.4-2 5.7-6.4-.1-.7 0-1.3 0-2 0-11.5 0-11.5-11.8-11.2-16.8.4-27 10.2-27.9 26.9-.5 10.1-.7 20.3-1 30.4-.4 14.5-4.1 19-17.9 21.9-1.2.2-2.7 2.3-2.8 3.7-.4 4.5 0 9-.2 13.5-.2 3.9 1.1 5.3 5.1 5.3 7.1 0 11.6 3.2 13.5 9.6 1.2 4.2 2 8.7 2.2 13.2.6 9.5.6 18.9 1.1 28.4 1.2 22 15.8 30.6 39.6 26.8v-9.4c0-8.8 0-8.8-8.9-9.2-6.2-.3-8.4-1.8-9.1-8.1-.8-7.9-.5-15.9-1.1-23.9-.8-14.8-2.5-29.4-17.2-38.8zm40-12.3c-7.1 0-12.8 5.6-12.7 12.5.1 6.8 5.6 12.1 12.5 12.1 7.3 0 12.7-5.4 12.7-12.4-.2-6.7-5.7-12.2-12.5-12.2zm43.1 24.6c7.3 0 12.3-4.8 12.3-12 .1-7.5-4.9-12.6-12.2-12.7-7.3 0-12.5 5.3-12.4 12.6.1 7.1 5.1 12.1 12.3 12.1zm43.2 0c6.9 0 12.9-5.6 12.9-12.2s-5.9-12.4-12.8-12.4-12.7 5.8-12.6 12.5c.1 6.6 5.8 12.1 12.5 12.1z"
+            })
+          ),
+          "SWAGGER"
+        )
+      )
+    ),
+    _react2.default.createElement("hr", null),
+    _react2.default.createElement(
+      "form",
+      { action: "https://groups.io/g/cordite-nms/signup?u=4408289288444521305", method: "post", target: "_blank" },
+      _react2.default.createElement(
+        "div",
+        null,
+        _react2.default.createElement(
+          "h6",
+          null,
+          "Subscribe to NMS discussion"
+        ),
+        _react2.default.createElement("br", null),
+        _react2.default.createElement("input", { id: "email", type: "email", name: "email", placeholder: "email address", required: "true" }),
+        _react2.default.createElement(
+          "div",
+          { style: { position: "absolute", left: "-5000px" }, "aria-hidden": "true" },
+          _react2.default.createElement("input", { type: "text", name: "b_4408289288444521305", tabIndex: "-1", value: "" })
+        ),
+        _react2.default.createElement(
+          "button",
+          { className: "sidebar-button-component", id: "groupsio-embedded-subscribe", type: "submit", value: "Subscribe", name: "subscribe" },
+          _react2.default.createElement(
+            "svg",
+            {
+              xmlns: "http://www.w3.org/2000/svg",
+              viewBox: "0 0 493.497 493.497",
+              id: "Layer_1" },
+            _react2.default.createElement("circle", {
+              cx: "152.8",
+              cy: "152.8",
+              r: "142" }),
+            _react2.default.createElement("path", { d: "M444.556,85.218H48.942C21.954,85.218,0,107.171,0,134.16v225.177c0,26.988,21.954,48.942,48.942,48.942h395.613  c26.988,0,48.941-21.954,48.941-48.942V134.16C493.497,107.171,471.544,85.218,444.556,85.218z M460.87,134.16v225.177  c0,2.574-0.725,4.924-1.793,7.09L343.74,251.081l117.097-117.097C460.837,134.049,460.87,134.096,460.87,134.16z M32.628,359.336  V134.16c0-0.064,0.033-0.11,0.033-0.175l117.097,117.097L34.413,366.426C33.353,364.26,32.628,361.911,32.628,359.336z   M251.784,296.902c-2.692,2.691-7.378,2.691-10.07,0L62.667,117.846h368.172L251.784,296.902z M172.827,274.152l45.818,45.819  c7.512,7.511,17.493,11.645,28.104,11.645c10.61,0,20.592-4.134,28.104-11.645l45.82-45.819l101.49,101.499H71.327L172.827,274.152z  " })
+          ),
+          " Submit"
+        )
+      )
+    ),
+    _react2.default.createElement("hr", null),
+    _react2.default.createElement(
+      "ul",
+      null,
+      _react2.default.createElement(
+        "li",
+        null,
+        _react2.default.createElement(
+          "span",
+          { className: "sidebar-property" },
+          "version: ",
+          props.buildProperties["nms.version"]
+        )
+      ),
+      _react2.default.createElement(
+        "li",
+        null,
+        _react2.default.createElement(
+          "span",
+          { className: "sidebar-property" },
+          "branch: ",
+          props.buildProperties["scmBranch"]
+        )
+      ),
+      _react2.default.createElement(
+        "li",
+        null,
+        _react2.default.createElement(
+          "span",
+          { className: "sidebar-property" },
+          "commit: ",
+          props.buildProperties["buildNumber"]
+        )
+      ),
+      _react2.default.createElement(
+        "li",
+        null,
+        _react2.default.createElement(
+          "span",
+          { className: "sidebar-property" },
+          "timestamp: ",
+          props.buildProperties["timestamp"]
+        )
+      )
+    )
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+
+var NavLink = function NavLink(props) {
+  return _react2.default.createElement(
+    "button",
+    { className: "sidebar-button-component", "data-btn": props.title, onClick: function onClick(e) {
+        return props.handleBtn(e);
+      } },
+    _react2.default.createElement("em", { className: "fa " + props.icon }),
+    props.title.toUpperCase()
+  );
+};
+});
+
+;require.register("components/Spinner/Spinner.js", function(exports, require, module) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Spinner = undefined;
+
+var _react = require("react");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Spinner = exports.Spinner = function Spinner() {
+  return _react2.default.createElement(
+    "div",
+    { className: "spinner-component" },
+    _react2.default.createElement("div", { className: "double-bounce1" }),
+    _react2.default.createElement("div", { className: "double-bounce2" })
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+});
+
+;require.register("components/Table/Table.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Table = undefined;
+
+var _from = require('babel-runtime/core-js/array/from');
+
+var _from2 = _interopRequireDefault(_from);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _propTypes = require('prop-types');
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var Table = exports.Table = function Table(props) {
+  var headersList = props.headersList,
+      rowData = props.rowData,
+      sortTable = props.sortTable,
+      admin = props.admin,
+      toggleModal = props.toggleModal;
+
+  return _react2.default.createElement(
+    'div',
+    { className: 'row grid-responsive mt-2' },
+    _react2.default.createElement(
+      'div',
+      { className: 'column ' },
+      _react2.default.createElement(
+        'div',
+        { className: 'card' },
+        _react2.default.createElement(
+          'div',
+          { className: 'card-block' },
+          _react2.default.createElement(
+            'div',
+            { className: 'table-component' },
+            _react2.default.createElement(
+              'table',
+              null,
+              _react2.default.createElement(TableHead, {
+                headersList: headersList,
+                sortTable: sortTable,
+                admin: admin
+              }),
+              _react2.default.createElement(TableBody, {
+                headersList: headersList,
+                rowData: rowData,
+                toggleModal: toggleModal,
+                admin: admin
+              })
+            )
+          )
+        )
+      )
+    )
+  );
+};
+
+var TableHead = function TableHead(props) {
+  var headersList = props.headersList,
+      sortTable = props.sortTable,
+      admin = props.admin;
+
+  var sortCol = function sortCol(e) {
+    sortTable(e);
+  };
+  return _react2.default.createElement(
+    'thead',
+    null,
+    _react2.default.createElement(
+      'tr',
+      null,
+      _react2.default.createElement(
+        'th',
+        null,
+        'Node'
+      ),
+      (0, _from2.default)(headersList.values()).map(function (h, index) {
+        return _react2.default.createElement(
+          'th',
+          { key: index, 'data-header': h, onClick: function onClick(e) {
+              return sortCol(e);
+            } },
+          h,
+          _react2.default.createElement('img', { src: 'png/sort.png', 'data-header': h })
+        );
+      }),
+      admin ? _react2.default.createElement(
+        'th',
+        null,
+        'Controls'
+      ) : null
+    )
+  );
+};
+
+var TableBody = function TableBody(props) {
+  var headersList = props.headersList,
+      rowData = props.rowData,
+      toggleModal = props.toggleModal,
+      admin = props.admin;
+
+  var tr = rowData.map(function (node, index) {
+    return _react2.default.createElement(TableRow, {
+      key: index,
+      node: node,
+      headersList: headersList,
+      toggleModal: toggleModal,
+      admin: admin });
+  });
+  return _react2.default.createElement(
+    'tbody',
+    null,
+    tr
+  );
+};
+
+var TableRow = function TableRow(props) {
+  var node = props.node,
+      headersList = props.headersList,
+      toggleModal = props.toggleModal,
+      admin = props.admin;
+
+  var valueArray = [];
+
+  headersList.forEach(function (value, key) {
+    if (node.hasOwnProperty(key)) {
+      valueArray.push(node[key]);
+    } else {
+      valueArray.push("");
+    }
+  });
+
+  return _react2.default.createElement(
+    'tr',
+    { className: 'table-row-component' },
+    _react2.default.createElement(
+      'td',
+      null,
+      _react2.default.createElement(TableTooltip, { tooltip: node.nodeKey }),
+      node.nodeKey.slice(0, 3) + '...' + node.nodeKey.substr(-3)
+    ),
+    valueArray.map(function (value, index) {
+      var td = void 0;
+      typeof value === "boolean" ? td = _react2.default.createElement('td', { className: value.toString(), key: index }) : td = _react2.default.createElement(
+        'td',
+        { key: index },
+        value.toString()
+      );
+      return td;
+    }),
+    admin ? _react2.default.createElement(
+      'td',
+      { key: 9 },
+      _react2.default.createElement(
+        'button',
+        {
+          className: 'wibble',
+          'data-link': 'delete',
+          onClick: function onClick(e) {
+            toggleModal(e, node);
+          } },
+        _react2.default.createElement('em', { className: 'fa fa-trash' })
+      )
+    ) : null
+  );
+};
+
+var TableTooltip = function TableTooltip(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'table-tooltip-component' },
+    props.tooltip
+  );
+};
+
+Table.propTypes = {
+  headersList: _propTypes2.default.object.isRequired,
+  rowData: _propTypes2.default.array.isRequired
+};
+
+TableHead.propTypes = {
+  headersList: _propTypes2.default.object.isRequired
+};
+
+TableBody.propTypes = {
+  rowData: _propTypes2.default.array.isRequired
+};
+
+TableRow.propTypes = {
+  nodes: _propTypes2.default.object
+};
+});
+
+;require.register("containers/App/App.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _getPrototypeOf = require('babel-runtime/core-js/object/get-prototype-of');
+
+var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
+
+var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
+
+var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
+
+var _createClass2 = require('babel-runtime/helpers/createClass');
+
+var _createClass3 = _interopRequireDefault(_createClass2);
+
+var _possibleConstructorReturn2 = require('babel-runtime/helpers/possibleConstructorReturn');
+
+var _possibleConstructorReturn3 = _interopRequireDefault(_possibleConstructorReturn2);
+
+var _inherits2 = require('babel-runtime/helpers/inherits');
+
+var _inherits3 = _interopRequireDefault(_inherits2);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _Default = require('containers/Default/Default');
+
+var _Default2 = _interopRequireDefault(_Default);
+
+var _Login = require('containers/Login/Login');
+
+var _restCalls = require('scripts/restCalls');
+
+var _Modal = require('components/Modal/Modal');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var App = function (_React$Component) {
+  (0, _inherits3.default)(App, _React$Component);
+
+  function App(props) {
+    (0, _classCallCheck3.default)(this, App);
+
+    var _this = (0, _possibleConstructorReturn3.default)(this, (App.__proto__ || (0, _getPrototypeOf2.default)(App)).call(this, props));
+
+    _this.state = {
+      admin: sessionStorage["corditeAccessToken"] ? true : false,
+      status: 'done',
+      subDomain: 'default',
+      style: false,
+      modal: ''
+    };
+
+    _this.NMSLogin = _this.NMSLogin.bind(_this);
+    _this.toggleModal = _this.toggleModal.bind(_this);
+    _this.setAdmin = _this.setAdmin.bind(_this);
+    _this.deleteNode = _this.deleteNode.bind(_this);
+    return _this;
+  }
+
+  (0, _createClass3.default)(App, [{
+    key: 'NMSLogin',
+    value: function NMSLogin(loginData) {
+      return (0, _restCalls.login)(loginData).then(function () {
+        return (0, _restCalls.checkAuth)();
+      }).then(function (status) {
+        if (status != 200) return "fail";
+        return "success";
+      }).catch(function (err) {
+        return console.log(err);
+      });
+    }
+  }, {
+    key: 'toggleModal',
+    value: function toggleModal(e, node) {
+      if (!e) {
+        this.setState({
+          modal: '',
+          style: !this.state.style
+        });
+      } else if (e.target.dataset.link) {
+        this.setState({
+          modal: e.target.dataset.link || '',
+          style: !this.state.style,
+          selectedNode: !!node ? node : null
+        });
+      }
+    }
+  }, {
+    key: 'setAdmin',
+    value: function setAdmin(adminFlag) {
+      this.setState({ admin: adminFlag });
+    }
+  }, {
+    key: 'deleteNode',
+    value: function deleteNode() {
+      var _this2 = this;
+
+      (0, _restCalls.deleteNodes)(this.state.selectedNode.nodeKey).then(function (result) {
+        return _this2.setState({ selectedNode: null });
+      });
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var page = null;
+      switch (this.state.subDomain) {
+        case 'login':
+          page = _react2.default.createElement(_Login.Login, { nmsLogin: this.NMSLogin });
+          break;
+        case 'default':
+          page = _react2.default.createElement(_Default2.default, {
+            toggleModal: this.toggleModal,
+            admin: this.state.admin });
+          break;
+        default:
+          page = _react2.default.createElement(_Login.Login, { nmsLogin: this.nmsLogin });
+          break;
+      }
+
+      var modal = null;
+      switch (this.state.modal) {
+        case 'sign-in':
+          modal = _react2.default.createElement(_Modal.LoginModal, {
+            toggleModal: this.toggleModal,
+            style: this.state.style,
+            nmsLogin: this.NMSLogin,
+            setAdmin: this.setAdmin });
+          break;
+        case 'sign-out':
+          modal = _react2.default.createElement(_Modal.LogoutModal, {
+            toggleModal: this.toggleModal,
+            style: this.state.style,
+            setAdmin: this.setAdmin });
+          break;
+        case 'delete':
+          modal = _react2.default.createElement(_Modal.DeleteModal, {
+            toggleModal: this.toggleModal,
+            style: this.state.style,
+            setAdmin: this.setAdmin,
+            selectedNode: this.state.selectedNode,
+            deleteNode: this.deleteNode });
+          break;
+        default:
+          modal = "";
+          break;
+      }
+
+      return _react2.default.createElement(
+        'div',
+        { className: 'app-component' },
+        this.state.status == 'done' ? page : "",
+        modal
+      );
+    }
+  }]);
+  return App;
+}(_react2.default.Component); /*
+                               *   Copyright 2018, Cordite Foundation.
+                               *
+                               *    Licensed under the Apache License, Version 2.0 (the "License");
+                               *    you may not use this file except in compliance with the License.
+                               *    You may obtain a copy of the License at
+                               *
+                               *      http://www.apache.org/licenses/LICENSE-2.0
+                               *
+                               *    Unless required by applicable law or agreed to in writing, software
+                               *    distributed under the License is distributed on an "AS IS" BASIS,
+                               *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                               *    See the License for the specific language governing permissions and
+                               *    limitations under the License.
+                               */
+
+
+exports.default = App;
+});
+
+;require.register("containers/Default/Default.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _regenerator = require('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var _getPrototypeOf = require('babel-runtime/core-js/object/get-prototype-of');
+
+var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
+
+var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
+
+var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
+
+var _createClass2 = require('babel-runtime/helpers/createClass');
+
+var _createClass3 = _interopRequireDefault(_createClass2);
+
+var _possibleConstructorReturn2 = require('babel-runtime/helpers/possibleConstructorReturn');
+
+var _possibleConstructorReturn3 = _interopRequireDefault(_possibleConstructorReturn2);
+
+var _inherits2 = require('babel-runtime/helpers/inherits');
+
+var _inherits3 = _interopRequireDefault(_inherits2);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _Page = require('containers/Page/Page');
+
+var _Nav = require('components/Nav/Nav');
+
+var _Sidebar = require('components/Sidebar/Sidebar');
+
+var _restCalls = require('scripts/restCalls');
+
+var _processData = require('scripts/processData');
+
+var _headersList = require('scripts/headersList');
+
+var _navOptions = require('navOptions.json');
+
+var _navOptions2 = _interopRequireDefault(_navOptions);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var Default = function (_React$Component) {
+  (0, _inherits3.default)(Default, _React$Component);
+
+  function Default(props) {
+    (0, _classCallCheck3.default)(this, Default);
+
+    var _this = (0, _possibleConstructorReturn3.default)(this, (Default.__proto__ || (0, _getPrototypeOf2.default)(Default)).call(this, props));
+
+    _this.getData = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee() {
+      var notaries, nodes, properties;
+      return _regenerator2.default.wrap(function _callee$(_context) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
+              _context.next = 2;
+              return (0, _restCalls.getNotaries)();
+
+            case 2:
+              notaries = _context.sent;
+              _context.next = 5;
+              return (0, _restCalls.getNodes)();
+
+            case 5:
+              nodes = _context.sent;
+              _context.next = 8;
+              return (0, _restCalls.getBuildProperties)();
+
+            case 8:
+              properties = _context.sent;
+              _context.next = 11;
+              return (0, _processData.mutateNodes)(nodes);
+
+            case 11:
+              nodes = _context.sent;
+
+              nodes = (0, _processData.isNotary)(nodes, notaries);
+              nodes = (0, _processData.sortNodes)('Organisational Unit', nodes, _headersList.headersList);
+
+              this.setState({
+                nodes: nodes,
+                notaries: notaries,
+                buildProperties: properties
+              });
+
+            case 15:
+            case 'end':
+              return _context.stop();
+          }
+        }
+      }, _callee, this);
+    }));
+
+    _this.handleBtn = function (event, data) {
+      var btnType = event.target.dataset.btn;
+
+      switch (btnType.toLowerCase()) {
+        case 'swagger':
+          window.location = document.baseURI + "swagger/";
+          break;
+        case 'dashboard':
+          _this.setState({ page: 'home' });
+          break;
+        case 'braid':
+          // window.location = "/braid/api/"
+          (0, _restCalls.getBraidAPI)().then(function (result) {
+            _this.setState({
+              braid: result,
+              page: 'braid'
+            });
+          });
+
+          break;
+        default:
+          break;
+      }
+    };
+
+    _this.state = {
+      nodes: [],
+      notaries: [],
+      page: 'home',
+      braid: {},
+      buildProperties: {}
+    };
+
+    _this.getData = _this.getData.bind(_this);
+    _this.sortTable = _this.sortTable.bind(_this);
+    return _this;
+  }
+
+  (0, _createClass3.default)(Default, [{
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      this.getData();
+    }
+  }, {
+    key: 'sortTable',
+    value: function sortTable(e) {
+      var sortedNodes = (0, _processData.sortNodes)(e.target.dataset.header, this.state.nodes, _headersList.headersList);
+      this.setState({ nodes: sortedNodes });
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return _react2.default.createElement(
+        'div',
+        { className: 'default-component' },
+        _react2.default.createElement(_Nav.Nav, { toggleModal: this.props.toggleModal }),
+        _react2.default.createElement(
+          'div',
+          { className: 'row' },
+          this.props.admin ? _react2.default.createElement(_Sidebar.Sidebar, {
+            navOptions: _navOptions2.default,
+            buildProperties: this.state.buildProperties,
+            handleBtn: this.handleBtn }) : "",
+          _react2.default.createElement(
+            'section',
+            { id: 'main-content', className: "column" + (this.props.admin ? " column-offset-20" : "") },
+            _react2.default.createElement(_Page.Page, {
+              headersList: _headersList.headersList,
+              nodes: this.state.nodes,
+              notaries: this.state.notaries,
+              page: this.state.page,
+              sortTable: this.sortTable,
+              json: this.state.braid,
+              toggleModal: this.props.toggleModal,
+              admin: this.props.admin,
+              getData: this.getData
+            })
+          )
+        )
+      );
+    }
+  }]);
+  return Default;
+}(_react2.default.Component);
+
+exports.default = Default;
+});
+
+;require.register("containers/Login/Login.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.LoginContainer = exports.Login = undefined;
+
+var _regenerator = require('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var _getPrototypeOf = require('babel-runtime/core-js/object/get-prototype-of');
+
+var _getPrototypeOf2 = _interopRequireDefault(_getPrototypeOf);
+
+var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
+
+var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
+
+var _createClass2 = require('babel-runtime/helpers/createClass');
+
+var _createClass3 = _interopRequireDefault(_createClass2);
+
+var _possibleConstructorReturn2 = require('babel-runtime/helpers/possibleConstructorReturn');
+
+var _possibleConstructorReturn3 = _interopRequireDefault(_possibleConstructorReturn2);
+
+var _inherits2 = require('babel-runtime/helpers/inherits');
+
+var _inherits3 = _interopRequireDefault(_inherits2);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var handleLogin = function handleLogin(nmsLogin, loginData) {
+  var result = nmsLogin(loginData);
+  result == 'fail' ? true : false;
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+var Login = exports.Login = function Login(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'login-component' },
+    _react2.default.createElement(LoginContainer, props)
+  );
+};
+
+var LoginContainer = exports.LoginContainer = function LoginContainer(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'login-container-component' },
+    _react2.default.createElement(LoginLogo, { title: 'Cordite stats' }),
+    _react2.default.createElement(LoginMain, {
+      nmsLogin: props.nmsLogin,
+      toggleModal: props.toggleModal,
+      setAdmin: props.setAdmin }),
+    _react2.default.createElement(LoginFooter, null)
+  );
+};
+
+var LoginLogo = function LoginLogo(props) {
+  return _react2.default.createElement('div', { className: 'login-logo-component' });
+};
+
+var LoginMain = function LoginMain(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'login-main-component' },
+    _react2.default.createElement(LoginTitle, { title: 'Welcome, Please login' }),
+    _react2.default.createElement(LoginForm, {
+      nmsLogin: props.nmsLogin,
+      toggleModal: props.toggleModal,
+      setAdmin: props.setAdmin })
+  );
+};
+
+var LoginFooter = function LoginFooter() {
+  return _react2.default.createElement(
+    'div',
+    { className: 'login-footer-component' },
+    _react2.default.createElement(
+      'div',
+      { className: 'brand-copyright' },
+      '\xA9 2018 Cordite'
+    ),
+    _react2.default.createElement(
+      'div',
+      { className: 'footer-links' },
+      _react2.default.createElement(
+        'a',
+        { href: '#' },
+        'About'
+      ),
+      '\xA0|\xA0',
+      _react2.default.createElement(
+        'a',
+        { href: '#' },
+        'Privacy'
+      ),
+      '\xA0|\xA0',
+      _react2.default.createElement(
+        'a',
+        { href: '#' },
+        'Contact Us'
+      )
+    )
+  );
+};
+
+var LoginTitle = function LoginTitle(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'login-title-component' },
+    props.title
+  );
+};
+
+var LoginForm = function (_React$Component) {
+  (0, _inherits3.default)(LoginForm, _React$Component);
+
+  function LoginForm(props) {
+    (0, _classCallCheck3.default)(this, LoginForm);
+
+    var _this = (0, _possibleConstructorReturn3.default)(this, (LoginForm.__proto__ || (0, _getPrototypeOf2.default)(LoginForm)).call(this, props));
+
+    _this.handleClick = function () {
+      var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(e) {
+        var loginData, result;
+        return _regenerator2.default.wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                e.preventDefault();
+
+                if (!(e.target.dataset.btn == 'cancel')) {
+                  _context.next = 4;
+                  break;
+                }
+
+                this.props.toggleModal();
+                return _context.abrupt('return');
+
+              case 4:
+                loginData = {
+                  user: this.state.user,
+                  password: this.state.password
+                };
+                _context.next = 7;
+                return this.props.nmsLogin(loginData);
+
+              case 7:
+                result = _context.sent;
+
+                if (result == 'fail') {
+                  this.setState({ error: 'error' });
+                } else {
+                  this.props.setAdmin(true);
+                  this.props.toggleModal();
+                }
+
+              case 9:
+              case 'end':
+                return _context.stop();
+            }
+          }
+        }, _callee, this);
+      }));
+
+      return function (_x) {
+        return _ref.apply(this, arguments);
+      };
+    }();
+
+    _this.state = {
+      user: '',
+      password: '',
+      error: ''
+    };
+    _this.handleChange = _this.handleChange.bind(_this);
+    _this.handleClick = _this.handleClick.bind(_this);
+    return _this;
+  }
+
+  (0, _createClass3.default)(LoginForm, [{
+    key: 'handleChange',
+    value: function handleChange(e) {
+      e.preventDefault();
+      var _e$target = e.target,
+          type = _e$target.type,
+          value = _e$target.value;
+
+      switch (type) {
+        case "text":
+          this.setState({ user: value, error: '' });
+          break;
+        case "password":
+          this.setState({ password: value, error: '' });
+          break;
+        default:
+          break;
+      }
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      return _react2.default.createElement(
+        'form',
+        { className: 'login-form-component' },
+        _react2.default.createElement(FormTextInput, {
+          placeholder: 'Username',
+          value: this.state.value,
+          handleChange: this.handleChange }),
+        _react2.default.createElement(FormPassword, {
+          placeholder: 'Password',
+          value: this.state.value,
+          handleChange: this.handleChange }),
+        _react2.default.createElement(FormError, { error: this.state.error }),
+        _react2.default.createElement(FormButtons, { onClick: this.handleClick })
+      );
+    }
+  }]);
+  return LoginForm;
+}(_react2.default.Component);
+
+var FormTextInput = function FormTextInput(props) {
+  var placeholder = props.placeholder,
+      value = props.value,
+      handleChange = props.handleChange;
+
+  return _react2.default.createElement(
+    'div',
+    { className: 'form-text-input-component' },
+    _react2.default.createElement('input', {
+      autoFocus: 'true',
+      className: 'form-control',
+      placeholder: placeholder,
+      value: value,
+      type: 'text',
+      onChange: function onChange(e) {
+        return handleChange(e);
+      } })
+  );
+};
+
+var FormPassword = function FormPassword(props) {
+  var placeholder = props.placeholder,
+      value = props.value,
+      handleChange = props.handleChange;
+
+  return _react2.default.createElement(
+    'div',
+    { className: 'form-password-component' },
+    _react2.default.createElement('input', {
+      className: 'form-control',
+      placeholder: placeholder,
+      value: value,
+      type: 'password',
+      onChange: function onChange(e) {
+        return handleChange(e);
+      } })
+  );
+};
+
+var FormButtons = function FormButtons(props) {
+  var _onClick = props.onClick;
+
+  return _react2.default.createElement(
+    'div',
+    { className: 'form-buttons-component' },
+    _react2.default.createElement(
+      'a',
+      { href: '#', className: 'btn' },
+      'Forgot your password?'
+    ),
+    _react2.default.createElement(
+      'button',
+      {
+        className: 'btn',
+        onClick: function onClick(e) {
+          return _onClick(e);
+        } },
+      'Log In'
+    ),
+    _react2.default.createElement(
+      'button',
+      {
+        className: 'btn',
+        'data-btn': 'cancel',
+        onClick: function onClick(e) {
+          return _onClick(e);
+        } },
+      'Cancel'
+    )
+  );
+};
+
+var FormError = function FormError(props) {
+  return _react2.default.createElement(
+    'div',
+    { className: 'form-error-component ' + props.error },
+    'Username/password is invalid'
+  );
+};
+});
+
+;require.register("containers/Page/Page.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Page = undefined;
+
+var _keys = require('babel-runtime/core-js/object/keys');
+
+var _keys2 = _interopRequireDefault(_keys);
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _propTypes = require('prop-types');
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
+var _Home = require('containers/Pages/Home/Home');
+
+var _Swagger = require('containers/Pages/Swagger/Swagger');
+
+var _Braid = require('containers/Pages/Braid/Braid');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var PAGES = {
+  home: _Home.Home,
+  swagger: _Swagger.Swagger,
+  braid: _Braid.Braid
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+var Page = exports.Page = function Page(props) {
+  var Handler = PAGES[props.page];
+
+  return _react2.default.createElement(Handler, props);
+};
+
+Page.propTypes = {
+  page: _propTypes2.default.oneOf((0, _keys2.default)(PAGES)).isRequired
+};
+});
+
+;require.register("containers/Pages/Braid/Braid.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Braid = undefined;
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _propTypes = require('prop-types');
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
+var _DisplayBraid = require('components/DisplayBraid/DisplayBraid');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Braid = exports.Braid = function Braid(props) {
+  var json = props.json;
+
+  return _react2.default.createElement(
+    'section',
+    { className: 'braid-component' },
+    _react2.default.createElement(_DisplayBraid.DisplayBraid, { json: json })
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+
+
+Braid.propTypes = {};
+});
+
+;require.register("containers/Pages/Home/Home.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Home = undefined;
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _propTypes = require('prop-types');
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
+var _Nav = require('components/Nav/Nav');
+
+var _Table = require('components/Table/Table');
+
+var _MyMap = require('components/Map/MyMap');
+
+var _MyMap2 = _interopRequireDefault(_MyMap);
+
+var _Metrics = require('components/Metrics/Metrics');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var Home = exports.Home = function Home(props) {
+  var nodes = props.nodes,
+      notaries = props.notaries,
+      headersList = props.headersList,
+      sortTable = props.sortTable;
+
+  return _react2.default.createElement(
+    'section',
+    { className: 'home-component' },
+    _react2.default.createElement(_MyMap2.default, { nodes: nodes }),
+    _react2.default.createElement(_Metrics.Metrics, {
+      nodes: nodes,
+      notaries: notaries
+    }),
+    _react2.default.createElement(_Table.Table, {
+      headersList: headersList,
+      rowData: nodes,
+      sortTable: sortTable,
+      toggleModal: props.toggleModal,
+      admin: props.admin
+    })
+  );
+};
+
+Home.propTypes = {
+  headersList: _propTypes2.default.object.isRequired,
+  nodes: _propTypes2.default.array.isRequired,
+  notaries: _propTypes2.default.array.isRequired
+
+  /*
+  <DemoMap nodes={nodes}/>
+  <Metrics 
+    nodes={nodes}
+    notaries={notaries}
+  />
+  
+  */
+
+};
+});
+
+;require.register("containers/Pages/Swagger/Swagger.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Swagger = undefined;
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Swagger = exports.Swagger = function Swagger(props) {
+  console.log(document.baseURI);
+  return _react2.default.createElement(
+    'div',
+    { className: 'swagger-component' },
+    _react2.default.createElement('iframe', {
+      title: 'Swagger API', src: '{ document.baseURI }swagger/#/admin/post_admin_api_login' })
+  );
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+});
+
+;require.register("initialize.js", function(exports, require, module) {
+'use strict';
+
+require('babel-polyfill');
+
+require('whatwg-fetch');
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactDom = require('react-dom');
+
+var _reactDom2 = _interopRequireDefault(_reactDom);
+
+var _App = require('containers/App/App');
+
+var _App2 = _interopRequireDefault(_App);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var render = function render(Component) {
+  _reactDom2.default.render(_react2.default.createElement(Component, null), document.querySelector('#app'));
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  render(_App2.default);
+});
+});
+
+require.register("mapStyle.json", function(exports, require, module) {
+module.exports = [
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#a1dcd3"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "rgba(0, 0, 0, 0)"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": ""
+      },
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#FFFFFF"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.country",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#999999"
+      },
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.province",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#999999"
+      },
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.locality",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#bdbdbd"
+      },
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.neighborhood",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.neighborhood",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#181818"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1b1b1b"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#2c2c2c"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#8a8a8a"
+      }
+    ]
+  },
+  {
+    "featureType": "road.arterial",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#373737"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#3c3c3c"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway.controlled_access",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#4e4e4e"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#FFFFFF"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#3d3d3d"
+      }
+    ]
+  }
+];
+});
+
+require.register("navOptions.json", function(exports, require, module) {
+module.exports = [
+  [
+    {
+      "title": "dashboard",
+      "icon": "fa-desktop"
+    }
+  ],
+  [
+    {
+      "title": "Braid",
+      "icon": "fa-random"
+    }
+  ]
+];
+});
+
+require.register("scripts/geoCode.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.nodesLatLong = exports.lookupLatLong = undefined;
+
+var _map = require('babel-runtime/core-js/map');
+
+var _map2 = _interopRequireDefault(_map);
+
+var _regenerator = require('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var lookupLatLong = exports.lookupLatLong = function () {
+  var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(location) {
+    var params, response, status, locations;
+    return _regenerator2.default.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            params = {
+              address: '' + location.city,
+              key: API_KEY,
+              region: location.country.toLowerCase()
+            };
+
+            url.search = new URLSearchParams(params);
+
+            _context.next = 4;
+            return fetch(url);
+
+          case 4:
+            response = _context.sent;
+            _context.next = 7;
+            return response.status;
+
+          case 7:
+            status = _context.sent;
+
+            if (!(status === 200)) {
+              _context.next = 15;
+              break;
+            }
+
+            _context.next = 11;
+            return response.json();
+
+          case 11:
+            locations = _context.sent;
+            return _context.abrupt('return', locations.results[0].geometry.location);
+
+          case 15:
+            return _context.abrupt('return', response.statusText);
+
+          case 16:
+          case 'end':
+            return _context.stop();
+        }
+      }
+    }, _callee, this);
+  }));
+
+  return function lookupLatLong(_x) {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+var nodesLatLong = exports.nodesLatLong = function () {
+  var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(uniqueLocations) {
+    var locMap, i, tempLatLong;
+    return _regenerator2.default.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            locMap = new _map2.default();
+            _context2.t0 = _regenerator2.default.keys(uniqueLocations);
+
+          case 2:
+            if ((_context2.t1 = _context2.t0()).done) {
+              _context2.next = 10;
+              break;
+            }
+
+            i = _context2.t1.value;
+            _context2.next = 6;
+            return lookupLatLong(uniqueLocations[i]);
+
+          case 6:
+            tempLatLong = _context2.sent;
+
+            locMap.set('' + uniqueLocations[i].city + uniqueLocations[i].country, {
+              lat: tempLatLong.lat,
+              lng: tempLatLong.lng
+            });
+            _context2.next = 2;
+            break;
+
+          case 10:
+            return _context2.abrupt('return', locMap);
+
+          case 11:
+          case 'end':
+            return _context2.stop();
+        }
+      }
+    }, _callee2, this);
+  }));
+
+  return function nodesLatLong(_x2) {
+    return _ref2.apply(this, arguments);
+  };
+}();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var API_KEY = 'AIzaSyC4QrPK-xamnJwHo-CFW0XzeDj4INbsQYU';
+var url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+});
+
+;require.register("scripts/headersList.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.headersList = undefined;
+
+var _map = require('babel-runtime/core-js/map');
+
+var _map2 = _interopRequireDefault(_map);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var OU = 'OU',
+    O = 'O',
+    L = 'L',
+    C = 'C',
+    N = 'N';
+
+var headersList = exports.headersList = new _map2.default([[OU, 'Organisational Unit'], [O, 'Organisation'], [L, 'Location'], [C, 'Country'], [N, 'Notary']]);
+});
+
+;require.register("scripts/jwtProcess.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/*
+ *   Copyright 2018, Cordite Foundation.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+var getJWTExpiryDate = function getJWTExpiryDate(token) {
+  var jwtArray = token.split('.');
+  var result = JSON.parse(atob(jwtArray[1]));
+  return result.exp;
+};
+
+var checkToken = exports.checkToken = function checkToken(token) {
+  var unixTime = Date.now();
+  return Math.floor(unixTime / 1000) <= getJWTExpiryDate(token);
+};
+});
+
+;require.register("scripts/processData.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.sortNodes = exports.isNotary = exports.geoCodeNodes = exports.getLocations = exports.getHeaders = exports.parseNodes = exports.mutateNodes = undefined;
+
+var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
+
+var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
+
+var _map = require('babel-runtime/core-js/map');
+
+var _map2 = _interopRequireDefault(_map);
+
+var _getIterator2 = require('babel-runtime/core-js/get-iterator');
+
+var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+var _regenerator = require('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var mutateNodes = exports.mutateNodes = function () {
+  var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(nodes) {
+    var formatedNodes, uniqueLocations, uniqueLocationsMap;
+    return _regenerator2.default.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            formatedNodes = parseNodes(nodes);
+            uniqueLocations = getLocations(formatedNodes);
+            _context.next = 4;
+            return geoCode.nodesLatLong(uniqueLocations);
+
+          case 4:
+            uniqueLocationsMap = _context.sent;
+
+            formatedNodes = geoCodeNodes(formatedNodes, uniqueLocationsMap);
+            return _context.abrupt('return', formatedNodes);
+
+          case 7:
+          case 'end':
+            return _context.stop();
+        }
+      }
+    }, _callee, this);
+  }));
+
+  return function mutateNodes(_x) {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+var _geoCode = require('scripts/geoCode');
+
+var geoCode = _interopRequireWildcard(_geoCode);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var sortObject = {
+  sortCiteria: ""
+}; /*
+    *   Copyright 2018, Cordite Foundation.
+    *
+    *    Licensed under the Apache License, Version 2.0 (the "License");
+    *    you may not use this file except in compliance with the License.
+    *    You may obtain a copy of the License at
+    *
+    *      http://www.apache.org/licenses/LICENSE-2.0
+    *
+    *    Unless required by applicable law or agreed to in writing, software
+    *    distributed under the License is distributed on an "AS IS" BASIS,
+    *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    *    See the License for the specific language governing permissions and
+    *    limitations under the License.
+    */
+var parseNodes = exports.parseNodes = function parseNodes(nodes) {
+  var nodeArray = [];
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = (0, _getIterator3.default)(nodes), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var i = _step.value;
+
+      nodeArray = parseParties(i, nodeArray);
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  return nodeArray;
+};
+
+function parseParties(node, formatedNodeArray) {
+  for (var i in node.parties) {
+    formatedNodeArray.push(parseParty(node.nodeKey, node.parties[i]));
+  }
+  return formatedNodeArray;
+}
+
+function parseParty(nodeKey, party) {
+  var partyObj = {};
+  partyObj = parseX500(party, partyObj);
+  partyObj = parseKey(party, partyObj);
+  partyObj.nodeKey = nodeKey;
+  return partyObj;
+}
+
+function parseX500(party, partyObj) {
+  var tokens = party.name.split(',');
+  for (var i in tokens) {
+    tokens[i] = tokens[i].trim();
+    var letTokenSplit = tokens[i].split('=');
+    partyObj[letTokenSplit[0]] = letTokenSplit[1];
+  }
+  return partyObj;
+}
+
+function parseKey(party, partyObj) {
+  partyObj.key = party.key;
+  return partyObj;
+}
+
+var getHeaders = exports.getHeaders = function getHeaders(list) {
+  var headerArray = [];
+  console.log(list);
+  if (list.size == 0) return headerArray;
+  var _iteratorNormalCompletion2 = true;
+  var _didIteratorError2 = false;
+  var _iteratorError2 = undefined;
+
+  try {
+    for (var _iterator2 = (0, _getIterator3.default)(list.values()), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      var value = _step2.value;
+
+      headerArray.push(value);
+    }
+  } catch (err) {
+    _didIteratorError2 = true;
+    _iteratorError2 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion2 && _iterator2.return) {
+        _iterator2.return();
+      }
+    } finally {
+      if (_didIteratorError2) {
+        throw _iteratorError2;
+      }
+    }
+  }
+
+  return headerArray;
+};
+
+var getLocations = exports.getLocations = function getLocations(nodes) {
+  var locationArray = [];
+  for (var i in nodes) {
+    var obj = { city: nodes[i].L, country: nodes[i].C };
+    locationArray.push(obj);
+  }
+  locationArray = uniqueList(locationArray);
+  return locationArray;
+};
+
+function uniqueList(locationArray) {
+  var unique = locationArray.filter(uniqueObjects);
+  return unique;
+}
+
+function uniqueObjects(value, index, self) {
+  for (var i = 0; i < index; i++) {
+    if (self[i].city === self[index].city && self[i].country === self[index].country) return false;
+  }
+  return true;
+}
+
+var geoCodeNodes = exports.geoCodeNodes = function geoCodeNodes(nodesArray, locationsMap) {
+  var nodes = nodesArray;
+  nodes = nodes.map(function (node, index) {
+    var keyObj = '' + node.L + node.C;
+    node.lat = locationsMap.get(keyObj).lat;
+    node.lng = locationsMap.get(keyObj).lng;
+    return node;
+  });
+  return nodes;
+};
+
+var isNotary = exports.isNotary = function isNotary(nodes, notaries) {
+  var notaryMap = createNotaryMap(notaries);
+  for (var node in nodes) {
+    if (notaryMap.get(nodes[node].key)) {
+      nodes[node].N = true;
+    } else {
+      nodes[node].N = false;
+    }
+  }
+  return nodes;
+};
+
+function createNotaryMap(notaries) {
+  var notaryMap = new _map2.default();
+  notaries.forEach(function (notary) {
+    notaryMap.set(notary.notaryInfo.identity.owningKey, notary.notaryInfo.identity.owningKey);
+  });
+  return notaryMap;
+}
+
+var sortNodes = exports.sortNodes = function sortNodes(sortValue, nodeArray, notaryMap) {
+  var sortKey = void 0;
+  var _iteratorNormalCompletion3 = true;
+  var _didIteratorError3 = false;
+  var _iteratorError3 = undefined;
+
+  try {
+    for (var _iterator3 = (0, _getIterator3.default)(notaryMap), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+      var _ref2 = _step3.value;
+
+      var _ref3 = (0, _slicedToArray3.default)(_ref2, 2);
+
+      var key = _ref3[0];
+      var value = _ref3[1];
+
+      if (value === sortValue) sortKey = key;
+    }
+  } catch (err) {
+    _didIteratorError3 = true;
+    _iteratorError3 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion3 && _iterator3.return) {
+        _iterator3.return();
+      }
+    } finally {
+      if (_didIteratorError3) {
+        throw _iteratorError3;
+      }
+    }
+  }
+
+  if (sortKey === sortObject.sortCiteria) return nodeArray.reverse();else sortObject.sortCiteria = sortKey;
+
+  nodeArray.sort(function (a, b) {
+    var aValue = getProperty(a, sortKey, "");
+    var bValue = getProperty(b, sortKey, "");
+    return aValue.localeCompare(bValue);
+  });
+
+  return nodeArray;
+};
+
+function getProperty(obj, propertyName, defaultValue) {
+  if (obj.hasOwnProperty(obj, propertyName) && obj[propertyName]) {
+    return obj[propertyName];
+  } else {
+    return defaultValue;
+  }
+}
+
+Array.prototype.equals = function (array) {
+  if (!array) return false;
+  if (this.length != array.length) {
+    console.log('in here');return false;
+  }
+
+  for (var i = 0; i < this.length; i++) {
+    if (this[i]['key'] != array[i]['key']) return false;
+  }
+  return true;
+};
+
+Object.defineProperty(Array.prototype, "equals", { enumerable: false });
+});
+
+require.register("scripts/restCalls.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.deleteNodes = exports.getBraidAPI = exports.getBuildProperties = exports.getNotaries = exports.getNodes = exports.checkAuth = exports.login = undefined;
+
+var _regenerator = require('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _stringify = require('babel-runtime/core-js/json/stringify');
+
+var _stringify2 = _interopRequireDefault(_stringify);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var login = exports.login = function () {
+  var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(loginData) {
+    var response, status;
+    return _regenerator2.default.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            _context.next = 2;
+            return fetch(url + '/admin/api/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: (0, _stringify2.default)(loginData)
+            });
+
+          case 2:
+            response = _context.sent;
+            _context.next = 5;
+            return response.status;
+
+          case 5:
+            status = _context.sent;
+
+            if (!(status === 200)) {
+              _context.next = 12;
+              break;
+            }
+
+            _context.next = 9;
+            return response.text();
+
+          case 9:
+            sessionStorage["corditeAccessToken"] = _context.sent;
+            _context.next = 13;
+            break;
+
+          case 12:
+            console.log(response);
+
+          case 13:
+            return _context.abrupt('return', response);
+
+          case 14:
+          case 'end':
+            return _context.stop();
+        }
+      }
+    }, _callee, this);
+  }));
+
+  return function login(_x) {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+var checkAuth = exports.checkAuth = function () {
+  var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2() {
+    var status, token;
+    return _regenerator2.default.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            status = 403;
+            token = sessionStorage['corditeAccessToken'];
+
+            if (token && (0, _jwtProcess.checkToken)(token)) {
+              status = 200;
+            }
+            return _context2.abrupt('return', status);
+
+          case 4:
+          case 'end':
+            return _context2.stop();
+        }
+      }
+    }, _callee2, this);
+  }));
+
+  return function checkAuth() {
+    return _ref2.apply(this, arguments);
+  };
+}();
+
+var getNodes = exports.getNodes = function () {
+  var _ref3 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee3() {
+    var token, response, nodes;
+    return _regenerator2.default.wrap(function _callee3$(_context3) {
+      while (1) {
+        switch (_context3.prev = _context3.next) {
+          case 0:
+            token = sessionStorage["corditeAccessToken"];
+            _context3.next = 3;
+            return fetch(url + '/admin/api/nodes', {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                "Authorization": 'Bearer ' + token
+              }
+            });
+
+          case 3:
+            response = _context3.sent;
+            _context3.next = 6;
+            return response.json();
+
+          case 6:
+            nodes = _context3.sent;
+            return _context3.abrupt('return', nodes);
+
+          case 8:
+          case 'end':
+            return _context3.stop();
+        }
+      }
+    }, _callee3, this);
+  }));
+
+  return function getNodes() {
+    return _ref3.apply(this, arguments);
+  };
+}();
+
+var getNotaries = exports.getNotaries = function () {
+  var _ref4 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee4() {
+    var response, notaries;
+    return _regenerator2.default.wrap(function _callee4$(_context4) {
+      while (1) {
+        switch (_context4.prev = _context4.next) {
+          case 0:
+            _context4.next = 2;
+            return fetch(url + '/admin/api/notaries', {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                "Authorization": 'Bearer ' + sessionStorage["corditeAccessToken"]
+              }
+            });
+
+          case 2:
+            response = _context4.sent;
+            _context4.next = 5;
+            return response.json();
+
+          case 5:
+            notaries = _context4.sent;
+            return _context4.abrupt('return', notaries);
+
+          case 7:
+          case 'end':
+            return _context4.stop();
+        }
+      }
+    }, _callee4, this);
+  }));
+
+  return function getNotaries() {
+    return _ref4.apply(this, arguments);
+  };
+}();
+
+var getBuildProperties = exports.getBuildProperties = function () {
+  var _ref5 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee5() {
+    var response, properties;
+    return _regenerator2.default.wrap(function _callee5$(_context5) {
+      while (1) {
+        switch (_context5.prev = _context5.next) {
+          case 0:
+            _context5.next = 2;
+            return fetch(url + '/admin/api/build-properties', {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json'
+              }
+            });
+
+          case 2:
+            response = _context5.sent;
+            _context5.next = 5;
+            return response.json();
+
+          case 5:
+            properties = _context5.sent;
+            return _context5.abrupt('return', properties);
+
+          case 7:
+          case 'end':
+            return _context5.stop();
+        }
+      }
+    }, _callee5, this);
+  }));
+
+  return function getBuildProperties() {
+    return _ref5.apply(this, arguments);
+  };
+}();
+
+var getBraidAPI = exports.getBraidAPI = function () {
+  var _ref6 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee6() {
+    var response, braidCode;
+    return _regenerator2.default.wrap(function _callee6$(_context6) {
+      while (1) {
+        switch (_context6.prev = _context6.next) {
+          case 0:
+            _context6.next = 2;
+            return fetch(url + '/braid/api', {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                "Authorization": 'Bearer ' + sessionStorage["corditeAccessToken"]
+              }
+            });
+
+          case 2:
+            response = _context6.sent;
+            _context6.next = 5;
+            return response.json();
+
+          case 5:
+            braidCode = _context6.sent;
+            return _context6.abrupt('return', braidCode);
+
+          case 7:
+          case 'end':
+            return _context6.stop();
+        }
+      }
+    }, _callee6, this);
+  }));
+
+  return function getBraidAPI() {
+    return _ref6.apply(this, arguments);
+  };
+}();
+
+var deleteNodes = exports.deleteNodes = function () {
+  var _ref7 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee7(nodeKey) {
+    var response;
+    return _regenerator2.default.wrap(function _callee7$(_context7) {
+      while (1) {
+        switch (_context7.prev = _context7.next) {
+          case 0:
+            _context7.next = 2;
+            return fetch(url + '/admin/api/nodes/' + nodeKey, {
+              method: 'DELETE',
+              headers: {
+                'accept': 'application/json',
+                "Authorization": 'Bearer ' + sessionStorage["corditeAccessToken"]
+              }
+            });
+
+          case 2:
+            response = _context7.sent;
+            return _context7.abrupt('return', response);
+
+          case 4:
+          case 'end':
+            return _context7.stop();
+        }
+      }
+    }, _callee7, this);
+  }));
+
+  return function deleteNodes(_x2) {
+    return _ref7.apply(this, arguments);
+  };
+}();
+
+var _jwtProcess = require('scripts/jwtProcess');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var url = document.baseURI; /*
+                             *   Copyright 2018, Cordite Foundation.
+                             *
+                             *    Licensed under the Apache License, Version 2.0 (the "License");
+                             *    you may not use this file except in compliance with the License.
+                             *    You may obtain a copy of the License at
+                             *
+                             *      http://www.apache.org/licenses/LICENSE-2.0
+                             *
+                             *    Unless required by applicable law or agreed to in writing, software
+                             *    distributed under the License is distributed on an "AS IS" BASIS,
+                             *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                             *    See the License for the specific language governing permissions and
+                             *    limitations under the License.
+                             */
+});
+
+;require.register("templates/google.analytics.pug", function(exports, require, module) {
+function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;var pug_debug_filename, pug_debug_line;try {var pug_debug_sources = {"app\u002Ftemplates\u002Fgoogle.analytics.pug":"script"};
+;pug_debug_line = 1;pug_debug_filename = "app\u002Ftemplates\u002Fgoogle.analytics.pug";
+pug_html = pug_html + "\u003Cscript\u003E\u003C\u002Fscript\u003E";} catch (err) {pug.rethrow(err, pug_debug_filename, pug_debug_line, pug_debug_sources[pug_debug_filename]);};return pug_html;};
+module.exports = template;
+});
+
+;require.register("templates/head.pug", function(exports, require, module) {
+function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;var pug_debug_filename, pug_debug_line;try {var pug_debug_sources = {"app\u002Ftemplates\u002Fhead.pug":"head\n  base(href=\"${location}\u002F\")\n  meta(charset=\"utf-8\")\n  meta(name=\"viewport\" content=\"width=device-width\")\n  title='NMS'\n  link(rel=\"icon\" href=\"png\u002Ffavicon\u002Ffavicon.ico\" sizes=\"16x16 24x24 32x32 64x64\" type=\"image\u002Fvnd.microsoft.icon\")\n  link(rel=\"stylesheet\" href=\"app.css\")\n  link(href=\"https:\u002F\u002Ffonts.googleapis.com\u002Fcss?family=Montserrat:300,300i,400,400i,500,500i,600,600i,700\" rel=\"stylesheet\")\n\n  meta(name=\"title\" content=\"Cordite Stats\")\n  meta(name=\"navigation-title\" content=\"\")\n  meta(name=\"description\" content=\"\")\n  meta(name=\"keywords\" content=\"\")\n\n  meta(property=\"og:title\" content=\"Cordite Stats\")\n  meta(property=\"og:type\" content=\"website\")\n  meta(property=\"og:image\" content=\"jpg\u002Flogo-watermark-og.jpg\")\n  meta(property=\"og:url\" content=\"\")\n  meta(property=\"og:description\" content=\"\")\n\n  meta(name=\"twitter:description\" content=\"CorditeStats\")\n  meta(name=\"twitter:image:src\" content=\"jpg\u002Flogo-watermark-og.jpg\")\n  meta(name=\"twitter:card\" content=\"summary\")\n  meta(name=\"twitter:creator\" content=\"@jchrisjones\")\n  meta(name=\"twitter:site\" content=\"@we_are_cordite\")\n  meta(name=\"twitter:label1\" value=\"Network Mapping Service\")\n  meta(name=\"twitter:data1\" value=\"View nodes on the cordite network.\")\n\n  meta(name=\"theme-color\" content=\"#0A2F64\")\n  meta(name=\"msapplication-navbutton-color\" content=\"#0A2F64\")\n  meta(name=\"apple-mobile-web-app-capable\" content=\"yes\")\n  meta(name=\"apple-mobile-web-app-status-bar-style\" content=\"black\")\n\n  link(rel=\"apple-touch-icon\" href=\"png\u002Fapple-touch\u002Ftouch-icon-iphone.png\")\n  link(rel=\"apple-touch-icon\" sizes=\"152x152\" href=\"png\u002Fapple-touch\u002Ftouch-icon-ipad.png\")\n  link(rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"png\u002Fapple-touch\u002Ftouch-icon-iphone-retina.png\")\n  link(rel=\"apple-touch-icon\" sizes=\"167x167\" href=\"png\u002Fapple-touch\u002Ftouch-icon-ipad-retina.png\")\n\n  link(rel=\"icon\" sizes=\"192x192\" href=\"png\u002Fandroid\u002F192x192_icon.png\")\n  link(rel=\"manifest\" href=\"manifest.json\")\n\n  \u002F\u002F- link(rel=\"canonical\" href=\"\")"};
+;pug_debug_line = 1;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Chead\u003E";
+;pug_debug_line = 2;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cbase href=\"${location}\u002F\"\u003E";
+;pug_debug_line = 3;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta charset=\"utf-8\"\u003E";
+;pug_debug_line = 4;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"viewport\" content=\"width=device-width\"\u003E";
+;pug_debug_line = 5;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Ctitle\u003E";
+;pug_debug_line = 5;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + (pug.escape(null == (pug_interp = 'NMS') ? "" : pug_interp)) + "\u003C\u002Ftitle\u003E";
+;pug_debug_line = 6;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"icon\" href=\"png\u002Ffavicon\u002Ffavicon.ico\" sizes=\"16x16 24x24 32x32 64x64\" type=\"image\u002Fvnd.microsoft.icon\"\u003E";
+;pug_debug_line = 7;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"stylesheet\" href=\"app.css\"\u003E";
+;pug_debug_line = 8;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink href=\"https:\u002F\u002Ffonts.googleapis.com\u002Fcss?family=Montserrat:300,300i,400,400i,500,500i,600,600i,700\" rel=\"stylesheet\"\u003E";
+;pug_debug_line = 10;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"title\" content=\"Cordite Stats\"\u003E";
+;pug_debug_line = 11;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"navigation-title\" content=\"\"\u003E";
+;pug_debug_line = 12;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"description\" content=\"\"\u003E";
+;pug_debug_line = 13;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"keywords\" content=\"\"\u003E";
+;pug_debug_line = 15;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta property=\"og:title\" content=\"Cordite Stats\"\u003E";
+;pug_debug_line = 16;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta property=\"og:type\" content=\"website\"\u003E";
+;pug_debug_line = 17;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta property=\"og:image\" content=\"jpg\u002Flogo-watermark-og.jpg\"\u003E";
+;pug_debug_line = 18;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta property=\"og:url\" content=\"\"\u003E";
+;pug_debug_line = 19;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta property=\"og:description\" content=\"\"\u003E";
+;pug_debug_line = 21;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:description\" content=\"CorditeStats\"\u003E";
+;pug_debug_line = 22;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:image:src\" content=\"jpg\u002Flogo-watermark-og.jpg\"\u003E";
+;pug_debug_line = 23;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:card\" content=\"summary\"\u003E";
+;pug_debug_line = 24;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:creator\" content=\"@jchrisjones\"\u003E";
+;pug_debug_line = 25;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:site\" content=\"@we_are_cordite\"\u003E";
+;pug_debug_line = 26;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:label1\" value=\"Network Mapping Service\"\u003E";
+;pug_debug_line = 27;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"twitter:data1\" value=\"View nodes on the cordite network.\"\u003E";
+;pug_debug_line = 29;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"theme-color\" content=\"#0A2F64\"\u003E";
+;pug_debug_line = 30;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"msapplication-navbutton-color\" content=\"#0A2F64\"\u003E";
+;pug_debug_line = 31;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"apple-mobile-web-app-capable\" content=\"yes\"\u003E";
+;pug_debug_line = 32;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Cmeta name=\"apple-mobile-web-app-status-bar-style\" content=\"black\"\u003E";
+;pug_debug_line = 34;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"apple-touch-icon\" href=\"png\u002Fapple-touch\u002Ftouch-icon-iphone.png\"\u003E";
+;pug_debug_line = 35;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"apple-touch-icon\" sizes=\"152x152\" href=\"png\u002Fapple-touch\u002Ftouch-icon-ipad.png\"\u003E";
+;pug_debug_line = 36;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"png\u002Fapple-touch\u002Ftouch-icon-iphone-retina.png\"\u003E";
+;pug_debug_line = 37;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"apple-touch-icon\" sizes=\"167x167\" href=\"png\u002Fapple-touch\u002Ftouch-icon-ipad-retina.png\"\u003E";
+;pug_debug_line = 39;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"icon\" sizes=\"192x192\" href=\"png\u002Fandroid\u002F192x192_icon.png\"\u003E";
+;pug_debug_line = 40;pug_debug_filename = "app\u002Ftemplates\u002Fhead.pug";
+pug_html = pug_html + "\u003Clink rel=\"manifest\" href=\"manifest.json\"\u003E\u003C\u002Fhead\u003E";} catch (err) {pug.rethrow(err, pug_debug_filename, pug_debug_line, pug_debug_sources[pug_debug_filename]);};return pug_html;};
+module.exports = template;
+});
+
+;require.alias("buffer/index.js", "buffer");
+require.alias("node-browser-modules/node_modules/process/browser.js", "process");process = require('process');require.register("___globals___", function(exports, require, module) {
+  
+});})();require('___globals___');
+
+
+//# sourceMappingURL=app.js.map
