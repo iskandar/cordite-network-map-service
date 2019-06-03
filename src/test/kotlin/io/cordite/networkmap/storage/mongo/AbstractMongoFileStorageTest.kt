@@ -30,7 +30,6 @@ import org.junit.*
 import org.junit.runner.RunWith
 import java.time.Duration
 
-@Ignore
 @RunWith(VertxUnitRunner::class)
 class AbstractMongoFileStorageTest {
   companion object {

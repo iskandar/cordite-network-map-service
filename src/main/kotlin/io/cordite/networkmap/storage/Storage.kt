@@ -24,10 +24,9 @@ interface Storage<T> {
   fun put(key: String, value: T): Future<Unit>
   fun get(key: String): Future<T>
   fun getOrNull(key: String): Future<T?>
-  fun getOrDefault(key: String, default: T): Future<T>
   fun getKeys(): Future<List<String>>
   fun getAll(): Future<Map<String, T>>
-  fun getAll(keys: List<String>): Future<Map<String, T>>
+  fun getAll(keys: List<String>) : Future<Map<String, T>>
   fun delete(key: String): Future<Unit>
   fun exists(key: String): Future<Boolean>
   fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration)

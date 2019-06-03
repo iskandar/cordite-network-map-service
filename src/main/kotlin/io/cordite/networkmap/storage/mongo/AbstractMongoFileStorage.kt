@@ -83,16 +83,6 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       }
   }
 
-  override fun getOrDefault(key: String, default: T): Future<T> {
-    return exists(key)
-      .compose { exists ->
-        when {
-          exists -> get(key)
-          else -> succeededFuture(default)
-        }
-      }
-  }
-
   override fun getKeys(): Future<List<String>> {
     return bucket.find()
       .toObservable()

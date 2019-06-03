@@ -74,6 +74,14 @@
       <id>5_jcenter</id>
       <url>https://jcenter.bintray.com</url>
     </repository>
+    <repository>
+      <id>6_exposed</id>
+      <name>bintray</name>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>https://dl.bintray.com/kotlin/exposed</url>
+    </repository>
   </repositories>
 
   <licenses>
@@ -256,6 +264,11 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.exposed</groupId>
+      <artifactId>exposed</artifactId>
+      <version>0.13.7</version>
     </dependency>
   </dependencies>
 

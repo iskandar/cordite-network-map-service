@@ -130,8 +130,8 @@ fun HttpServerResponse.setNoCache(): HttpServerResponse {
     .putHeader("expires", "0")
 }
 
-fun HttpServerResponse.setCacheControl(cacheTimeout: Duration) {
-  putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
+fun HttpServerResponse.setCacheControl(cacheTimeout: Duration): HttpServerResponse {
+  return putHeader(HttpHeaders.CACHE_CONTROL, "max-age=${cacheTimeout.seconds}")
 }
 
 fun <T> Vertx.executeBlocking(fn: () -> T): Future<T> {

@@ -26,7 +26,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.junit.*
 import org.junit.runner.RunWith
 
-@Ignore
 @RunWith(VertxUnitRunner::class)
 class MongoTextStorageTest {
   companion object {

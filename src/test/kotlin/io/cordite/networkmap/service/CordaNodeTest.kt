@@ -71,14 +71,16 @@ class CordaNodeTest {
     // BUT we can't use the one used by the application
 
     vertx = Vertx.vertx()
-    this.service = NetworkMapService(dbDirectory = dbDirectory,
+    val nmsOptions = NMSOptions(
+      dbDirectory = dbDirectory,
       user = InMemoryUser.createUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
       tls = false,
-      vertx = vertx,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
-      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY)
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY
+    )
+    this.service = NetworkMapService(nmsOptions = nmsOptions, vertx = vertx)
     service.startup().setHandler(context.asyncAssertSuccess())
   }
 

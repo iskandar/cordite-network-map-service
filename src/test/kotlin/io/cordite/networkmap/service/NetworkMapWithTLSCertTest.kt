@@ -67,18 +67,25 @@ class NetworkMapWithTLSCertTest {
       .setVerifyHost(false)
     )
 
-    this.service = NetworkMapService(dbDirectory = dbDirectory,
-      user = InMemoryUser.createUser("", "sa", ""),
+    val nmsOptions = NMSOptions(
+      dbDirectory = dbDirectory,
+      user = InMemoryUser("", "sa", ""),
       port = port,
       cacheTimeout = NetworkMapServiceTest.CACHE_TIMEOUT,
       tls = true,
       certPath = certPath,
       keyPath = keyPath,
-      vertx = vertx,
       hostname = "127.0.0.1",
       webRoot = NetworkMapServiceTest.WEB_ROOT,
-      paramUpdateDelay = Duration.ZERO
+      paramUpdateDelay = Duration.ZERO,
+      enableDoorman = true,
+      enableCertman = true,
+      pkix = false,
+      truststore = null,
+      trustStorePassword = null,
+      strictEV = false
     )
+    this.service = NetworkMapService(nmsOptions)
 
     val completed = Future.future<Unit>()
     service.startup().setHandler(completed)

@@ -140,23 +140,23 @@ class NetworkMapServiceTest {
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
 
-    this.service = NetworkMapService(dbDirectory = dbDirectory,
-      user = InMemoryUser.createUser("", "sa", ""),
+    val nmsOptions = NMSOptions(
+      dbDirectory = dbDirectory,
+      user = InMemoryUser("", "sa", ""),
       port = port,
       cacheTimeout = CACHE_TIMEOUT,
       tls = false,
-      vertx = vertx,
       webRoot = WEB_ROOT,
-      certificateManagerConfig = CertificateManagerConfig(
-        root = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
-        doorManEnabled = false,
-        certManEnabled = true,
-        certManPKIVerficationEnabled = false,
-        certManRootCAsTrustStoreFile = null,
-        certManRootCAsTrustStorePassword = null,
-        certManStrictEVCerts = false),
-      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
+      enableDoorman = false,
+      enableCertman = true,
+      pkix = false,
+      truststore = null,
+      trustStorePassword = null,
+      strictEV = false
     )
+
+    this.service = NetworkMapService(nmsOptions)
 
     val completed = Future.future<Unit>()
     service.startup().setHandler(completed)

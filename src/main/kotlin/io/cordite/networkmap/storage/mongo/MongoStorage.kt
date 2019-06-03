@@ -89,6 +89,10 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
 
   private var result: T? = null
 
+  init {
+    val stack = Thread.currentThread().stackTrace
+    println(stack);
+  }
   override fun onComplete() {
     try {
       when {

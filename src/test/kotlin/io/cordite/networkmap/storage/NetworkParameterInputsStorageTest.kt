@@ -63,7 +63,7 @@ class NetworkParameterInputsStorageTest {
   @Test
   fun `that we create the input folder`(context: TestContext) {
     val tempDir = createTempDirectory()
-    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
+    val nmis = NetworkParameterInputsStorage(vertx, tempDir)
     nmis.makeDirs()
       .onSuccess {
         val rootDir = File(tempDir, DEFAULT_DIR_NAME)
@@ -77,7 +77,7 @@ class NetworkParameterInputsStorageTest {
   @Test
   fun `that digest stream correctly signals a change in the input set`(context: TestContext) {
     val tempDir = createTempDirectory()
-    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
+    val nmis = NetworkParameterInputsStorage(vertx, tempDir)
 
     var initialDigest = ""
     var newDigest = ""
@@ -116,7 +116,7 @@ class NetworkParameterInputsStorageTest {
   @Test
   fun `that we can load whitelist and notaries`(context: TestContext) {
     val tempDir = createTempDirectory()
-    val nmis = NetworkParameterInputsStorage(tempDir, vertx)
+    val nmis = NetworkParameterInputsStorage(vertx, tempDir)
     val async = context.async()
 
     nmis.makeDirs()
