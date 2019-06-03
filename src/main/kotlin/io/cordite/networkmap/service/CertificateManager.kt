@@ -15,10 +15,10 @@
  */
 package io.cordite.networkmap.service
 
+import io.bluebank.braid.core.async.mapUnit
 import io.bluebank.braid.core.http.write
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.Storage
-import io.cordite.networkmap.utils.mapUnit
 import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Future
 import io.vertx.core.Future.succeededFuture

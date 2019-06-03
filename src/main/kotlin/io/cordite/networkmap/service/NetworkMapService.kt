@@ -20,6 +20,7 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
+import io.bluebank.braid.core.async.mapUnit
 import io.bluebank.braid.core.http.HttpServerConfig
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext

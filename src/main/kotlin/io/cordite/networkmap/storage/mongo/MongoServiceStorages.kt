@@ -15,29 +15,35 @@
  */
 package io.cordite.networkmap.storage.mongo
 
+import io.bluebank.braid.core.async.mapUnit
 import io.cordite.networkmap.service.ServiceStorages
 import io.cordite.networkmap.service.StorageType
-import io.cordite.networkmap.storage.Storage
+import io.cordite.networkmap.storage.file.TextStorage
 import io.cordite.networkmap.utils.NMSOptions
+import io.cordite.networkmap.utils.all
 import io.vertx.core.Future
-import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import io.vertx.core.Vertx
 
-class MongoServiceStorages(private val nmsOptions: NMSOptions) : ServiceStorages() {
+class MongoServiceStorages(private val vertx: Vertx, private val nmsOptions: NMSOptions) : ServiceStorages() {
   init {
     assert(nmsOptions.storageType == StorageType.MONGO) { "mongo service cannot be initiated with storage type set to ${nmsOptions.storageType}"}
   }
 
   private val mongoClient = MongoStorage.connect(nmsOptions)
-  override val certAndKeys: Storage<CertificateAndKeyPair> = CertificateAndKeyPairStorage(mongoClient, nmsOptions.mongodDatabase)
-  override val nodeInfo: Storage<SignedNodeInfo> = SignedNodeInfoStorage(mongoClient, nmsOptions.mongodDatabase)
-  override val networkParameters: Storage<SignedNetworkParameters> = SignedNetworkParametersStorage(mongoClient, nmsOptions.mongodDatabase)
-  override val parameterUpdate: Storage<ParametersUpdate> = ParametersUpdateStorage(mongoClient, nmsOptions.mongodDatabase)
-  override val text: Storage<String> = MongoTextStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val certAndKeys = CertificateAndKeyPairStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val nodeInfo = SignedNodeInfoStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val networkParameters = SignedNetworkParametersStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val parameterUpdate  = ParametersUpdateStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val text  = MongoTextStorage(mongoClient, nmsOptions.mongodDatabase)
 
   override fun setupStorage(): Future<Unit> {
-    return Future.succeededFuture()
+    return all(
+      networkParameters.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, nmsOptions.dbDirectory)),
+      parameterUpdate.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, nmsOptions.dbDirectory)),
+      // TODO: add something to clear down cached networkmaps on the filesystem from previous versions
+      text.migrate(TextStorage(vertx, nmsOptions.dbDirectory)),
+      nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, nmsOptions.dbDirectory)),
+      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, nmsOptions.dbDirectory))
+    ).mapUnit()
   }
 }

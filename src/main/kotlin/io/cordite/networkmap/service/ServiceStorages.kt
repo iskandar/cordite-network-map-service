@@ -42,7 +42,7 @@ abstract class ServiceStorages {
     fun create(vertx: Vertx, nmsOptions: NMSOptions) : ServiceStorages {
       return when (nmsOptions.storageType) {
         StorageType.FILE -> FileServiceStorages(vertx, nmsOptions)
-        StorageType.MONGO -> MongoServiceStorages(nmsOptions)
+        StorageType.MONGO -> MongoServiceStorages(vertx, nmsOptions)
       }
     }
     private val logger = loggerFor<ServiceStorages>()
@@ -57,18 +57,6 @@ abstract class ServiceStorages {
   abstract val text : Storage<String>
 
   abstract fun setupStorage(): Future<Unit>
-
-  // TODO: Re-enable when database solution has stabilised
-//  private fun migrate(): Future<Unit> {
-//    return all(
-//      networkParameters.migrate(io.cordite.networkmap.storage.file.SignedNetworkParametersStorage(vertx, dbDirectory)),
-//      parameterUpdate.migrate(io.cordite.networkmap.storage.file.ParametersUpdateStorage(vertx, dbDirectory)),
-//      // TODO: add something to clear down cached networkmaps on the filesystem from previous versions
-//      text.migrate(TextStorage(vertx, dbDirectory)),
-//      nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, dbDirectory)),
-//      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, dbDirectory))
-//    ).mapUnit()
-//  }
 
   fun getCurrentNetworkParametersHash(): Future<SecureHash> {
     return text.get(CURRENT_PARAMETERS)

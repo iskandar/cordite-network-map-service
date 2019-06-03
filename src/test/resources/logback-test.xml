@@ -17,6 +17,6 @@
   <logger name="io.bluebank.braid.corda.CordaSockJSHandler" level="info"/>
   <logger name="BasicInfo" level="info"/>
   <logger name="test-data" level="info"/>
-  <logger name="mongo" level="warn"/>
+  <logger name="mongo" level="info"/>
   <logger name="io.vertx.ext.web.handler.impl.LoggerHandlerImpl" level="WARN"/>
 </configuration>
