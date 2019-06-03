@@ -221,10 +221,6 @@ fun <T> List<Future<T>>.all(): Future<List<T>> {
   return fResult
 }
 
-fun <T> Future<T>.mapUnit() : Future<Unit> {
-  return this.map { Unit }
-}
-
 @JvmName("allTyped")
 fun <T> all(vararg futures: Future<T>): Future<List<T>> {
   return futures.toList().all()

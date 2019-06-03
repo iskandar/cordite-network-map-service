@@ -85,14 +85,12 @@ fun <T> Publisher<T>.toFuture(): Future<T> {
 class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : Subscriber<T>, Future<T> by future {
   companion object {
     private val log = loggerFor<SubscriberOnFuture<*>>()
+    private val ignoreClasses = setOf(SubscriberOnFuture::class.java.name, "io.cordite.networkmap.storage.mongo.MongoStorageKt", Thread::class.java.name)
   }
 
   private var result: T? = null
+  private val stack = Thread.currentThread().stackTrace.first { !ignoreClasses.contains(it.className) }
 
-  init {
-    val stack = Thread.currentThread().stackTrace
-    println(stack);
-  }
   override fun onComplete() {
     try {
       when {
@@ -102,7 +100,7 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
             true -> future.result()
             else -> future.cause() as Any
           }
-          }")
+          } execute from $stack")
         }
         else -> {
           future.complete(result)
@@ -121,10 +119,10 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
     try {
       when {
         future.isComplete -> {
-          log.error("future has already been completed")
+          log.error("future has already been completed executed from stack $stack")
         }
         result != null -> {
-          log.error("already received one item $result")
+          log.error("already received one item $result for future executed from stack $stack")
         }
         else -> {
           result = t
@@ -143,7 +141,7 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
           true -> future.result()
           else -> future.cause() as Any
         }
-        }")
+        } for future executed from $stack")
       }
       else -> {
         try {
@@ -169,7 +167,7 @@ enum class IndexType {
 }
 
 infix fun <R> IndexType.idx(property: KProperty<R>): Bson {
-  return when(this) {
+  return when (this) {
     IndexType.HASHED -> Indexes.hashed(property.name)
   }
 }

@@ -32,4 +32,5 @@
   <logger name="io.bluebank.braid.corda.rest.RestMounter" level="info"/>
   <logger name="io.bluebank.braid.corda.CordaSockJSHandler" level="info"/>
   <logger name="BasicInfo" level="info"/>
+  <logger name="mongo" level="info"/>
 </configuration>

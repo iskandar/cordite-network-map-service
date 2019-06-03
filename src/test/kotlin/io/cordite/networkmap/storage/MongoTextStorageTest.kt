@@ -57,8 +57,11 @@ class MongoTextStorageTest {
   @Test
   fun testStorage(context: TestContext) {
     val async = context.async()
+    val key = "hello"
+    val value = "world"
     MongoTextStorage(mongoClient, TestDatabase.createUniqueDBName()).apply {
-      this.put("hello", "world")
+      this.get("hello")
+        .recover { this.put(key, value).map { value } }
         .compose {
           this.get("hello")
         }

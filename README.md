@@ -3,7 +3,7 @@
 - [Supported tags and respective Dockerfile links](#supported-tags-and-respective-dockerfile-links)
 - [Design criteria and Features](#design-criteria-and-features)
 - [Backlog of Features, Improvements, and Optimisations](#backlog-of-features--improvements--and-optimisations)
-- [FAQ](#faq)
+- [FAQ](FAQ.md)
 - [How do I get in touch?](#how-do-i-get-in-touch)
 - [What if something does not work?](#what-if-something-does-not-work)
 - [How do I contribute?](#how-do-i-contribute-)
@@ -46,11 +46,6 @@ The following are on the roadmap but not implemented yet:
 It is recommended that these amoungst other things would be need for this software to be suitable for production.  
 If you would like to accelerate the roadmap and use this software in production then feel free to either contribute or get in contact on the #cordite channel on [Corda slack](https://slack.corda.net/) 
 >>>
-
-
-## FAQ
-
-See [here](FAQ.md).
 
 ## How do I get in touch?
   + News is announced on [@We_are_Cordite](https://twitter.com/we_are_cordite)

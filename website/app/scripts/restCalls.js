@@ -17,7 +17,7 @@ import {checkToken} from 'scripts/jwtProcess';
 
 const url = document.baseURI;
 
-export async function login(loginData){
+export async function login(loginData) {
   const response = await fetch(`${url}/admin/api/login`, {
     method: 'POST',
     headers: {
@@ -26,19 +26,18 @@ export async function login(loginData){
     body: JSON.stringify(loginData)
   });
   let status = await response.status;
-  if(status === 200) {
+  if (status === 200) {
     sessionStorage["corditeAccessToken"] = await response.text();
-  }
-  else{
+  } else {
     console.log(response);
   }
   return response;
 }
 
-export async function checkAuth(){
+export async function checkAuth() {
   let status = 403
   const token = sessionStorage['corditeAccessToken'];
-  if(token && checkToken(token)){
+  if (token && checkToken(token)) {
     status = 200;
   }
   return status;
@@ -46,7 +45,7 @@ export async function checkAuth(){
 
 export async function getNodes() {
   const token = sessionStorage["corditeAccessToken"];
-  const response = await fetch(`${url}/admin/api/nodes`,{
+  const response = await fetch(`${url}/admin/api/nodes`, {
     method: 'GET',
     headers: {
       'accept': 'application/json',
@@ -58,7 +57,7 @@ export async function getNodes() {
 }
 
 export async function getNotaries() {
-  const response = await fetch(`${url}/admin/api/notaries`,{
+  const response = await fetch(`${url}/admin/api/notaries`, {
     method: 'GET',
     headers: {
       'accept': 'application/json',
@@ -80,8 +79,8 @@ export async function getBuildProperties() {
   return properties;
 }
 
-export async function getBraidAPI(){
-  const response = await fetch(`${url}/braid/api`,{
+export async function getBraidAPI() {
+  const response = await fetch(`${url}/braid/api`, {
     method: 'GET',
     headers: {
       'accept': 'application/json',
@@ -92,8 +91,8 @@ export async function getBraidAPI(){
   return braidCode;
 }
 
-export async function deleteNodes(nodeKey){
-  const response = await fetch(`${url}/admin/api/nodes/${nodeKey}`, 
+export async function deleteNodes(nodeKey) {
+  const response = await fetch(`${url}/admin/api/nodes/${nodeKey}`,
     {
       method: 'DELETE',
       headers: {
@@ -101,6 +100,6 @@ export async function deleteNodes(nodeKey){
         "Authorization": `Bearer ${sessionStorage["corditeAccessToken"]}`
       }
     });
-    return response;
+  return response;
 }
 
