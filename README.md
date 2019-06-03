@@ -84,6 +84,9 @@ You can configure the service using `-D` system properties. See the section for
 
 Java properties (pass with -D<propertyname>=<property-value>) and env variables:
 
+
+java properties (pass with -D<propertyname>=<property-value>) and env variables
+
 | Property                    | Env Variable                        | Default                                                                                               | Description                                                                                                              |
 | --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | auth-password               | NMS_AUTH_PASSWORD                   | admin                                                                                                 | system admin password                                                                                                    |
@@ -104,10 +107,12 @@ Java properties (pass with -D<propertyname>=<property-value>) and env variables:
 | param-update-delay          | NMS_PARAM_UPDATE_DELAY              | 10S                                                                                                   | schedule duration for a parameter update                                                                                 |
 | port                        | NMS_PORT                            | 8080                                                                                                  | web port                                                                                                                 |
 | root-ca-name                | NMS_ROOT_CA_NAME                    | CN="<replace me>", OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB     | the name for the root ca. If doorman and certman are turned off this will automatically default to Corda dev root ca     |
+| storage-type                | NMS_STORAGE_TYPE                    | mongo                                                                                                 | file | mongo                                                                                                             |
 | tls                         | NMS_TLS                             | false                                                                                                 | whether TLS is enabled or not                                                                                            |
 | tls-cert-path               | NMS_TLS_CERT_PATH                   |                                                                                                       | path to cert if TLS is turned on                                                                                         |
 | tls-key-path                | NMS_TLS_KEY_PATH                    |                                                                                                       | path to key if TLS turned on                                                                                             |
 | web-root                    | NMS_WEB_ROOT                        | /                                                                                                     | for remapping the root url for all requests                                                                              |
+
 
 ## Doorman protocol
 

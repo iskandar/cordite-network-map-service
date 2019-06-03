@@ -16,9 +16,11 @@
 package io.cordite.networkmap
 
 import io.bluebank.braid.core.logging.loggerFor
+import io.cordite.networkmap.NetworkMapApp.Companion.bootstrapNMS
 import io.cordite.networkmap.service.NetworkMapService
 import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
+import io.cordite.networkmap.utils.NMSOptionsParser
 import kotlin.system.exitProcess
 
 
@@ -29,7 +31,7 @@ open class NetworkMapApp {
     @JvmStatic
     fun main(args: Array<String>) {
       LogInitialiser.init()
-      NMSOptions().apply {
+      NMSOptionsParser().apply {
         if (args.contains("--help")) {
           printHelp()
           return
@@ -40,19 +42,20 @@ open class NetworkMapApp {
       }
     }
 
-    private fun NMSOptions.bootstrapNMS() {
-      if (truststore != null && !truststore.exists()) {
-        println("failed to find truststore ${truststore.path}")
-        exitProcess(-1)
-      }
-      NetworkMapService(this).startup().setHandler {
-        if (it.failed()) {
-          logger.error("failed to complete setup", it.cause())
-        } else {
-          logger.info("started")
+    private fun NMSOptionsParser.bootstrapNMS() {
+      NMSOptions.parse(this).apply {
+        if (truststore != null && !truststore.exists()) {
+          println("failed to find truststore ${truststore.path}")
+          exitProcess(-1)
+        }
+        NetworkMapService(this).startup().setHandler {
+          if (it.failed()) {
+            logger.error("failed to complete setup", it.cause())
+          } else {
+            logger.info("started")
+          }
         }
       }
     }
-
   }
 }
