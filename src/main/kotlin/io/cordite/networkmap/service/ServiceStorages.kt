@@ -18,6 +18,8 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.Storage
 import io.cordite.networkmap.storage.file.FileServiceStorages
+import io.cordite.networkmap.storage.mongo.MongoServiceStorages
+import io.cordite.networkmap.utils.NMSOptions
 import io.cordite.networkmap.utils.catch
 import io.cordite.networkmap.utils.sign
 import io.vertx.core.Future
@@ -28,7 +30,6 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import java.io.File
 
 enum class StorageType {
   FILE,
@@ -38,10 +39,10 @@ enum class StorageType {
 abstract class ServiceStorages {
   companion object {
 
-    fun create(storageType: StorageType, vertx: Vertx, dbDirectory: File) : ServiceStorages {
-      return when (storageType) {
-        StorageType.FILE -> FileServiceStorages(vertx, dbDirectory)
-        else -> error("unsupported type $storageType")
+    fun create(vertx: Vertx, nmsOptions: NMSOptions) : ServiceStorages {
+      return when (nmsOptions.storageType) {
+        StorageType.FILE -> FileServiceStorages(vertx, nmsOptions)
+        StorageType.MONGO -> MongoServiceStorages(nmsOptions)
       }
     }
     private val logger = loggerFor<ServiceStorages>()

@@ -35,8 +35,8 @@ import java.io.File
 /**
  * @Deprecated("this is only provided for migration from earlier versions of network parameters to the database implementation")
  */
-class NetworkParameterInputsStorage(parentDir: File,
-                                    private val vertx: Vertx,
+class NetworkParameterInputsStorage(private val vertx: Vertx,
+                                    parentDir: File,
                                     childDir: String = DEFAULT_DIR_NAME,
                                     validatingNotariesDirectoryName: String = DEFAULT_DIR_VALIDATING_NOTARIES,
                                     nonValidatingNotariesDirectoryName: String = DEFAULT_DIR_NON_VALIDATING_NOTARIES,

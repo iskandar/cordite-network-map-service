@@ -89,7 +89,7 @@ class NetworkMapService(
   private val adminBraidRoot: String = root + ADMIN_BRAID_ROOT
   private val swaggerRoot: String = root + SWAGGER_ROOT
 
-  internal val storages = ServiceStorages.create(StorageType.FILE,vertx, nmsOptions.dbDirectory)
+  internal val storages = ServiceStorages.create(vertx, nmsOptions)
   private val adminService = AdminServiceImpl()
   internal lateinit var processor: NetworkMapServiceProcessor
   private val authService = AuthService(nmsOptions.authProvider)

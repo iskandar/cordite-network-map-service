@@ -15,9 +15,7 @@
  */
 package io.cordite.networkmap.utils
 
-import io.cordite.networkmap.service.CertificateManager
-import io.cordite.networkmap.service.InMemoryAuthProvider
-import io.cordite.networkmap.service.InMemoryUser
+import io.cordite.networkmap.service.*
 import io.cordite.networkmap.storage.mongo.MongoStorage
 import io.vertx.ext.auth.AuthProvider
 import io.vertx.ext.auth.User
@@ -44,10 +42,11 @@ class NMSOptions(val port: Int = 8080,
                  val trustStorePassword: String? = null,
                  val strictEV: Boolean = false,
                  val webRoot: String = "/",
+                 val storageType: StorageType = StorageType.MONGO,
                  val mongoConnectionString: String = "embed",
                  val mongodLocation: String = "",
                  val mongodDatabase: String = MongoStorage.DEFAULT_DATABASE,
-                 val rootCA : CertificateAndKeyPair = DEV_ROOT_CA) : Options() {
+                 val rootCA : CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME)) : Options() {
 
   val authProvider : AuthProvider by lazy {
      when (user) {
@@ -93,7 +92,7 @@ class NMSOptions(val port: Int = 8080,
   }
 }
 
-class NMSOptionsParser() : Options() {
+class NMSOptionsParser : Options() {
   val portOpt = addOption("port", "8080", "web port")
   val dbDirectoryOpt = addOption("db", ".db", "database directory for this service")
   val cacheTimeoutOpt = addOption("cache-timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")

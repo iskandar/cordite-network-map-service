@@ -26,10 +26,12 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.sequence
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 import java.security.PublicKey
+import java.sql.Blob
 
 open class SerializationEnvironment {
   companion object {
@@ -49,7 +51,6 @@ open class SerializationEnvironment {
       Json.mapper.registerModule(module)
       Json.prettyMapper.registerModule(module)
     }
-
   }
 
   private class NMSSerializationFactoryImpl(val name: String) : SerializationFactoryImpl()
@@ -86,15 +87,13 @@ fun <T : Any> T.serializeOnContext(): ByteSequence {
   }
 }
 
-inline fun <reified T : Any> ByteSequence.deserializeOnContext(): T {
-  return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
-    this.deserialize()
-  }
-}
-
 inline fun <reified T : Any> ByteArray.deserializeOnContext(): T {
   return SerializationFactory.defaultFactory.withCurrentContext(SerializationDefaults.P2P_CONTEXT) {
     this.deserialize()
   }
 }
 
+fun <T : Any> Blob.deserializeOnContext(clazz : Class<T>): T {
+  val array = this.getBytes(1, this.length().toInt())
+  return SerializationFactory.defaultFactory.deserialize(array.sequence(), clazz, SerializationDefaults.P2P_CONTEXT)
+}
