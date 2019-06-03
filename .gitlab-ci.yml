@@ -1,7 +1,6 @@
 stages:
  - build
  - release
- - scan
 
 variables:
 
@@ -11,6 +10,21 @@ variables:
 # For more information on Docker see
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Docker.gitlab-ci.yml
 
+branch:maven:
+#  image: dazraf/build-tools:snapshot
+  stage: build
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+    MAVEN_CLI_OPTS: "--threads 1C --batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+  script:
+    - mvn $MAVEN_CLI_OPTS clean license:check package
+    - cat target/site/jacoco/index.html
+#    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+  except:
+    - master
+    - /^[0-9]+-.*$/
+  tags:
+    - build-tools
 
 build:maven:
 #  image: dazraf/build-tools:snapshot
@@ -21,7 +35,7 @@ build:maven:
   script:
     - mvn $MAVEN_CLI_OPTS clean license:check package
     - cat target/site/jacoco/index.html
-    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+#    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
     - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
     - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} .
     - docker push ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
@@ -129,7 +143,7 @@ release:docker:
 
 container_scanning:
   image: docker:stable
-  stage: scan
+  stage: release
   variables:
     CI_APPLICATION_REPOSITORY: ${CI_REGISTRY_IMAGE}
     CI_APPLICATION_TAG: ${CI_PIPELINE_ID}
@@ -185,7 +199,7 @@ container_scanning:
 #    - tags
 
 dast:
-  stage: scan
+  stage: release
   image: registry.gitlab.com/gitlab-org/security-products/zaproxy
   variables:
     website: "https://network-map-edge.cordite.foundation/"
@@ -204,7 +218,7 @@ dast:
     - tags
 
 dependency_scanning:
-  stage: scan
+  stage: release
   image: docker:stable
   variables:
     DOCKER_DRIVER: overlay2
