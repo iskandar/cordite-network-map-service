@@ -82,6 +82,7 @@ class NMSOptions(val port: Int = 8080,
         mongoConnectionString = nmsOptionsParser.mongoConnectionOpt.stringValue,
         mongodLocation = nmsOptionsParser.mongodLocationOpt.stringValue,
         mongodDatabase = nmsOptionsParser.mongodDatabaseOpt.stringValue,
+        storageType = StorageType.valueOf(nmsOptionsParser.storageType.stringValue.toUpperCase()),
         rootCA = if (!nmsOptionsParser.doormanOpt.booleanValue && !nmsOptionsParser.certmanOpt.booleanValue) {
           DEV_ROOT_CA
         } else {
@@ -115,4 +116,5 @@ class NMSOptionsParser : Options() {
   val mongoConnectionOpt = addOption("mongo-connection-string", "embed", "MongoDB connection string. If set to `embed` will start its own mongo instance")
   val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
   val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
+  val storageType = addOption("storage-type", StorageType.MONGO.name.toLowerCase(), "file | mongo")
 }
