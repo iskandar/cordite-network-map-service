@@ -107,37 +107,37 @@ release:docker:
     - master
     - tags
 
-container_scanning:
-  image: docker:stable
-  stage: release
-  variables:
-    CI_APPLICATION_REPOSITORY: ${CI_REGISTRY_IMAGE}
-    CI_APPLICATION_TAG: ${CI_PIPELINE_ID}
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - docker run -d --name db arminc/clair-db:latest
-    - docker run -p 6060:6060 --link db:postgres -d --name clair --restart on-failure arminc/clair-local-scan:v2.0.1
-    - apk add -U wget ca-certificates
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-    - docker pull ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}
-    - wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
-    - mv clair-scanner_linux_amd64 clair-scanner
-    - chmod +x clair-scanner
-    - touch clair-whitelist.yml
-    - while( ! wget -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; done
-    - retries=0
-    - echo "Waiting for clair daemon to start"
-    - while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
-    - ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r gl-container-scanning-report.json -l clair.log -w clair-whitelist.yml ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} || true
-  artifacts:
-    paths: [gl-container-scanning-report.json]
-  tags:
-    - docker
-  only:
-    - master
-    - tags
+# container_scanning:
+#   image: docker:stable
+#   stage: release
+#   variables:
+#     CI_APPLICATION_REPOSITORY: ${CI_REGISTRY_IMAGE}
+#     CI_APPLICATION_TAG: ${CI_PIPELINE_ID}
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - docker run -d --name db arminc/clair-db:latest
+#     - docker run -p 6060:6060 --link db:postgres -d --name clair --restart on-failure arminc/clair-local-scan:v2.0.1
+#     - apk add -U wget ca-certificates
+#     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+#     - docker pull ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}
+#     - wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
+#     - mv clair-scanner_linux_amd64 clair-scanner
+#     - chmod +x clair-scanner
+#     - touch clair-whitelist.yml
+#     - while( ! wget -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; done
+#     - retries=0
+#     - echo "Waiting for clair daemon to start"
+#     - while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
+#     - ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r gl-container-scanning-report.json -l clair.log -w clair-whitelist.yml ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} || true
+#   artifacts:
+#     paths: [gl-container-scanning-report.json]
+#   tags:
+#     - docker
+#   only:
+#     - master
+#     - tags
 
 # fails due to use of npm
 #sast:
@@ -164,47 +164,47 @@ container_scanning:
 #    - master
 #    - tags
 
-dast:
-  stage: release
-  image: registry.gitlab.com/gitlab-org/security-products/zaproxy
-  variables:
-    website: "https://network-map-edge.cordite.foundation/"
-  allow_failure: true
-  script:
-    - mkdir -p /zap/wrk/
-    - /zap/zap-baseline.py -J gl-dast-report.json -t $website || true
-    - cp /zap/wrk/gl-dast-report.json .
-  artifacts:
-    reports:
-      dast: gl-dast-report.json
-  tags:
-    - docker
-  only:
-    - master
-    - tags
+# dast:
+#   stage: release
+#   image: registry.gitlab.com/gitlab-org/security-products/zaproxy
+#   variables:
+#     website: "https://network-map-edge.cordite.foundation/"
+#   allow_failure: true
+#   script:
+#     - mkdir -p /zap/wrk/
+#     - /zap/zap-baseline.py -J gl-dast-report.json -t $website || true
+#     - cp /zap/wrk/gl-dast-report.json .
+#   artifacts:
+#     reports:
+#       dast: gl-dast-report.json
+#   tags:
+#     - docker
+#   only:
+#     - master
+#     - tags
 
-dependency_scanning:
-  stage: release
-  image: docker:stable
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
-    - docker run
-        --env DEP_SCAN_DISABLE_REMOTE_CHECKS="${DEP_SCAN_DISABLE_REMOTE_CHECKS:-false}"
-        --volume "$PWD:/code"
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        "registry.gitlab.com/gitlab-org/security-products/dependency-scanning:$SP_VERSION" /code
-  artifacts:
-    reports:
-      dependency_scanning: gl-dependency-scanning-report.json
-  tags:
-    - docker
-  only:
-    - master
-    - tags
+# dependency_scanning:
+#   stage: release
+#   image: docker:stable
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
+#     - docker run
+#         --env DEP_SCAN_DISABLE_REMOTE_CHECKS="${DEP_SCAN_DISABLE_REMOTE_CHECKS:-false}"
+#         --volume "$PWD:/code"
+#         --volume /var/run/docker.sock:/var/run/docker.sock
+#         "registry.gitlab.com/gitlab-org/security-products/dependency-scanning:$SP_VERSION" /code
+#   artifacts:
+#     reports:
+#       dependency_scanning: gl-dependency-scanning-report.json
+#   tags:
+#     - docker
+#   only:
+#     - master
+#     - tags
 
 
