@@ -19,8 +19,7 @@ branch:maven:
   script:
     - mvn $MAVEN_CLI_OPTS clean license:check package
     - cat target/site/jacoco/index.html
-#    - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
-  except:
+  only:
     - /^[0-9]+-.*$/
   tags:
     - build-tools
