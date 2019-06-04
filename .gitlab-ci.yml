@@ -11,7 +11,6 @@ variables:
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Docker.gitlab-ci.yml
 
 branch:maven:
-#  image: dazraf/build-tools:snapshot
   stage: build
   variables:
     MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
@@ -37,6 +36,7 @@ build:maven:
     - docker push ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
   only:
     - master
+    - tags
   tags:
     - build-tools
   artifacts:
@@ -45,25 +45,43 @@ build:maven:
       - target/site/jacoco/index.html
       - target/network-map-service/
 
-build:maven-release:
-  stage: build
-  variables:
-    NMS_VERSION: $CI_COMMIT_REF_NAME
-    MAVEN_OPTS: "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
-    MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
-  script:
-    - mvn versions:set -DnewVersion=${NMS_VERSION:1}
-    - mvn $MAVEN_CLI_OPTS clean license:check package
-    - cat target/site/jacoco/index.html
-  only:
-    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
-  tags:
-    - build-tools
-  artifacts:
-    paths:
-      - target/network-map-service.jar
-      - target/site/jacoco/index.html
-      - target/network-map-service/**
+
+#code_quality:
+#  stage: build
+#  image: docker:stable
+#  variables:
+#    DOCKER_DRIVER: overlay2
+#  allow_failure: true
+#  services:
+#    - docker:stable-dind
+#  script:
+#    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
+#    - docker run
+#        --env SOURCE_CODE="$PWD"
+#        --volume "$PWD":/code
+#        --volume /var/run/docker.sock:/var/run/docker.sock
+#        "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
+#  artifacts:
+#    paths: [gl-code-quality-report.json]
+#  tags:
+#    - docker
+
+# package:docker:
+#  stage: package
+#  image: docker:latest
+#  variables:
+#    DOCKER_DRIVER: overlay2
+#  services:
+#    - docker:stable-dind
+#  script:
+#    - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
+#    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} .
+#    - docker push ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
+#  tags:
+#    - docker
+#  only:
+#    - master # should be on all branches to stop master failing
+#    - tags
 
 release:docker:
   stage: release
@@ -153,7 +171,7 @@ dast:
     website: "https://network-map-edge.cordite.foundation/"
   allow_failure: true
   script:
-    - mkdir /zap/wrk/
+    - mkdir -p /zap/wrk/
     - /zap/zap-baseline.py -J gl-dast-report.json -t $website || true
     - cp /zap/wrk/gl-dast-report.json .
   artifacts:
