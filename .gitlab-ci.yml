@@ -19,8 +19,9 @@ branch:maven:
   script:
     - mvn $MAVEN_CLI_OPTS clean license:check package
     - cat target/site/jacoco/index.html
-  only:
-    - /^[0-9]+-.*$/
+  except:
+    - master
+    - tags
   tags:
     - docker
 
