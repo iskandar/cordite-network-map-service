@@ -26,6 +26,7 @@ branch:maven:
     - docker
 
 build:maven:
+  image: dazraf/build-tools:latest
   stage: build
   variables:
     MAVEN_OPTS: "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
@@ -40,7 +41,7 @@ build:maven:
     - master
     - tags
   tags:
-    - build-tools
+    - docker
   artifacts:
     paths:
       - target/network-map-service.jar
