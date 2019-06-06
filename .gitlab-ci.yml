@@ -11,19 +11,22 @@ variables:
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Docker.gitlab-ci.yml
 
 branch:maven:
+  image: dazraf/build-tools:latest
   stage: build
   variables:
-    MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+    MAVEN_OPTS: "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
     MAVEN_CLI_OPTS: "--threads 1C --batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
   script:
     - mvn $MAVEN_CLI_OPTS clean license:check package
     - cat target/site/jacoco/index.html
-  only:
-    - /^[0-9]+-.*$/
+  except:
+    - master
+    - tags
   tags:
-    - build-tools
+    - docker
 
 build:maven:
+  image: dazraf/build-tools:latest
   stage: build
   variables:
     MAVEN_OPTS: "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
@@ -38,7 +41,7 @@ build:maven:
     - master
     - tags
   tags:
-    - build-tools
+    - docker
   artifacts:
     paths:
       - target/network-map-service.jar
