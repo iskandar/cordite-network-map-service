@@ -174,7 +174,7 @@ class NetworkMapServiceProcessor(
     }
   }
 
-  internal fun addNotaryInfo(notaryInfo: NotaryInfo): Future<String> {
+  private fun addNotaryInfo(notaryInfo: NotaryInfo): Future<String> {
     return addNotaryInfos(listOf(notaryInfo))
   }
 
