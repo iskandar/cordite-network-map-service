@@ -15,28 +15,59 @@
  */
 package io.cordite.networkmap.utils
 
+import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.PortAllocation
 import java.io.IOException
 import java.net.ServerSocket
-import java.util.*
 
 fun getFreePort(): Int {
+  PreallocatedFreePortAllocation.DEFAULT_ALLOCATOR.nextPort()
   return ServerSocket(0).use { it.localPort }
 }
 
-class FreePortAllocation(val range: IntRange = 10_000 .. 30_000) : PortAllocation() {
+class PreallocatedFreePortAllocation(private val range: IntRange = 10_000 .. 30_000) : PortAllocation() {
   companion object {
-    private const val RETRIES = 10
+    private val log = loggerFor<PreallocatedFreePortAllocation>()
+    private val assigned = mutableSetOf<Int>()
+    internal val DEFAULT_ALLOCATOR = PreallocatedFreePortAllocation()
+    internal val EOS_MESSAGE = "no unassigned port found"
+    private fun attemptToAssignPort(port: Int) : Boolean {
+      synchronized(assigned) {
+        return if (assigned.contains(port)) {
+          false
+        } else {
+          assigned.add(port)
+          true
+        }
+      }
+    }
   }
-  private val random = Random()
-  private val span = range.last - range.first
-  override fun nextPort(): Int {
-    return generateSequence { random.nextDouble() }.map { it -> (range.first + (span * it)).toInt() }.take(RETRIES).firstOrNull() { port ->
+
+  private val fountain = generateSequence(range.first) {
+    val next = it + 1
+    if (next <= range.last) {
+      next
+    } else {
+      null
+    }
+  }.filter {
       try {
-        ServerSocket(port).use { true }
-      } catch (err: IOException) {
+        ServerSocket(it).use { true }
+      } catch (ex: IOException) {
         false
       }
-    } ?: error("failed to locate an unused port with $RETRIES retries")
+    }
+    .iterator()
+
+  override fun nextPort(): Int {
+    return try {
+      generateSequence { fountain.next() }
+        .filter { attemptToAssignPort(it) }
+        .first()
+    } catch (ex: NoSuchElementException) {
+      error(EOS_MESSAGE)
+    }.apply {
+      log.info("allocating port: ${this}")
+    }
   }
 }

@@ -38,6 +38,7 @@ class NetworkMapWithTLSCertTest {
 
     init {
 //      SerializationTestEnvironment.init()
+      LogInitialiser.init()
     }
   }
 
