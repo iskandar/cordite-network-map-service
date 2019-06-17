@@ -23,6 +23,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.Connection
 import java.time.Instant
@@ -58,6 +59,7 @@ object NetworkParametersTable : KeyValueTable<NetworkParameters>(NetworkParamete
   }
 }
 
+@Ignore
 class TempTests {
   @Before
   fun before() {
