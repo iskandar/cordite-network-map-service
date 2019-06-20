@@ -117,7 +117,7 @@ class CordaNodeTest {
       compatibilityZone = zoneParams,
       notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
       notaryCustomOverrides = mapOf("devMode" to false),
-      startNodesInProcess = true,
+      startNodesInProcess = false,
       driverDirectory = createTempDir().toPath()
     ) {
       val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
