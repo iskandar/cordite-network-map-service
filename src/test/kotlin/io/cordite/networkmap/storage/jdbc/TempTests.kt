@@ -21,14 +21,17 @@ import io.cordite.networkmap.serialisation.serializeOnContext
 import net.corda.core.node.NetworkParameters
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.Connection
 import java.time.Instant
 import kotlin.test.assertEquals
 
 
+@Ignore
 open class KeyValueTable<T : Any>(private val clazz: Class<T>) : Table() {
   private val key = varchar("key", 1024).primaryKey()
   private val value = blob("value")
@@ -80,12 +83,13 @@ class TempTests {
     transaction(db) {
       SchemaUtils.create(NetworkParametersTable)
       NetworkParametersTable.insert {
-        NetworkParametersTable.assign(it, db.connector(), k1, v1)
+        assign(it, db.connector(), k1, v1)
       }
       val result = NetworkParametersTable.select { NetworkParametersTable.minimumVersion.eq(v1.minimumPlatformVersion)}.first()
       val (k2, v2) = NetworkParametersTable.extract(result)
       assertEquals(k1, k2)
       assertEquals(v1, v2)
     }
+    TransactionManager.closeAndUnregister(db)
   }
 }

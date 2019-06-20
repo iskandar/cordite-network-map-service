@@ -16,8 +16,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <kotlin.version>1.2.71</kotlin.version>
     <junit.version>4.12</junit.version>
-    <vertx.version>3.7.0</vertx.version>
-    <corda.version>4.1-RC03</corda.version>
+    <vertx.version>3.7.1</vertx.version>
+    <corda.version>4.1</corda.version>
     <dockerfile-maven.version>1.4.0</dockerfile-maven.version>
     <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -25,7 +25,7 @@
     <log4j.version>2.11.1</log4j.version>
     <env.CI_REGISTRY_IMAGE>local/${jar.name}</env.CI_REGISTRY_IMAGE>
     <env.CI_PIPELINE_ID>local</env.CI_PIPELINE_ID>
-    <braid.version>4.1.0-RC01</braid.version>
+    <braid.version>4.1.0</braid.version>
     <argLine>-javaagent:lib/quasar.jar</argLine>
     <npm.skip>false</npm.skip>
     <logback.version>1.2.3</logback.version>

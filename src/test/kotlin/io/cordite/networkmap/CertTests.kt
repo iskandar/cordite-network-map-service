@@ -31,6 +31,7 @@ import kotlin.test.assertTrue
 
 operator fun Path.div(other: String): Path = resolve(other)
 operator fun File.div(other: String): File = File(this, other)
+
 class CertTests {
   companion object {
     private val certificateDirectory = File("src/test/resources/certificates")
