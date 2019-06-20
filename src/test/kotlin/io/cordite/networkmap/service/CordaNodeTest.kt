@@ -15,6 +15,7 @@
  */
 package io.cordite.networkmap.service
 
+import io.bluebank.braid.core.async.getOrThrow
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
@@ -24,8 +25,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.testing.driver.internal.InProcessImpl
-import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
@@ -41,8 +40,8 @@ import java.time.Duration
 class CordaNodeTest {
   companion object {
     val log = loggerFor<CordaNodeTest>()
-    val CACHE_TIMEOUT = 1.millis
-    val NETWORK_PARAM_UPDATE_DELAY : Duration = 100.millis
+    val CACHE_TIMEOUT = 10.millis
+    val NETWORK_PARAM_UPDATE_DELAY : Duration = 0.millis
     const val DEFAULT_NETWORK_MAP_ROOT = "/"
 
     @JvmField
@@ -67,6 +66,7 @@ class CordaNodeTest {
 
   @Before
   fun before(context: TestContext) {
+    log.info("preparing test environment")
     // we'll need to have a serialization context so that the NMS can set itself up
     // BUT we can't use the one used by the application
 
@@ -78,7 +78,8 @@ class CordaNodeTest {
       cacheTimeout = CACHE_TIMEOUT,
       tls = false,
       webRoot = DEFAULT_NETWORK_MAP_ROOT,
-      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY
+      paramUpdateDelay = NETWORK_PARAM_UPDATE_DELAY,
+      storageType = StorageType.FILE
     )
     this.service = NetworkMapService(nmsOptions = nmsOptions, vertx = vertx)
     service.startup().setHandler(context.asyncAssertSuccess())
@@ -86,43 +87,60 @@ class CordaNodeTest {
 
   @After
   fun after(context: TestContext) {
-    val async = context.async()
-    vertx.close {
-      context.assertTrue(it.succeeded())
-      async.complete()
+    log.info("closing test")
+    try {
+      val async = context.async()
+      service.shutdown()
+      vertx.close {
+        context.assertTrue(it.succeeded())
+        async.complete()
+      }
+    } catch(err: Throwable) {
+      log.error("failed to shutdown cleanly", err)
     }
   }
 
   @Test
   fun `run node`(context: TestContext) {
+    log.info("starting ${CordaNodeTest::class.simpleName} test run")
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
     log.info("starting up the driver")
     val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), null, {
-      service.addNotaryInfos(it)
+      service.addNotaryInfos(it).getOrThrow()
+      log.info("notary initialised")
     }, rootCert)
 
-    val portAllocation = FreePortAllocation()
+    val portAllocation = PreallocatedFreePortAllocation()
     internalDriver(
       portAllocation = portAllocation,
       compatibilityZone = zoneParams,
       notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
       notaryCustomOverrides = mapOf("devMode" to false),
-      startNodesInProcess = true
+      startNodesInProcess = false,
+      driverDirectory = createTempDir().toPath()
     ) {
-      val user = User("user1", "test", permissions = setOf())
+      val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
       log.info("start up the node")
-      val node = startNode(providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"), rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false)).getOrThrow() as InProcessImpl
+      val node = startNode(
+        providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"),
+        rpcUsers = listOf(user),
+        customOverrides = mapOf("devMode" to false)
+      ).getOrThrow()
+
+      val nodeRpc = node.rpc
       log.info("node started. going to sleep to wait for the NMS to update")
       Thread.sleep(2000) // plenty of time for the NMS to synchronise
       val nmc = createNetworkMapClient(context, rootCert)
       val nm = nmc.getNetworkMap().payload
       val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
-      context.assertEquals(node.internalServices.networkParameters, nmp)
-      val nodeNodes = node.internalServices.networkMapCache.allNodes.toSet()
+      context.assertEquals(nodeRpc.networkParameters, nmp)
+      val nodeNodes = nodeRpc.networkMapSnapshot().toSet()
       val nmNodes = nm.nodeInfoHashes.map { nmc.getNodeInfo(it) }.toSet()
       context.assertEquals(nodeNodes, nmNodes)
       context.assertEquals(2, nodeNodes.size)
+      log.info("corda network node has the same nodes as the network map")
+      node.stop()
     }
   }
 

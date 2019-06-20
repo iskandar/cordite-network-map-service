@@ -44,6 +44,7 @@ class NetworkMapAdminInterfaceTest {
 
     init {
       SerializationTestEnvironment.init()
+      LogInitialiser.init()
     }
 
     private var vertx = Vertx.vertx()
