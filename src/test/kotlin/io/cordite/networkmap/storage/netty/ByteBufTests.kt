@@ -15,13 +15,20 @@
  */
 package io.cordite.networkmap.storage.netty
 
+import io.cordite.networkmap.utils.JunitMDCRule
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
+import org.junit.Rule
 import org.junit.Test
 import java.nio.ByteBuffer
 import kotlin.test.assertEquals
 
 class ByteBufTests {
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Test
   fun `does bytebuf track bytebuffer`() {
     val byteBuffer = ByteBuffer.allocate(100)

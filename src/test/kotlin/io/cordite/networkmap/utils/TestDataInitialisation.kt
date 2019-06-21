@@ -21,7 +21,6 @@ import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.service.NetworkMapServiceProcessor
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
-import io.cordite.networkmap.storage.file.SignedNodeInfoStorage
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.node.NotaryInfo
@@ -32,18 +31,6 @@ import java.time.Instant
 
 /** the name of this logger is used in [logback-test.xml] */
 private val logger = LoggerFactory.getLogger("test-data")
-
-fun setupDefaultInputFiles(directory: File) {
-  val inputs = File(directory, NetworkParameterInputsStorage.DEFAULT_DIR_NAME)
-  inputs.parentFile.mkdirs()
-  copyFolder(SAMPLE_INPUTS.toPath(), inputs.toPath())
-}
-
-fun setupDefaultNodes(directory: File) {
-  val nodes = File(directory, SignedNodeInfoStorage.DEFAULT_CHILD_DIR)
-  nodes.mkdirs()
-  copyFolder(SAMPLE_NODES.toPath(), nodes.toPath())
-}
 
 
 fun NetworkMapServiceProcessor.initialiseWithTestData(vertx: Vertx, includeNodes : Boolean = true) : Future<Unit> {

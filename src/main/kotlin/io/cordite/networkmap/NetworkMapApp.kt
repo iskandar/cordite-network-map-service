@@ -16,9 +16,7 @@
 package io.cordite.networkmap
 
 import io.bluebank.braid.core.logging.loggerFor
-import io.cordite.networkmap.NetworkMapApp.Companion.bootstrapNMS
 import io.cordite.networkmap.service.NetworkMapService
-import io.cordite.networkmap.utils.LogInitialiser
 import io.cordite.networkmap.utils.NMSOptions
 import io.cordite.networkmap.utils.NMSOptionsParser
 import kotlin.system.exitProcess
@@ -30,7 +28,6 @@ open class NetworkMapApp {
 
     @JvmStatic
     fun main(args: Array<String>) {
-      LogInitialiser.init()
       NMSOptionsParser().apply {
         if (args.contains("--help")) {
           printHelp()

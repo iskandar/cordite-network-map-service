@@ -33,18 +33,16 @@ import java.nio.file.Files
 @RunWith(VertxUnitRunner::class)
 class NetworkParameterInputsStorageTest {
   companion object {
-    private lateinit var vertx: Vertx
     @JvmField
     @ClassRule
     val mdcClassRule = JunitMDCRule()
 
-    init {
-      SerializationTestEnvironment.init()
-    }
+    private lateinit var vertx: Vertx
 
     @JvmStatic
     @BeforeClass
     fun before() {
+      SerializationTestEnvironment.init()
       vertx = Vertx.vertx()
     }
 
@@ -58,7 +56,6 @@ class NetworkParameterInputsStorageTest {
   @JvmField
   @Rule
   val mdcRule = JunitMDCRule()
-
 
   @Test
   fun `that we create the input folder`(context: TestContext) {

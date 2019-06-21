@@ -30,11 +30,11 @@ import java.io.File
 @RunWith(VertxUnitRunner::class)
 class StorageTest {
   companion object {
-    private lateinit var vertx: Vertx
-
     @JvmField
     @ClassRule
     val mdcClassRule = JunitMDCRule()
+
+    private lateinit var vertx: Vertx
 
     @JvmStatic
     @BeforeClass

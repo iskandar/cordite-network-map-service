@@ -15,11 +15,13 @@
  */
 package io.cordite.networkmap.changeset
 
+import io.cordite.networkmap.utils.JunitMDCRule
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.testing.core.TestIdentity
+import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,6 +30,10 @@ import kotlin.test.assertTrue
 
 class ChangeSetTest {
   private val fountain = AtomicInteger(1)
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that we can add a new notary info`() {

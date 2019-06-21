@@ -15,7 +15,9 @@
  */
 package io.cordite.networkmap.serialisation
 
+import io.cordite.networkmap.utils.JunitMDCRule
 import net.corda.core.node.services.AttachmentId
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -28,6 +30,10 @@ class WhitelistSetTest {
     val hash2 = AttachmentId.parse("A0FF6D5BD46520F346468A74E7D8C58F51D353D4F38F0E34DFE920D9991FAAFF")
     val hash3 = AttachmentId.parse("A0FF6D5BD46520F346468A74E7D8C58F51D353D4F38F0E34DFE920D9991FAAFE")
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun `that we can parse a white list with multiple hashes per contract`() {

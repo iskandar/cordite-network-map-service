@@ -23,6 +23,7 @@ import io.vertx.core.impl.NoStackTraceThrowable
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.junit.After
+import org.junit.ClassRule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -30,6 +31,12 @@ import java.io.File
 
 @RunWith(VertxUnitRunner::class)
 class VertxKtTests {
+  companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+  }
+
   private val vertx = Vertx.vertx()
   @After
   fun after() {

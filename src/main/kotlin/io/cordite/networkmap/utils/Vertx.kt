@@ -44,16 +44,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 private val logger = loggerFor<NetworkMapService>()
 
-object LogInitialiser {
-  init {
-    System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory")
-  }
-
-  fun init() {
-    // will cause init to be called once and once only
-  }
-}
-
 fun RoutingContext.end(text: String) {
   val length = text.length
   response().apply {

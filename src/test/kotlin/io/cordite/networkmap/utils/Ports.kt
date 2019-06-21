@@ -25,22 +25,15 @@ fun getFreePort(): Int {
   return ServerSocket(0).use { it.localPort }
 }
 
-class PreallocatedFreePortAllocation(private val range: IntRange = 10_000 .. 30_000) : PortAllocation() {
+class PreallocatedFreePortAllocation(
+  private val range: IntRange = 10_000 .. 30_000,
+  private val assigned : MutableSet<Int> = DEFAULT_ASSIGNED_SET
+) : PortAllocation() {
   companion object {
     private val log = loggerFor<PreallocatedFreePortAllocation>()
-    private val assigned = mutableSetOf<Int>()
+    internal const val EOS_MESSAGE = "no unassigned port found"
+    private val DEFAULT_ASSIGNED_SET = mutableSetOf<Int>()
     internal val DEFAULT_ALLOCATOR = PreallocatedFreePortAllocation()
-    internal val EOS_MESSAGE = "no unassigned port found"
-    private fun attemptToAssignPort(port: Int) : Boolean {
-      synchronized(assigned) {
-        return if (assigned.contains(port)) {
-          false
-        } else {
-          assigned.add(port)
-          true
-        }
-      }
-    }
   }
 
   private val fountain = generateSequence(range.first) {
@@ -52,8 +45,12 @@ class PreallocatedFreePortAllocation(private val range: IntRange = 10_000 .. 30_
     }
   }.filter {
       try {
-        ServerSocket(it).use { true }
+        ServerSocket(it).use {
+          log.debug("found unbound port $it")
+          true
+        }
       } catch (ex: IOException) {
+        log.debug("port $it is bound")
         false
       }
     }
@@ -68,6 +65,17 @@ class PreallocatedFreePortAllocation(private val range: IntRange = 10_000 .. 30_
       error(EOS_MESSAGE)
     }.apply {
       log.info("allocating port: ${this}")
+    }
+  }
+
+  private fun attemptToAssignPort(port: Int) : Boolean {
+    synchronized(assigned) {
+      return if (assigned.contains(port)) {
+        false
+      } else {
+        assigned.add(port)
+        true
+      }
     }
   }
 }
