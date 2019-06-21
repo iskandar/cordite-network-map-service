@@ -17,12 +17,15 @@ package io.cordite.networkmap
 
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.keystore.toX509KeyStore
+import io.cordite.networkmap.utils.JunitMDCRule
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import org.junit.ClassRule
+import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.nio.file.Path
@@ -34,10 +37,18 @@ operator fun File.div(other: String): File = File(this, other)
 
 class CertTests {
   companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+
     private val certificateDirectory = File("src/test/resources/certificates")
     val nodeKeyStorePath = certificateDirectory / "nodekeystore.jks"
     const val password = "cordacadevpass"
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   @Test
   fun test1() {

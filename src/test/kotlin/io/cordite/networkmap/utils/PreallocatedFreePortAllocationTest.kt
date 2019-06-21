@@ -22,8 +22,9 @@ import kotlin.test.assertFails
 class PreallocatedFreePortAllocationTest {
   @Test
   fun `that we can generate a sequence of non-clashing ports`() {
-    val allocator1 = PreallocatedFreePortAllocation(range = 10_001 .. 10_003)
-    val allocator2 = PreallocatedFreePortAllocation(range = 10_002 .. 10_004)
+    val assigned = mutableSetOf<Int>()
+    val allocator1 = PreallocatedFreePortAllocation(range = 10_001 .. 10_003, assigned = assigned)
+    val allocator2 = PreallocatedFreePortAllocation(range = 10_002 .. 10_004, assigned = assigned)
     assertEquals(10_001, allocator1.nextPort())
     assertEquals(10_002, allocator1.nextPort())
     assertEquals(10_003, allocator2.nextPort())

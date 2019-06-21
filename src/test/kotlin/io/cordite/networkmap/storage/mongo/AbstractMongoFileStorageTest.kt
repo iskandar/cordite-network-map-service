@@ -40,13 +40,10 @@ class AbstractMongoFileStorageTest {
 
     private lateinit var mongoClient: MongoClient
 
-    init {
-      SerializationTestEnvironment.init()
-    }
-
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
+      SerializationTestEnvironment.init()
       mongoClient = TestDatabase.createMongoClient()
     }
 

@@ -48,9 +48,11 @@ class CordaNodeTest {
     @ClassRule
     val mdcClassRule = JunitMDCRule()
 
-    init {
+    @JvmStatic
+    @BeforeClass
+    fun beforeClass() {
+      log.info("before class running")
       SerializationTestEnvironment.init()
-      LogInitialiser.init()
     }
   }
 
@@ -102,16 +104,15 @@ class CordaNodeTest {
 
   @Test
   fun `run node`(context: TestContext) {
-    log.info("starting ${CordaNodeTest::class.simpleName} test run")
+    val portAllocation = PreallocatedFreePortAllocation()
+
     val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
 
-    log.info("starting up the driver")
     val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port$DEFAULT_NETWORK_MAP_ROOT"), null, {
       service.addNotaryInfos(it).getOrThrow()
       log.info("notary initialised")
     }, rootCert)
 
-    val portAllocation = PreallocatedFreePortAllocation()
     internalDriver(
       portAllocation = portAllocation,
       compatibilityZone = zoneParams,
@@ -140,10 +141,8 @@ class CordaNodeTest {
       context.assertEquals(nodeNodes, nmNodes)
       context.assertEquals(2, nodeNodes.size)
       log.info("corda network node has the same nodes as the network map")
-      node.stop()
     }
   }
-
 
   private fun createNetworkMapClient(context: TestContext, rootCert: X509Certificate): NetworkMapClient {
     val async = context.async()

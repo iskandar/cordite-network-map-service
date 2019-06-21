@@ -44,10 +44,9 @@ class NetworkMapAdminInterfaceTest {
 
     init {
       SerializationTestEnvironment.init()
-      LogInitialiser.init()
     }
 
-    private var vertx = Vertx.vertx()
+    private lateinit var vertx : Vertx
     private val dbDirectory = createTempDir()
     private val port = getFreePort()
 
@@ -57,7 +56,6 @@ class NetworkMapAdminInterfaceTest {
     @JvmField
     @ClassRule
     val mdcClassRule = JunitMDCRule()
-
 
     @JvmStatic
     @BeforeClass

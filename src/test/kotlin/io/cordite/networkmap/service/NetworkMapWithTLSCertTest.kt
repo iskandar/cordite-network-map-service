@@ -36,11 +36,16 @@ class NetworkMapWithTLSCertTest {
     @ClassRule
     val mdcClassRule = JunitMDCRule()
 
-    init {
-//      SerializationTestEnvironment.init()
-      LogInitialiser.init()
+    @JvmStatic
+    @BeforeClass
+    fun beforeClass() {
+      SerializationTestEnvironment.init()
     }
   }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
 
   private var vertx = Vertx.vertx()
   private val dbDirectory = createTempDir()
@@ -50,9 +55,7 @@ class NetworkMapWithTLSCertTest {
   private lateinit var client: HttpClient
 
 
-  @JvmField
-  @Rule
-  val mdcRule = JunitMDCRule()
+
 
   @Before
   fun before(context: TestContext) {

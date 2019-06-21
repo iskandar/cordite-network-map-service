@@ -15,6 +15,7 @@
  */
 package io.cordite.networkmap.utils
 
+import io.bluebank.braid.core.logging.LogInitialiser
 import net.corda.core.utilities.loggerFor
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
@@ -25,6 +26,10 @@ class JunitMDCRule : TestWatcher() {
     private val log = loggerFor<JunitMDCRule>()
     const val MDC_CLASS = "test-class"
     const val MDC_NAME = "test-name"
+  }
+
+  init {
+    LogInitialiser.init()
   }
 
   override fun starting(description: Description?) {

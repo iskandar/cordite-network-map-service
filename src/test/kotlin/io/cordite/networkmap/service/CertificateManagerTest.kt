@@ -15,10 +15,13 @@
  */
 package io.cordite.networkmap.service
 
-import com.mongodb.reactivestreams.client.MongoClient
+import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
-import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.JunitMDCRule
+import io.cordite.networkmap.utils.SerializationTestEnvironment
+import io.cordite.networkmap.utils.catch
+import io.cordite.networkmap.utils.onSuccess
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -34,37 +37,37 @@ import java.nio.file.Files
 @RunWith(VertxUnitRunner::class)
 class CertificateManagerTest {
   companion object {
-    private val vertx = Vertx.vertx()
+    private val log = loggerFor<CertificateManagerTest>()
 
     @JvmField
     @ClassRule
     val mdcClassRule = JunitMDCRule()
 
     const val KEYSTORE_PASSWORD = "password"
-    private lateinit var mongoClient: MongoClient
-    private val dbDirectory = createTempDir()
-
-    init {
-      SerializationTestEnvironment.init()
-    }
 
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      mongoClient = TestDatabase.createMongoClient()
-    }
-
-    @JvmStatic
-    @AfterClass
-    fun after() {
-      vertx.close()
-      mongoClient.close()
+      log.info("before class")
+      SerializationTestEnvironment.init()
     }
   }
 
   @JvmField
   @Rule
   val mdcRule = JunitMDCRule()
+  private lateinit var vertx : Vertx
+  private val dbDirectory = createTempDir()
+
+  @Before
+  fun before() {
+    vertx = Vertx.vertx()
+  }
+
+  @After
+  fun after() {
+    vertx.close()
+  }
 
   @Test
   fun validateNodeInfoCertificates(context: TestContext) {

@@ -15,17 +15,16 @@
  */
 package io.cordite.networkmap.storage.jdbc
 
-import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
+import io.cordite.networkmap.utils.JunitMDCRule
+import io.cordite.networkmap.utils.SerializationTestEnvironment
 import net.corda.core.node.NetworkParameters
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.*
 import java.sql.Connection
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -62,9 +61,19 @@ object NetworkParametersTable : KeyValueTable<NetworkParameters>(NetworkParamete
 }
 
 class TempTests {
+  companion object {
+    @JvmField
+    @ClassRule
+    val mdcClassRule = JunitMDCRule()
+  }
+
+  @JvmField
+  @Rule
+  val mdcRule = JunitMDCRule()
+
   @Before
   fun before() {
-    SerializationEnvironment.init()
+    SerializationTestEnvironment.init()
   }
 
   @Test
