@@ -65,7 +65,7 @@ class NetworkMapServiceProcessor(
     const val EXECUTOR = "network-map-pool"
 
     private val templateNetworkParameters = NetworkParameters(
-      minimumPlatformVersion = 1,
+      minimumPlatformVersion = 4,
       notaries = listOf(),
       maxMessageSize = 10485760,
       maxTransactionSize = Int.MAX_VALUE,
