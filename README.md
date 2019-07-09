@@ -2,6 +2,7 @@
 
 - [Supported tags and respective Dockerfile links](#supported-tags-and-respective-dockerfile-links)
 - [Design criteria and Features](#design-criteria-and-features)
+- [Design Wiki](https://gitlab.com/cordite/network-map-service/wikis/design)
 - [Backlog of Features, Improvements, and Optimisations](#backlog-of-features--improvements--and-optimisations)
 - [FAQ](FAQ.md)
 - [How do I get in touch?](#how-do-i-get-in-touch)
