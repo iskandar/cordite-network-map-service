@@ -95,6 +95,20 @@
     <url>https://gitlab.com/cordite/network-map-service/tree/${project.scm.tag}</url>
     <tag>master</tag>
   </scm>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>oss</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <layout>default</layout>
+    </snapshotRepository>
+    <repository>
+      <id>oss</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      <layout>default</layout>
+    </repository>
+  </distributionManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -534,8 +548,8 @@
                 </goals>
                 <configuration>
                   <executable>${gpg.executable}</executable>
-                  <keyname>${env.GPG_KEYNAME}</keyname>
-                  <passphrase>${env.GPG_PASSPHRASE}</passphrase>
+                  <keyname>${gpg.keyname}</keyname>
+                  <passphrase>${gpg.passphrase}</passphrase>
                   <gpgArguments>
                     <arg>--pinentry-mode</arg>
                     <arg>loopback</arg>
