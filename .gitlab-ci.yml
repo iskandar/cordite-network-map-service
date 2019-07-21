@@ -1,6 +1,8 @@
 stages:
  - build
+ - snapshot_release
  - release
+
 
 variables:
 
@@ -85,6 +87,38 @@ build:maven:
 #  only:
 #    - master # should be on all branches to stop master failing
 #    - tags
+
+snapshot_release:maven:
+  stage: snapshot_release
+  image: dazraf/build-tools:latest
+  script:
+    - rm -rf ~/.gnupg
+    - gpg --version
+    - gpg --import --batch --passphrase "$GPG_PASSPHRASE" <<< "$GPG_KEY"
+    - gpg --import-ownertrust <<< "$GPG_OWNER_TRUST"
+    - mvn $MAVEN_CLI_OPTS dokka:javadocJar deploy -DskipTests -P release
+  only:
+    - master
+  tags:
+    - build-tools
+
+release:maven:
+  stage: release
+  image: dazraf/build-tools:latest
+  variables:
+    NMS_VERSION: $CI_COMMIT_REF_NAME
+  when: manual
+  script:
+    - rm -rf ~/.gnupg
+    - gpg --version
+    - gpg --import --batch --passphrase "$GPG_PASSPHRASE" <<< "$GPG_KEY"
+    - gpg --import-ownertrust <<< "$GPG_OWNER_TRUST"
+    - mvn $MAVEN_CLI_OPTS versions:set -DnewVersion=${NMS_VERSION:1}
+    - mvn $MAVEN_CLI_OPTS dokka:javadocJar deploy -DskipTests -P release
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+.*$/
+  tags:
+    - build-tools
 
 release:docker:
   stage: release
