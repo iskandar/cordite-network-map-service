@@ -3,8 +3,11 @@ stages:
  - snapshot_release
  - release
 
-
 variables:
+
+before_script:
+  - mkdir -p ~/.m2/repository
+  - cp maven/settings.xml ~/.m2/settings.xml
 
 # For more information on Maven see
 #  https://gitlab.com/gitlab-org/gitlab-ci-yml/blob/master/Maven.gitlab-ci.yml
