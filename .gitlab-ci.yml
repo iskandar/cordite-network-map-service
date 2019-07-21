@@ -97,8 +97,8 @@ snapshot_release:maven:
     - gpg --import --batch --passphrase "$GPG_PASSPHRASE" <<< "$GPG_KEY"
     - gpg --import-ownertrust <<< "$GPG_OWNER_TRUST"
     - mvn $MAVEN_CLI_OPTS dokka:javadocJar deploy -DskipTests -P release
-  only:
-    - master
+#  only:
+#    - master
   tags:
     - build-tools
 

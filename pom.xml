@@ -30,7 +30,6 @@
     <logback.version>1.2.3</logback.version>
     <flapdoodle.version>2.1.1</flapdoodle.version>
     <node.version>v8.6.0</node.version>
-    <dokka.version>0.9.18</dokka.version>
   </properties>
 
   <repositories>
@@ -342,7 +341,8 @@
         <version>2.22.2</version>
         <configuration>
           <systemPropertyVariables>
-            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
+            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory
+            </vertx.logger-delegate-factory-class-name>
             <buildDirectory>${project.build.directory}</buildDirectory>
           </systemPropertyVariables>
         </configuration>
@@ -481,7 +481,15 @@
         <gpg.executable>gpg</gpg.executable>
         <gpg.keyname>${env.GPG_KEYNAME}</gpg.keyname>
         <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
+        <dokka.version>0.9.18</dokka.version>
       </properties>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>jcenter</id>
+          <name>JCenter</name>
+          <url>https://jcenter.bintray.com/</url>
+        </pluginRepository>
+      </pluginRepositories>
       <build>
         <plugins>
           <plugin>
