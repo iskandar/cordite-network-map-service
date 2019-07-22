@@ -10,6 +10,7 @@
   <packaging>jar</packaging>
 
   <name>network-map-service</name>
+  <url>https://gitlab.com/cordite/network-map-service</url>
   <description>
     An implementation of the Corda network-map protocol and the doorman certificate authority.
   </description>
