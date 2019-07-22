@@ -10,6 +10,9 @@
   <packaging>jar</packaging>
 
   <name>network-map-service</name>
+  <description>
+    An implementation of the Corda network-map protocol and the doorman certificate authority.
+  </description>
 
   <properties>
     <nms.version>${project.version}</nms.version>
@@ -108,6 +111,63 @@
       <layout>default</layout>
     </repository>
   </distributionManagement>
+
+  <developers>
+    <developer>
+      <name>Farzad Pezeshkpour</name>
+      <email>fp@lab577.io</email>
+      <organization>LAB577</organization>
+      <organizationUrl>https://lab577.io</organizationUrl>
+    </developer>
+    <developer>
+      <name>Richard Crook</name>
+      <email>rc@lab577.io</email>
+      <organization>LAB577</organization>
+      <organizationUrl>https://lab577.io</organizationUrl>
+    </developer>
+    <developer>
+      <name>Ben Wyeth</name>
+      <email>bw@lab577.io</email>
+      <organization>LAB577</organization>
+      <organizationUrl>https://lab577.io</organizationUrl>
+    </developer>
+    <developer>
+      <name>Chris Jones</name>
+      <email>chris.jones@bluebank.io</email>
+      <organization>Royal Bank of Scotland</organization>
+      <organizationUrl>https://www.rbs.com</organizationUrl>
+    </developer>
+    <developer>
+      <name>Ajitha Thayaharan</name>
+      <email>ajitha.thayaharan@bcstechnology.com.au</email>
+      <organization>BCS Technology</organization>
+      <organizationUrl>https://www.bcstechnology.com.au</organizationUrl>
+    </developer>
+    <developer>
+      <name>Joel Dudley</name>
+      <email>joel.dudley@r3.com</email>
+      <organization>R3</organization>
+      <organizationUrl>https://www.r3.com/</organizationUrl>
+    </developer>
+    <developer>
+      <name>opticyclic</name>
+      <email>opticyclic@gmail.com</email>
+      <organization>opticyclic</organization>
+      <organizationUrl>https://gitlab.com/opticyclic</organizationUrl>
+    </developer>
+    <developer>
+      <name>Richard Green</name>
+      <email>richardagreen@gmail.com</email>
+      <organization>Richard Green</organization>
+      <organizationUrl>https://gitlab.com/ragmondo</organizationUrl>
+    </developer>
+    <developer>
+      <name>Ivan Schasny</name>
+      <email>ivan.schasny@r3.com</email>
+      <organization>R3</organization>
+      <organizationUrl>https://www.r3.com/</organizationUrl>
+    </developer>
+  </developers>
 
   <dependencies>
     <dependency>
@@ -506,6 +566,18 @@
       </pluginRepositories>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>org.jetbrains.dokka</groupId>
             <artifactId>dokka-maven-plugin</artifactId>
