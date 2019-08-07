@@ -22,6 +22,7 @@ Steps:
 * 1.6 Stop the notary node
 * 1.7 Delete the network-parameters file on the notary node
 * 1.8 Start the notary node and other nodes
+* 1.9 Running the example CorDapp
 
 ~~Video of the following section being demonstrated on a laptop available [here](https://www.youtube.com/watch?v=NczNdVxEZyM).~~
 
@@ -103,9 +104,11 @@ java -jar network-map-service.jar
     ```
 #### 1.4. Start the notary node
 
-    ```bash
-    java -jar corda.jar
-    ```
+- [ ] Navigate to notary node directory and excecute
+
+  ```bash
+  java -jar corda.jar
+  ```
   
   - [ ] check that the notary node has been registered with the NMS [http://localhost:8080](http://localhost:8080)
 
@@ -133,6 +136,10 @@ java -jar network-map-service.jar
 
 #### 1.8 Start the notary node and other nodes
 - [ ] check that all the nodes have been registered with the NMS [http://localhost:8080](http://localhost:8080)
+
+#### 1.9 Running the example CorDapp
+- [ ] This CorDapp is documented here. [https://docs.corda.net/tutorial-cordapp.html](https://docs.corda.net/tutorial-cordapp.html)
+  
 
 ### 2. How do I set up TLS?
 
