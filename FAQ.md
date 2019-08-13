@@ -15,17 +15,22 @@
 Steps:
 
 * 1.1 Start the NMS
-* 1.2 Prepare the Cordapp project
-* 1.3 Register the Nodes
-* 1.4 Designate the Notary
+* 1.2 Prepare the cordapp project
+* 1.3 Register the nodes
+* 1.4 Start the notary node
+* 1.5 Designate the notary node
+* 1.6 Stop the notary node
+* 1.7 Delete the network-parameters file on the notary node
+* 1.8 Start the notary node and other nodes
+* 1.9 Running the example CorDapp
 
-Video of the following section being demonstrated on a laptop available [here](https://www.youtube.com/watch?v=NczNdVxEZyM).
+~~Video of the following section being demonstrated on a laptop available [here](https://www.youtube.com/watch?v=NczNdVxEZyM).~~
 
 
 #### 1.1 Start the NMS ...
 
-##### ... the Docker way
-- `docker run -p 8080:8080 cordite/network-map:v0.3.6` 
+##### ... the Docker way/Users/ajitha/personal/Business/code/network-map-service/FAQ.md
+- `docker run -p 8080:8080 -e NMS_STORAGE_TYPE=file cordite/network-map` 
 - check it's started using a browser http://localhost:8080
 
 ##### ... the Java way
@@ -49,10 +54,10 @@ java -jar network-map-service.jar
 ```
 
 #### 1.2. Prepare the Cordapp project
-- [ ] checkout the cordapp kotlin template (or any other cordapp project)
+- [ ] checkout the samples repo and go to cordapp-example(or any other cordapp project)
     
     ```bash
-    git clone git@github.com:corda/cordapp-template-kotlin.git
+    git clone git@github.com:corda/samples.git
     ```
 
 - [ ] ensure that your cordapp X509 names have the following fields: 
@@ -66,22 +71,15 @@ java -jar network-map-service.jar
   ./gradlew clean deployNodes
   ```
   
-- [ ] add the `compatibilityZoneURL` to the node.config within each node directory 
+- [ ] add the `compatibilityZoneURL` and `devModeOptions.allowCompatibilityZone` to the node.config within each node directory and ensure that all state is removed from the node directories
 
   ```bash
   pushd build/nodes
   for N in */; do
         echo 'compatibilityZoneURL="http://localhost:8080"' >> $N/node.conf
-  done
-  popd
-  ```
-- [ ] ensure that all state is removed from the node directories
-  
-  ```bash
-  pushd build/nodes
-  for N in */; do
+        echo 'devModeOptions.allowCompatibilityZone=true' >> $N/node.conf
         pushd $N
-        rm -rf network-parameters nodeInfo-* persistence.mv.db certificates/* additional-node-infos/*
+        rm -rf network-parameters nodeInfo-* persistence.mv.db certificates additional-node-infos
         popd
   done
   popd
@@ -104,15 +102,17 @@ java -jar network-map-service.jar
     done
     popd
     ```
-  - [ ] in each node directory, start the node:
+#### 1.4. Start the notary node
 
-    ```bash
-    java -jar corda.jar
-    ```
+- [ ] Navigate to notary node directory and excecute
+
+  ```bash
+  java -jar corda.jar
+  ```
   
-  - [ ] check that nodes have been registered with the NMS [http://localhost:8080](http://localhost:8080)
+  - [ ] check that the notary node has been registered with the NMS [http://localhost:8080](http://localhost:8080)
 
-#### 1.4 Designate the notary
+#### 1.5 Designate the notary
 - [ ] login to the NMS API and cache the token
 
   ```bash
@@ -127,6 +127,19 @@ java -jar network-map-service.jar
     curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8080//admin/api/notaries/validating
     popd
     ```
+
+#### 1.6 Stop the notary node
+- [ ] In the notary node shell, execute `bye`
+
+#### 1.7 Delete the network-parameters file on the notary node
+- [ ] In the notary node directory, remove the `network-parameters` file
+
+#### 1.8 Start the notary node and other nodes
+- [ ] check that all the nodes have been registered with the NMS [http://localhost:8080](http://localhost:8080)
+
+#### 1.9 Running the example CorDapp
+- [ ] This CorDapp is documented here. [https://docs.corda.net/tutorial-cordapp.html](https://docs.corda.net/tutorial-cordapp.html)
+  
 
 ### 2. How do I set up TLS?
 
