@@ -29,7 +29,7 @@ Steps:
 
 #### 1.1 Start the NMS ...
 
-##### ... the Docker way/Users/ajitha/personal/Business/code/network-map-service/FAQ.md
+##### ... the Docker way
 - `docker run -p 8080:8080 -e NMS_STORAGE_TYPE=file cordite/network-map` 
 - check it's started using a browser http://localhost:8080
 
