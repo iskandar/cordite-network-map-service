@@ -149,7 +149,7 @@ class NetworkMapServiceProcessor(
       val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), false)))
       updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
     } catch (err: Throwable) {
-      logger.error("failed to add validating notary", err)
+      logger.error("failed to add a non-validating notary", err)
       Future.failedFuture(err)
     }
   }
