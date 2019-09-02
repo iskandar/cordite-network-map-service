@@ -352,7 +352,7 @@ class NetworkMapServiceProcessor(
   // BEGIN: core functions
 
   internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = ""): Future<Unit> {
-    return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay))
+    return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay).plus(NMSOptions().cacheTimeout))
   }
 
   private fun createNetworkParameters(): Future<SecureHash> {
@@ -451,6 +451,17 @@ class NetworkMapServiceProcessor(
           }
         }
       }
+  }
+  
+  fun replaceAllNetworkParameters(newNetworkParameters: NetworkParameters): Future<String> {
+    logger.info("replacing all network parameters")
+    return try {
+      val updater = changeSet(Change.ReplaceAllNetworkParameters(newNetworkParameters))
+      updateNetworkParameters(updater, "admin replacing all network parameters").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to replace the network parameters", err)
+      failedFuture(err)
+    }
   }
 
   // END: core functions
