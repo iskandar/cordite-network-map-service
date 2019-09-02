@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.bluebank.braid.core.async.getOrThrow
 import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
@@ -27,13 +28,20 @@ import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.jsonObjectOf
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NetworkParameters
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.User
+import net.corda.testing.node.internal.SharedCompatibilityZoneParams
+import net.corda.testing.node.internal.internalDriver
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URL
 import java.security.KeyStore
 import java.time.Duration
 
@@ -63,7 +71,7 @@ class NetworkMapAdminInterfaceTest {
       vertx = Vertx.vertx()
 
       val async = context.async()
-      val nmsOptions = NMSOptions(
+      /*val nmsOptions = NMSOptions(
         dbDirectory = dbDirectory,
         user = InMemoryUser("", "sa", ""),
         port = port,
@@ -71,7 +79,17 @@ class NetworkMapAdminInterfaceTest {
         tls = true,
         hostname = "127.0.0.1",
         webRoot = NetworkMapServiceTest.WEB_ROOT,
-        paramUpdateDelay = Duration.ZERO
+        paramUpdateDelay = Duration.ZERO,
+      )*/
+      val nmsOptions = NMSOptions(
+        dbDirectory = dbDirectory,
+        user = InMemoryUser.createUser("", "sa", ""),
+        port = port,
+        cacheTimeout = CordaNodeTest.CACHE_TIMEOUT,
+        tls = false,
+        webRoot = CordaNodeTest.DEFAULT_NETWORK_MAP_ROOT,
+        paramUpdateDelay = CordaNodeTest.NETWORK_PARAM_UPDATE_DELAY,
+        storageType = StorageType.FILE
       )
       this.service = NetworkMapService(nmsOptions)
 
@@ -280,5 +298,103 @@ class NetworkMapAdminInterfaceTest {
     }.exceptionHandler {
       context.fail(it)
     }.end()
+  }
+  
+  @Test
+  fun `delete node`(context: TestContext) {
+    
+    val portAllocation = PreallocatedFreePortAllocation()
+    
+    val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+    
+    val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port${CordaNodeTest.DEFAULT_NETWORK_MAP_ROOT}"), null, {
+      service.addNotaryInfos(it).getOrThrow()
+      CordaNodeTest.log.info("notary initialised")
+    }, rootCert)
+    
+    internalDriver(
+      portAllocation = portAllocation,
+      compatibilityZone = zoneParams,
+      notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
+      notaryCustomOverrides = mapOf("devMode" to false),
+      startNodesInProcess = false,
+      driverDirectory = createTempDir().toPath()
+    ) {
+      val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
+      CordaNodeTest.log.info("start up the node")
+      val node = startNode(
+        providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"),
+        rpcUsers = listOf(user),
+        customOverrides = mapOf("devMode" to false)
+        
+      ).getOrThrow()
+  
+      val nodeRpc = node.rpc
+      CordaNodeTest.log.info("node started. going to sleep to wait for the NMS to update")
+      Thread.sleep(2000) // plenty of time for the NMS to synchronise
+      val nodeNodes = nodeRpc.networkMapSnapshot().toSet()
+      context.assertEquals(2, nodeNodes.size)
+  
+      log.info("logging in")
+      var key = ""
+      val async = context.async()
+      client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/login", jsonObjectOf("user" to "sa", "password" to ""))
+        .onSuccess {
+          key = "Bearer $it"
+          log.info("key: $key")
+        }.compose {
+          // set the complete whitelist
+          log.info("deleting nodes whitelist")
+          client.futurePost("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/nodes/deleteAll", "", "Authorization" to key)
+        }.compose {
+          Thread.sleep(2000);
+          log.info("get nodes")
+          client.futureGet("${NetworkMapServiceTest.WEB_ROOT}${NetworkMapService.ADMIN_REST_ROOT}/nodes")
+        }
+        .onSuccess {
+          log.info("succeeded getting nodes")
+          val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
+          context.assertEquals(2, nodes.size, "nodes should be correct count")
+          log.info("node count is correct")
+        }.onSuccess {
+          async.complete()
+        }
+        .catch(context::fail)
+      }
+      
+    }
+  @Test
+  fun `delete node1`(context: TestContext) {
+    val portAllocation = PreallocatedFreePortAllocation()
+    
+    val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+    
+    val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$port${CordaNodeTest.DEFAULT_NETWORK_MAP_ROOT}"), null, {
+      service.addNotaryInfos(it).getOrThrow()
+      CordaNodeTest.log.info("notary initialised")
+    }, rootCert)
+    
+    internalDriver(
+      portAllocation = portAllocation,
+      compatibilityZone = zoneParams,
+      notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
+      notaryCustomOverrides = mapOf("devMode" to false),
+      startNodesInProcess = false,
+      driverDirectory = createTempDir().toPath()
+    ) {
+      val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
+      CordaNodeTest.log.info("start up the node")
+      val node = startNode(
+        providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"),
+        rpcUsers = listOf(user),
+        customOverrides = mapOf("devMode" to false)
+      ).getOrThrow()
+      
+      val nodeRpc = node.rpc
+      CordaNodeTest.log.info("node started. going to sleep to wait for the NMS to update")
+      Thread.sleep(2000) // plenty of time for the NMS to synchronise
+      val nodeNodes = nodeRpc.networkMapSnapshot().toSet()
+      context.assertEquals(2, nodeNodes.size)
+    }
   }
 }
