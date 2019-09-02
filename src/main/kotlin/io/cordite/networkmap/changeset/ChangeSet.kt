@@ -99,4 +99,11 @@ sealed class Change : Function<NetworkParameters, NetworkParameters> {
       modifiedTime = Instant.now()
     )
   }
+  
+  data class ReplaceAllNetworkParameters(val newNetworkParameters: NetworkParameters) : Change() {
+    override fun apply(networkParameters: NetworkParameters) =
+        newNetworkParameters.copy(
+            modifiedTime = Instant.now()
+        )
+  }
 }
