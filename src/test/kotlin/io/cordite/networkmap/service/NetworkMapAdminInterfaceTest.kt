@@ -20,6 +20,8 @@ import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
+import io.vertx.core.Future
+import io.vertx.core.Future.future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
@@ -27,14 +29,18 @@ import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.jsonObjectOf
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.core.TestIdentity
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.security.KeyStore
+import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAdminInterfaceTest {
@@ -48,6 +54,7 @@ class NetworkMapAdminInterfaceTest {
 		private lateinit var vertx: Vertx
 		private lateinit var service: NetworkMapService
 		private lateinit var client: HttpClient
+		private lateinit var currentNetworkParameters: NetworkParameters
 		
 		@JvmField
 		@ClassRule
@@ -117,7 +124,7 @@ class NetworkMapAdminInterfaceTest {
 		var whitelist = ""
 		
 		log.info("logging in")
-		client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
+		val future: Future<Long> = client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
 			.onSuccess {
 				key = "Bearer $it"
 				log.info("key: $key")
@@ -215,10 +222,67 @@ class NetworkMapAdminInterfaceTest {
 			.onSuccess {
 				context.assertEquals(whitelist.parseWhitelist(), it.toString().parseWhitelist())
 			}
-			.onSuccess {
-				async.complete()
+			.compose {
+				log.info("getting current network parameters")
+				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
 			}
-			.catch(context::fail)
+			.onSuccess {
+				log.info("succeeded in getting current network parameters")
+				currentNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
+			}
+			.compose {
+				log.info("replacing network parameters")
+				val notary1 = NotaryInfo(TestIdentity(CordaX500Name("Notary1", "New York", "US")).party, false)
+				val newNetworkParams = currentNetworkParameters.copy(
+					notaries = listOf(notary1),
+					minimumPlatformVersion = 3
+				)
+				client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParams), "Authorization" to key)
+			}
+			.compose { waitForNMSUpdate() }
+		val updatedNetworkParameters = getNMSParametersWithRetry(future)
+		updatedNetworkParameters?.let {
+			context.assertEquals(1, updatedNetworkParameters!!.notaries!!.size, "notaries should be correct count after update")
+			log.info("notary count is correct")
+			context.assertEquals(3, updatedNetworkParameters!!.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
+			log.info("minimumPlatformVersion is correct")
+		}
+		future.onSuccess {
+			async.complete()
+		}
+		.catch(context::fail)
+	}
+	
+	/**
+	 * waits using vertx's timeout
+	 * this is recommended to [Thread.sleep] calls because vertx gets very upset if the event loop is blocked for too long
+	 */
+	private fun waitForNMSUpdate(): Future<Long> {
+		val extraWait = Duration.ofSeconds(15) // to give a bit more time for CPU starved environments to catchup
+		val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()
+		return future<Long>().apply { vertx.setTimer(milliseconds, this::complete) }
+	}
+	
+	/**
+	 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
+	 * we need to poll the current network parameters api. This method helps to retry calling the api until
+	 * we get the updated nms parameters
+	 */
+	private fun getNMSParametersWithRetry(future: Future<Long>): NetworkParameters? {
+		var updatedNetworkParameters: NetworkParameters? = null
+		(1..5).forEach {
+			future.compose {
+				log.info("getting updated network parameters")
+				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
+			}
+				.onSuccess {
+					log.info("succeeded in getting updated network parameters")
+					updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
+					if (updatedNetworkParameters?.notaries?.size == 1)
+						updatedNetworkParameters
+				}
+		}
+		return updatedNetworkParameters
 	}
 	
 	@Test

@@ -68,6 +68,9 @@ class NetworkMapServiceTest {
 		@ClassRule
 		val mdcClassRule = JunitMDCRule()
 		
+		val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
+		val NETWORK_MAP_QUEUE_DELAY = 1.seconds
+		
 		val TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
 			"MIIDSzCCAjOgAwIBAgIEIGkklDANBgkqhkiG9w0BAQsFADBVMQswCQYDVQQGEwJH\n" +
 			"QjELMAkGA1UECBMCVUsxDzANBgNVBAcTBkxvbmRvbjEMMAoGA1UEChMDbm1zMQww\n" +
@@ -234,12 +237,12 @@ class NetworkMapServiceTest {
 		}
 	}
 	
-	
 	@Test
 	fun `that we can modify the network parameters`() {
 		val nmc = createNetworkMapClient()
 		deleteValidatingNotaries(nmc)
-		NMSUtil.waitForNMSUpdate(vertx)
+		Thread.sleep(Math.max(1, NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY))
+		Thread.sleep(Math.max(1, NETWORK_MAP_QUEUE_DELAY.toMillis() * 2))
 		val nm = nmc.getNetworkMap().payload
 		assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
 		val deadLine = nm.parametersUpdate!!.updateDeadline
@@ -251,8 +254,8 @@ class NetworkMapServiceTest {
 		val nmp = nmc.getNetworkParameters(nm2.networkParameterHash).verified()
 		assertEquals(1, nmp.notaries.size)
 		assertTrue(nmp.notaries.all { !it.validating })
-		
 	}
+	
 	
 	@Test
 	fun `that we can submit a certificate and signature to certman`(context: TestContext) {

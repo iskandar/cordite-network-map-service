@@ -469,6 +469,16 @@ class NetworkMapServiceProcessor(
 			}
 	}
 	
+	fun replaceAllNetworkParameters(newNetworkParameters: NetworkParameters): Future<String> {
+		logger.info("replacing all network parameters")
+		return try {
+			val updater = changeSet(Change.ReplaceAllNetworkParameters(newNetworkParameters))
+			updateNetworkParameters(updater, "admin replacing all network parameters").map { "OK" }
+		} catch (err: Throwable) {
+			logger.error("failed to replace the network parameters", err)
+			failedFuture(err)
+		}
+	}
 	// END: core functions
 	
 	// BEGIN: utility functions

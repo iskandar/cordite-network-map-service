@@ -51,6 +51,25 @@ class ChangeSetTest {
     assertEquals(1, newNetworkParams.notaries.size)
     assertEquals(notaryInfo, newNetworkParams.notaries.first())
   }
+  
+  @Test
+  fun `that we can replace all network parameters`() {
+    val notary1 = NotaryInfo(createParty(), false)
+    val notary2 = NotaryInfo(createParty(), false)
+    val networkParams = defaultNetworkParameters()
+    val newNetworkParams = NetworkParameters(
+        minimumPlatformVersion = 3,
+        notaries = listOf(notary1, notary2),
+        maxMessageSize = Int.MAX_VALUE,
+        maxTransactionSize = Int.MAX_VALUE,
+        modifiedTime = Instant.now(),
+        epoch = 1,
+        whitelistedContractImplementations = mapOf()
+    )
+    val replacedNetworkParameters = changeSet(Change.ReplaceAllNetworkParameters(newNetworkParams))(networkParams)
+    val expected = newNetworkParams.copy(epoch = networkParams.epoch + 1, modifiedTime = replacedNetworkParameters.modifiedTime)
+    assertEquals(expected, replacedNetworkParameters)
+  }
 
   private fun defaultNetworkParameters() =
     NetworkParameters(
