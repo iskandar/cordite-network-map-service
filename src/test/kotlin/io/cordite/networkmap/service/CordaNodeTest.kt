@@ -115,7 +115,7 @@ class CordaNodeTest {
 	}
 	
 	@Test
-	fun `run node`(context: TestContext) {
+	fun `run node, check node count and delete all nodes`(context: TestContext) {
 		val portAllocation = PreallocatedFreePortAllocation()
 		
 		val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
