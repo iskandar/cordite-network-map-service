@@ -270,17 +270,15 @@ class NetworkMapAdminInterfaceTest {
 	 */
 	private fun getNMSParametersWithRetry(future: Future<Long>): NetworkParameters? {
 		var updatedNetworkParameters: NetworkParameters? = null
-		(1..5).forEach {
-			future.compose {
-				log.info("getting updated network parameters")
+		future.compose {
+			vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
 				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
 			}
-				.onSuccess {
-					log.info("succeeded in getting updated network parameters")
-					updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
-					if (updatedNetworkParameters?.notaries?.size == 1)
-						updatedNetworkParameters
-				}
+		}.onSuccess {
+			log.info("succeeded in getting updated network parameters")
+			updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
+			if (updatedNetworkParameters?.notaries?.size == 1)
+				updatedNetworkParameters
 		}
 		return updatedNetworkParameters
 	}
