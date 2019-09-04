@@ -15,5 +15,21 @@
  */
 package io.cordite.networkmap.utils
 
+import net.corda.core.utilities.millis
+import java.time.Duration
+
 const val SAMPLE_INPUTS = "test-data/inputs/"
 const val SAMPLE_NODES = "test-data/nodeinfos/"
+
+val DB_DIRECTORY = createTempDir()
+val PORT = getFreePort()
+val CACHE_TIMEOUT = 10.millis
+val NETWORK_PARAM_UPDATE_DELAY : Duration = 10.millis
+const val DEFAULT_NETWORK_MAP_ROOT = "/"
+const val ADMIN_NAME = ""
+const val ADMIN_USER_NAME = "sa"
+const val ADMIN_PASSWORD = ""
+const val ADMIN_REST_ROOT = "/admin/api"
+const val DEFAULT_HOST = "127.0.0.1"
+const val NETWORK_MAP_ROOT = "/network-map"
+

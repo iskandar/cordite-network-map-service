@@ -18,10 +18,7 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.keystore.toKeyStore
 import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage
-import io.cordite.networkmap.utils.JunitMDCRule
-import io.cordite.networkmap.utils.SerializationTestEnvironment
-import io.cordite.networkmap.utils.catch
-import io.cordite.networkmap.utils.onSuccess
+import io.cordite.networkmap.utils.*
 import io.vertx.core.Vertx
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
@@ -36,75 +33,74 @@ import java.nio.file.Files
 
 @RunWith(VertxUnitRunner::class)
 class CertificateManagerTest {
-  companion object {
-    private val log = loggerFor<CertificateManagerTest>()
-
-    @JvmField
-    @ClassRule
-    val mdcClassRule = JunitMDCRule()
-
-    const val KEYSTORE_PASSWORD = "password"
-
-    @JvmStatic
-    @BeforeClass
-    fun beforeClass() {
-      log.info("before class")
-      SerializationTestEnvironment.init()
-    }
-  }
-
-  @JvmField
-  @Rule
-  val mdcRule = JunitMDCRule()
-  private lateinit var vertx : Vertx
-  private val dbDirectory = createTempDir()
-
-  @Before
-  fun before() {
-    vertx = Vertx.vertx()
-  }
-
-  @After
-  fun after() {
-    vertx.close()
-  }
-
-  @Test
-  fun validateNodeInfoCertificates(context: TestContext) {
-    val caCertAndKeyPair = createRootCACertAndKeyPair()
-    val trustStoreFile = createRootTrustStore(caCertAndKeyPair)
-    val certificateManagerConfig = CertificateManagerConfig(
-      doorManEnabled = true,
-      certManEnabled = true,
-      certManPKIVerficationEnabled = true,
-      certManRootCAsTrustStoreFile = trustStoreFile,
-      certManRootCAsTrustStorePassword = KEYSTORE_PASSWORD,
-      certManStrictEVCerts = false)
-    val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
-    keyStoreDirectory.deleteOnExit()
-    val store = CertificateAndKeyPairStorage(vertx, dbDirectory)
-    val certManager = CertificateManager(vertx, store, certificateManagerConfig)
-    val async = context.async()
-    certManager.init()
-      .onSuccess {
-        async.complete()
-      }
-      .catch {
-        context.fail(it)
-      }
-  }
-
-  private fun createRootTrustStore(caCertAndKeyPair: CertificateAndKeyPair): File? {
-    val trustStore = caCertAndKeyPair.toKeyStore("cert", "key", KEYSTORE_PASSWORD)
-    val trustStoreFile = File.createTempFile("truststore", ".jks")
-    trustStoreFile.deleteOnExit()
-    trustStore.save(trustStoreFile.toPath(), KEYSTORE_PASSWORD)
-    return trustStoreFile
-  }
-
-  private fun createRootCACertAndKeyPair(): CertificateAndKeyPair {
-    val caKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-    val caCert = X509Utilities.createSelfSignedCACertificate(CertificateManagerConfig.DEFAULT_ROOT_NAME.x500Principal, caKeyPair)
-    return CertificateAndKeyPair(caCert, caKeyPair)
-  }
+	companion object {
+		private val log = loggerFor<CertificateManagerTest>()
+		
+		@JvmField
+		@ClassRule
+		val mdcClassRule = JunitMDCRule()
+		
+		const val KEYSTORE_PASSWORD = "password"
+		
+		@JvmStatic
+		@BeforeClass
+		fun beforeClass() {
+			log.info("before class")
+			SerializationTestEnvironment.init()
+		}
+	}
+	
+	@JvmField
+	@Rule
+	val mdcRule = JunitMDCRule()
+	private lateinit var vertx: Vertx
+	
+	@Before
+	fun before() {
+		vertx = Vertx.vertx()
+	}
+	
+	@After
+	fun after() {
+		vertx.close()
+	}
+	
+	@Test
+	fun validateNodeInfoCertificates(context: TestContext) {
+		val caCertAndKeyPair = createRootCACertAndKeyPair()
+		val trustStoreFile = createRootTrustStore(caCertAndKeyPair)
+		val certificateManagerConfig = CertificateManagerConfig(
+			doorManEnabled = true,
+			certManEnabled = true,
+			certManPKIVerficationEnabled = true,
+			certManRootCAsTrustStoreFile = trustStoreFile,
+			certManRootCAsTrustStorePassword = KEYSTORE_PASSWORD,
+			certManStrictEVCerts = false)
+		val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
+		keyStoreDirectory.deleteOnExit()
+		val store = CertificateAndKeyPairStorage(vertx, DB_DIRECTORY)
+		val certManager = CertificateManager(vertx, store, certificateManagerConfig)
+		val async = context.async()
+		certManager.init()
+			.onSuccess {
+				async.complete()
+			}
+			.catch {
+				context.fail(it)
+			}
+	}
+	
+	private fun createRootTrustStore(caCertAndKeyPair: CertificateAndKeyPair): File? {
+		val trustStore = caCertAndKeyPair.toKeyStore("cert", "key", KEYSTORE_PASSWORD)
+		val trustStoreFile = File.createTempFile("truststore", ".jks")
+		trustStoreFile.deleteOnExit()
+		trustStore.save(trustStoreFile.toPath(), KEYSTORE_PASSWORD)
+		return trustStoreFile
+	}
+	
+	private fun createRootCACertAndKeyPair(): CertificateAndKeyPair {
+		val caKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+		val caCert = X509Utilities.createSelfSignedCACertificate(CertificateManagerConfig.DEFAULT_ROOT_NAME.x500Principal, caKeyPair)
+		return CertificateAndKeyPair(caCert, caKeyPair)
+	}
 }
