@@ -292,17 +292,15 @@ class NetworkMapService(
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
-  fun postAckNetworkParameters(signedSecureHash: Buffer): Future<Unit> {
+  fun postAckNetworkParameters(signedSecureHash: Buffer) {
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
-    val hash = signedParameterHash.verified()
-    return storages.nodeInfo.get(hash.toString())
-      .onSuccess {
-        logger.info("received acknowledgement from node ${it.verified().legalIdentities}")
+    storages.storeLatestParametersAccepted(signedParameterHash)
+      .onSuccess { result ->
+        logger.info("Acknowledged network parameters saved against the node key $result")
       }
-      .catch {
-        logger.warn("received acknowledgement from unknown node!")
+      .catch { err ->
+        logger.info("failed to save acknowledged network parameters against the node key", err)
       }
-      .mapUnit()
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
