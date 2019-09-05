@@ -18,11 +18,13 @@ package io.cordite.networkmap.storage.mongo
 import io.bluebank.braid.core.async.mapUnit
 import io.cordite.networkmap.service.ServiceStorages
 import io.cordite.networkmap.service.StorageType
+import io.cordite.networkmap.storage.Storage
 import io.cordite.networkmap.storage.file.TextStorage
 import io.cordite.networkmap.utils.NMSOptions
 import io.cordite.networkmap.utils.all
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import net.corda.core.crypto.SecureHash
 
 class MongoServiceStorages(private val vertx: Vertx, private val nmsOptions: NMSOptions) : ServiceStorages() {
   init {
@@ -35,6 +37,7 @@ class MongoServiceStorages(private val vertx: Vertx, private val nmsOptions: NMS
   override val networkParameters = SignedNetworkParametersStorage(mongoClient, nmsOptions.mongodDatabase)
   override val parameterUpdate  = ParametersUpdateStorage(mongoClient, nmsOptions.mongodDatabase)
   override val text  = MongoTextStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val latestAcceptedParameters: Storage<SecureHash> = SecureHashStorage(mongoClient, nmsOptions.mongodDatabase)
 
   override fun setupStorage(): Future<Unit> {
     return all(

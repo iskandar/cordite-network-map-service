@@ -27,6 +27,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.ext.web.RoutingContext
+import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
@@ -188,6 +189,25 @@ class TextStorage(vertx: Vertx, parentDirectory: File, childDirectory: String = 
       putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN)
         .sendFile(resolveKey(key).absolutePath)
     }
+  }
+}
+
+class SecureHashStorage(
+  vertx: Vertx,
+  parentDirectory: File,
+  childDirectory: String = DEFAULT_CHILD_DIR
+) :
+  AbstractFileBasedNameValueStore<SecureHash>(File(parentDirectory, childDirectory), vertx) {
+  companion object {
+    const val DEFAULT_CHILD_DIR = "secure-hash"
+  }
+  
+  override fun deserialize(location: File): Future<SecureHash> {
+    return deserialize(location, vertx)
+  }
+  
+  override fun serialize(value: SecureHash, location: File): Future<Unit> {
+    return serialize(value, location, vertx)
   }
 }
 
