@@ -295,12 +295,14 @@ class NetworkMapService(
   fun postAckNetworkParameters(signedSecureHash: Buffer) {
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.storeLatestParametersAccepted(signedParameterHash)
+      // Todo add code to retrieve node info based on the key and change the log message to have to print node details
       .onSuccess { result ->
         logger.info("Acknowledged network parameters saved against the node key $result")
       }
       .catch { err ->
         logger.info("failed to save acknowledged network parameters against the node key", err)
       }
+      
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
