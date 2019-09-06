@@ -42,9 +42,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.SignedNodeInfo
+import org.apache.sshd.common.config.keys.Identity
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -295,14 +298,13 @@ class NetworkMapService(
   fun postAckNetworkParameters(signedSecureHash: Buffer) {
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.storeLatestParametersAccepted(signedParameterHash)
-      // Todo add code to retrieve node info based on the key and change the log message to have to print node details
+      // Todo add code to retrieve node info based on the key from nodeInfo storage and change the log message to print node details
       .onSuccess { result ->
-        logger.info("Acknowledged network parameters saved against the node key $result")
+        logger.info("Acknowledged network parameters $result saved against the node public key ${signedParameterHash.sig.by}")
       }
       .catch { err ->
-        logger.info("failed to save acknowledged network parameters against the node key", err)
+        logger.info("failed to save acknowledged network parameters against the node public key", err)
       }
-      
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

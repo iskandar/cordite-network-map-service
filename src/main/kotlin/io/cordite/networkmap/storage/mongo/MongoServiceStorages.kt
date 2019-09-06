@@ -37,7 +37,7 @@ class MongoServiceStorages(private val vertx: Vertx, private val nmsOptions: NMS
   override val networkParameters = SignedNetworkParametersStorage(mongoClient, nmsOptions.mongodDatabase)
   override val parameterUpdate  = ParametersUpdateStorage(mongoClient, nmsOptions.mongodDatabase)
   override val text  = MongoTextStorage(mongoClient, nmsOptions.mongodDatabase)
-  override val latestAcceptedParameters: Storage<SecureHash> = SecureHashStorage(mongoClient, nmsOptions.mongodDatabase)
+  override val latestAcceptedParameters = SecureHashStorage(mongoClient, nmsOptions.mongodDatabase)
 
   override fun setupStorage(): Future<Unit> {
     return all(
@@ -46,7 +46,8 @@ class MongoServiceStorages(private val vertx: Vertx, private val nmsOptions: NMS
       // TODO: add something to clear down cached networkmaps on the filesystem from previous versions
       text.migrate(TextStorage(vertx, nmsOptions.dbDirectory)),
       nodeInfo.migrate(io.cordite.networkmap.storage.file.SignedNodeInfoStorage(vertx, nmsOptions.dbDirectory)),
-      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, nmsOptions.dbDirectory))
+      certAndKeys.migrate(io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage(vertx, nmsOptions.dbDirectory)),
+      latestAcceptedParameters.migrate(io.cordite.networkmap.storage.file.SecureHashStorage(vertx, nmsOptions.dbDirectory))
     ).mapUnit()
   }
 }
