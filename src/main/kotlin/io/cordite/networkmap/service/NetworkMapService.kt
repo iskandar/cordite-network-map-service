@@ -35,6 +35,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.json.Json
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
@@ -295,15 +296,24 @@ class NetworkMapService(
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
-  fun postAckNetworkParameters(signedSecureHash: Buffer) {
+  fun postAckNetworkParameters(routingContext: RoutingContext) {
+    val signedSecureHash = Json.decodeValue(routingContext.body, Buffer::class.java)
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
-    storages.storeLatestParametersAccepted(signedParameterHash)
-      // Todo add code to retrieve node info based on the key from nodeInfo storage and change the log message to print node details
-      .onSuccess { result ->
-        logger.info("Acknowledged network parameters $result saved against the node public key ${signedParameterHash.sig.by}")
-      }
-      .catch { err ->
-        logger.info("failed to save acknowledged network parameters against the node public key", err)
+    storages.getCurrentNetworkParametersHash()
+      .onSuccess {
+          if(it == signedParameterHash.raw){
+            storages.storeLatestParametersAccepted(signedParameterHash)
+              // Todo add code to retrieve node info based on the key from nodeInfo storage and change the log message to print node details
+              .onSuccess { result ->
+                logger.info("Acknowledged network parameters $result saved against the node public key ${signedParameterHash.sig.by}")
+                routingContext.response().setStatusCode(HttpURLConnection.HTTP_OK).end()
+              }
+              .catch { err ->
+                logger.info("failed to save acknowledged network parameters against the node public key", err)
+              }
+          } else {
+            routingContext.response().setStatusMessage("network parameters not the latest version").setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST).end()
+          }
       }
   }
 
