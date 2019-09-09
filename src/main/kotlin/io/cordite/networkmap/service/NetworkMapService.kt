@@ -146,7 +146,7 @@ class NetworkMapService(
               unprotected {
                 get(NETWORK_MAP_ROOT, thisService::serveNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
-                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::ackNetworkParametersUpdate)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
@@ -296,7 +296,7 @@ class NetworkMapService(
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
-  fun ackNetworkParametersUpdate(routingContext: RoutingContext) {
+  fun postAckNetworkParameters(routingContext: RoutingContext) {
     val signedSecureHash = Json.decodeValue(routingContext.body, Buffer::class.java)
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.getCurrentNetworkParametersHash()
@@ -314,6 +314,9 @@ class NetworkMapService(
           } else {
             routingContext.response().setStatusMessage("network parameters not the latest version").setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST).end()
           }
+      }.catch {
+        logger.error("failed to acknowledge the network parameters sent by node public key ${signedParameterHash.sig.by}")
+        routingContext.end(it)
       }
   }
 
