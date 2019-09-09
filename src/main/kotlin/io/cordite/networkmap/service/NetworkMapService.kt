@@ -146,7 +146,7 @@ class NetworkMapService(
               unprotected {
                 get(NETWORK_MAP_ROOT, thisService::serveNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
-                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::ackNetworkParametersUpdate)
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
@@ -296,7 +296,7 @@ class NetworkMapService(
 
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
-  fun postAckNetworkParameters(routingContext: RoutingContext) {
+  fun ackNetworkParametersUpdate(routingContext: RoutingContext) {
     val signedSecureHash = Json.decodeValue(routingContext.body, Buffer::class.java)
     val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.getCurrentNetworkParametersHash()
