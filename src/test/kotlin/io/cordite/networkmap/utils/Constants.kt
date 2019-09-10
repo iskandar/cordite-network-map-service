@@ -21,8 +21,6 @@ import java.time.Duration
 const val SAMPLE_INPUTS = "test-data/inputs/"
 const val SAMPLE_NODES = "test-data/nodeinfos/"
 
-val DB_DIRECTORY = createTempDir()
-val PORT = getFreePort()
 val CACHE_TIMEOUT = 10.millis
 val NETWORK_PARAM_UPDATE_DELAY : Duration = 10.millis
 const val DEFAULT_NETWORK_MAP_ROOT = "/"

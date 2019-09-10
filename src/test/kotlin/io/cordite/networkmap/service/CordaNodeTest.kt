@@ -60,6 +60,8 @@ class CordaNodeTest {
 	@Rule
 	val mdcRule = JunitMDCRule()
 	
+	private val PORT = getFreePort()
+	private val dbDirectory = createTempDir()
 	private lateinit var vertx: Vertx
 	private lateinit var service: NetworkMapService
 	private lateinit var client: HttpClient
@@ -72,7 +74,7 @@ class CordaNodeTest {
 		val async = context.async()
 		vertx = Vertx.vertx()
 		val nmsOptions = NMSOptions(
-			dbDirectory = DB_DIRECTORY,
+			dbDirectory = dbDirectory,
 			user = InMemoryUser(ADMIN_NAME, ADMIN_USER_NAME, ADMIN_PASSWORD),
 			port = PORT,
 			cacheTimeout = CACHE_TIMEOUT,
