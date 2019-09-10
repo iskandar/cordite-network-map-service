@@ -19,6 +19,7 @@ import io.bluebank.braid.core.http.failed
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpClient
+import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.JsonObject
 import javax.ws.rs.core.HttpHeaders
@@ -30,6 +31,10 @@ fun HttpClient.futurePost(uri: String, json: JsonObject, vararg headers: Pair<St
 
 fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   return futureRequest(HttpMethod.POST, uri, body, *headers)
+}
+
+fun HttpClient.futurePostRaw(uri: String, body: String, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
+	return futureRequestRaw(HttpMethod.POST, uri, body, *headers)
 }
 
 fun HttpClient.futurePost(uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
@@ -59,8 +64,7 @@ fun HttpClient.futureDelete(uri: String, vararg headers: Pair<String, String>): 
 fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()
   @Suppress("DEPRECATION")
-  this.request(method, uri)
-  { response ->
+  this.request(method, uri) { response ->
     if (response.failed) {
       result.fail(response.statusMessage())
     } else {
@@ -83,6 +87,29 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vara
   return result
 }
 
+fun HttpClient.futureRequestRaw(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
+  val result = Future.future<HttpClientResponse>()
+  @Suppress("DEPRECATION")
+  this.request(method, uri) { response ->
+    if (response.failed) {
+      result.fail(response.statusMessage())
+    } else {
+      result.complete(response)
+    }
+  }
+    .putHeader(HttpHeaders.CONTENT_LENGTH, body.length.toString())
+    .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+    .apply {
+      headers.forEach {
+        putHeader(it.first, it.second)
+      }
+    }
+    .exceptionHandler {
+      result.fail(it)
+    }
+    .end(body)
+  return result
+}
 
 fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>): Future<Buffer> {
   val result = Future.future<Buffer>()

@@ -53,6 +53,7 @@ class CertificateManagerTest {
 	@JvmField
 	@Rule
 	val mdcRule = JunitMDCRule()
+	private val dbDirectory = createTempDir()
 	private lateinit var vertx: Vertx
 	
 	@Before
@@ -78,7 +79,7 @@ class CertificateManagerTest {
 			certManStrictEVCerts = false)
 		val keyStoreDirectory = Files.createTempDirectory("certstore").toFile()
 		keyStoreDirectory.deleteOnExit()
-		val store = CertificateAndKeyPairStorage(vertx, DB_DIRECTORY)
+		val store = CertificateAndKeyPairStorage(vertx, dbDirectory)
 		val certManager = CertificateManager(vertx, store, certificateManagerConfig)
 		val async = context.async()
 		certManager.init()

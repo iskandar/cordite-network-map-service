@@ -47,6 +47,8 @@ class NetworkMapWithTLSCertTest {
 	@Rule
 	val mdcRule = JunitMDCRule()
 	
+	private val PORT = getFreePort()
+	private val dbDirectory = createTempDir()
 	private var vertx = Vertx.vertx()
 	private lateinit var service: NetworkMapService
 	private lateinit var client: HttpClient
@@ -66,7 +68,7 @@ class NetworkMapWithTLSCertTest {
 		)
 		
 		val nmsOptions = NMSOptions(
-			dbDirectory = DB_DIRECTORY,
+			dbDirectory = dbDirectory,
 			user = InMemoryUser("", "sa", ""),
 			port = PORT,
 			cacheTimeout = CACHE_TIMEOUT,
