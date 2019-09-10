@@ -20,6 +20,8 @@ import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.NMSUtil.Companion.getNMSParametersWithRetry
+import io.cordite.networkmap.utils.NMSUtil.Companion.waitForNMSUpdate
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
@@ -238,8 +240,8 @@ class NetworkMapAdminInterfaceTest {
         )
         client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParams), "Authorization" to key)
       }
-      .compose { waitForNMSUpdate() }
-      .compose { getNMSParametersWithRetry() }
+      .compose { waitForNMSUpdate(vertx) }
+      .compose { getNMSParametersWithRetry(vertx, client) }
       .onSuccess { updatedNetworkParameters ->
         context.assertEquals(1, updatedNetworkParameters!!.notaries!!.size, "notaries should be correct count after update")
         log.info("notary count is correct")
@@ -251,29 +253,6 @@ class NetworkMapAdminInterfaceTest {
       }
       .catch(context::fail)
   }
-
-  /**
-   * waits using vertx's timeout
-   * this is recommended to [Thread.sleep] calls because vertx gets very upset if the event loop is blocked for too long
-   */
-  private fun waitForNMSUpdate(): Future<Unit> {
-    val extraWait = Duration.ofSeconds(15) // to give a bit more time for CPU starved environments to catchup
-    val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()
-    return vertx.sleep(milliseconds)
-  }
-
-  /**
-   * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
-   * we need to poll the current network parameters api. This method helps to retry calling the api until
-   * we get the updated nms parameters
-   */
-  private fun getNMSParametersWithRetry() =
-    vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
-      client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
-    }.map {
-      log.info("succeeded in getting updated network parameters")
-      Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
-    }
 
   @Test
   fun `that we can download the truststore`(context: TestContext) {
@@ -301,7 +280,7 @@ class NetworkMapAdminInterfaceTest {
       context.fail(it)
     }.end()
   }
-
+  
   @Test
   fun `that we can retrieve the current network parameters`(context: TestContext) {
     val async = context.async()

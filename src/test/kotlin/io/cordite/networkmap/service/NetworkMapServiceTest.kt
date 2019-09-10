@@ -15,21 +15,36 @@
  */
 package io.cordite.networkmap.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
+import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.NMSUtil.Companion.getNMSParametersWithRetry
+import io.cordite.networkmap.utils.NMSUtil.Companion.waitForNMSUpdate
+import io.netty.handler.codec.http.HttpResponse
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
+import io.vertx.kotlin.core.json.jsonObjectOf
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sign
+import net.corda.core.internal.sign
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.signWithCert
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -39,6 +54,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.junit.*
 import org.junit.Test
@@ -46,6 +62,7 @@ import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.CertificateFactory
@@ -69,9 +86,6 @@ class NetworkMapServiceTest {
     @JvmField
     @ClassRule
     val mdcClassRule = JunitMDCRule()
-
-    val NETWORK_PARAM_UPDATE_DELAY = 5.seconds
-    val NETWORK_MAP_QUEUE_DELAY = 1.seconds
 
     val TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
       "MIIDSzCCAjOgAwIBAgIEIGkklDANBgkqhkiG9w0BAQsFADBVMQswCQYDVQQGEwJH\n" +
@@ -135,11 +149,14 @@ class NetworkMapServiceTest {
 
   private lateinit var vertx: Vertx
   private lateinit var service: NetworkMapService
+  private lateinit var client: HttpClient
+  private lateinit var currentNetworkParameters: NetworkParameters
 
   @Before
   fun before(context: TestContext) {
     vertx = Vertx.vertx()
-
+    val async = context.async()
+    
     val nmsOptions = NMSOptions(
       dbDirectory = DB_DIRECTORY,
       user = InMemoryUser("", "sa", ""),
@@ -157,13 +174,26 @@ class NetworkMapServiceTest {
       storageType = StorageType.FILE
     )
 
-    this.service = NetworkMapService(nmsOptions)
-
-    val completed = Future.future<Unit>()
-    service.startup().setHandler(completed)
-    completed
-      .compose { service.processor.initialiseWithTestData(vertx = vertx, includeNodes = false) }
-      .setHandler(context.asyncAssertSuccess())
+    service = NetworkMapService(nmsOptions)
+    
+    service.startup().setHandler {
+      when {
+        it.succeeded() -> async.complete()
+        else -> context.fail(it.cause())
+      }
+    }
+  
+    client = vertx.createHttpClient(HttpClientOptions()
+      .setDefaultHost(DEFAULT_HOST)
+      .setDefaultPort(PORT)
+      .setSsl(false)
+      .setTrustAll(true)
+      .setVerifyHost(false)
+    )
+  
+    async.await()
+  
+    service.processor.initialiseWithTestData(vertx).setHandler(context.asyncAssertSuccess())
   }
 
   @After
@@ -307,6 +337,55 @@ class NetworkMapServiceTest {
       }
       .end(payload)
   }
+  
+  /*@Test
+  fun `that we can login, retrieve current network parameters, update it and acknowledge it via a node`(context: TestContext) {
+    val async = context.async()
+    var key = ""
+    
+    log.info("logging in")
+    client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
+      .onSuccess {
+        key = "Bearer $it"
+        log.info("key: $key")
+      }
+      .compose {
+        log.info("getting current network parameters")
+        client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
+      }
+      .onSuccess {
+        log.info("succeeded in getting current network parameters")
+        currentNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
+      }
+      .compose {
+        log.info("replacing network parameters")
+        val notary1 = NotaryInfo(TestIdentity(CordaX500Name("Notary1", "New York", "US")).party, false)
+        val newNetworkParams = currentNetworkParameters.copy(
+          notaries = listOf(notary1),
+          minimumPlatformVersion = 3
+        )
+        client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParams), "Authorization" to key)
+      }
+      .compose { waitForNMSUpdate(vertx) }
+      .compose { getNMSParametersWithRetry(vertx, client) }
+      .onSuccess { updatedNetworkParameters ->
+        context.assertEquals(1, updatedNetworkParameters!!.notaries!!.size, "notaries should be correct count after update")
+        log.info("notary count is correct")
+        context.assertEquals(3, updatedNetworkParameters!!.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
+        log.info("minimumPlatformVersion is correct")
+        updatedNetworkParameters
+      }
+      .compose {
+        val keyPair = Crypto.generateKeyPair()
+        val signedHash = it.serialize().hash.serialize().sign(keyPair)
+        client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$NETWORK_MAP_ROOT/ack-parameters", Json.encode(signedHash))
+      }
+      .compose { waitForNMSUpdate(vertx) }
+      .onSuccess {
+        async.complete()
+      }
+      .catch(context::fail)
+  }*/
 
   private fun getNetworkParties(nmc: NetworkMapClient) =
     nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
