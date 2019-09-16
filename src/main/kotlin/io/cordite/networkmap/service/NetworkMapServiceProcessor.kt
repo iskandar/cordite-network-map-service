@@ -278,6 +278,41 @@ class NetworkMapServiceProcessor(
     return storages.nodeInfo.delete(nodeKey)
   }
 
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete all nodeinfos")
+  fun deleteAllNodes(): Future<Unit> {
+    logger.info("deleting all nodeinfos")
+    return try {
+      storages.nodeInfo.clear()
+    } catch (err: Throwable) {
+      failedFuture(err)
+    }
+  }
+  
+  /*@Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "delete all nodeinfos")
+  fun deleteAllNodes(): Future<Map<String, SignedNodeInfo>> {
+    logger.info("deleting all nodeinfos")
+    return try {
+      // get all node infos
+      storages.nodeInfo.getAll()
+        .compose { mapOfNodes -> // we will be returning this back to the client after we've deleted the nodeinfos
+          // TODO: storage api should have a delete all - this is ugly
+          // delete all the nodes
+          mapOfNodes.map { namedNodeInfo ->
+            storages.nodeInfo.delete(namedNodeInfo.key)
+          }
+            // wait until all delete operations are finished
+            .all()
+            // and return the map of nodes deleted
+            .map { mapOfNodes }
+        }
+    } catch (err: Throwable) {
+      failedFuture(err)
+    }
+  }*/
+  
+  
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {
     logger.trace("serving current notaries")
@@ -308,7 +343,7 @@ class NetworkMapServiceProcessor(
     return storages.networkParameters.getKeys().map {
       it.drop((page - 1) * pageSize)
     }.compose { storages.networkParameters.getAll(it) }
-      .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() }}
+      .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() } }
   }
 
   @ApiOperation(value = "serve current network map as a JSON document", response = NetworkMap::class)
@@ -352,7 +387,7 @@ class NetworkMapServiceProcessor(
   // BEGIN: core functions
 
   internal fun updateNetworkParameters(update: (NetworkParameters) -> NetworkParameters, description: String = ""): Future<Unit> {
-    return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay).plus(NMSOptions().cacheTimeout))
+    return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay))
   }
 
   private fun createNetworkParameters(): Future<SecureHash> {
@@ -452,7 +487,7 @@ class NetworkMapServiceProcessor(
         }
       }
   }
-  
+
   fun replaceAllNetworkParameters(newNetworkParameters: NetworkParameters): Future<String> {
     logger.info("replacing all network parameters")
     return try {
@@ -463,7 +498,6 @@ class NetworkMapServiceProcessor(
       failedFuture(err)
     }
   }
-
   // END: core functions
 
   // BEGIN: utility functions
