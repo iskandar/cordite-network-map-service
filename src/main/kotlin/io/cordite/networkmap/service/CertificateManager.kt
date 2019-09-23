@@ -29,19 +29,23 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.CertRole
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
+import java.security.KeyPair
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.X509Certificate
@@ -162,7 +166,7 @@ class CertificateManager(
       arrayOf()
     }
   }
-
+  
   private fun generateJKSZipOutputStream(x500Name: CordaX500Name): ByteArrayOutputStream {
     val nodeCA = createCertificateAndKeyPair(doormanCertAndKeyPair, x500Name, CertificateType.NODE_CA)
     val nodeIdentity = createCertificateAndKeyPair(nodeCA, x500Name, CertificateType.LEGAL_IDENTITY)
@@ -327,6 +331,48 @@ class CertificateManager(
     return X509KeyStore(TRUST_STORE_PASSWORD).apply {
       setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
       setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
+    }
+  }
+  
+  private fun generateDistributedServiceKey(notaryX500Name: CordaX500Name): ByteArrayOutputStream {
+    val distributedServiceCertAndKey = createCertificateAndKeyPair(
+      rootCertificateAndKeyPair,
+      notaryX500Name,
+      CertificateType.SERVICE_IDENTITY
+    )
+    val certificatePath = listOf(distributedServiceCertAndKey.certificate,
+      doormanCertAndKeyPair.certificate,
+      rootCertificateAndKeyPair.certificate
+    )
+    return ByteArrayOutputStream().use { byteStream ->
+      ZipOutputStream(byteStream).use { zipStream ->
+        zipStream.putNextEntry(ZipEntry("distributedService.jks"))
+        distributedServiceCertAndKey.toKeyStore(
+          DISTRIBUTED_NOTARY_ALIAS_PREFIX,
+          "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+          NODE_IDENTITY_PASSWORD,
+          certificatePath)
+          .store(zipStream, NODE_IDENTITY_PASSWORD.toCharArray())
+        zipStream.closeEntry()
+      }
+      byteStream
+    }
+  }
+  
+  fun generateDistributedServiceKey(context: RoutingContext) {
+    try {
+      val payload = context.bodyAsString
+      val x500Name = CordaX500Name.parse(payload)
+      logger.info("generating distributed service jks files for $x500Name")
+      val stream = generateDistributedServiceKey(x500Name)
+      val bytes = stream.toByteArray()
+      context.response()
+        .putHeader(CONTENT_TYPE, "application/zip")
+        .putHeader(CONTENT_DISPOSITION, "attachment; filename=\"keys.zip\"")
+        .end(Buffer.buffer(bytes))
+    } catch (err: Throwable) {
+      logger.error("failed to generate jks files", err)
+      context.write(err)
     }
   }
 }
