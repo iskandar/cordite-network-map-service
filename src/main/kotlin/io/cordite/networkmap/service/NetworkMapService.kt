@@ -22,6 +22,7 @@ import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
 import io.bluebank.braid.core.async.mapUnit
 import io.bluebank.braid.core.http.HttpServerConfig
+import io.bluebank.braid.core.http.write
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
@@ -38,6 +39,7 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
+import io.vertx.kotlin.core.json.get
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
@@ -45,6 +47,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.CertificateType
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -147,6 +150,7 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
                 get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
+                get("$NETWORK_MAP_ROOT/jks/distributed-service/", thisService::generateDistributedServiceKey)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
@@ -383,7 +387,24 @@ class NetworkMapService(
       }
     }
   }
-
+  
+  fun generateDistributedServiceKey(context: RoutingContext) {
+    try {
+      val payload = context.bodyAsJson
+      val x500Name = CordaX500Name.parse(payload["x500Name"])
+      logger.info("generating distributed service jks files for $x500Name")
+      val stream = certificateManager.generateDistributedServiceKey(x500Name)
+      context.response().apply {
+        putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"distributedService.jks\"")
+        end(Buffer.buffer(stream))
+      }
+    } catch (err: Throwable) {
+      logger.error("failed to generate jks files", err)
+      context.write(err)
+    }
+  }
+  
   @ApiOperation(value = "get the build-time properties")
   fun serveProperties() = buildProperties
 
