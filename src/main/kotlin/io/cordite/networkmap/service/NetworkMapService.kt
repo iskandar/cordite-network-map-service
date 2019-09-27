@@ -150,7 +150,9 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
                 get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
-                get("$NETWORK_MAP_ROOT/jks/distributed-service/", thisService::generateDistributedServiceKey)
+                get("$NETWORK_MAP_ROOT/distributed-service/", thisService::getDistributedServiceKey)
+                //remove this
+                post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
@@ -178,6 +180,8 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/network-parameters/current", processor::getCurrentNetworkParameters)
                 get("$ADMIN_REST_ROOT/build-properties", thisService::serveProperties)
                 get("$ADMIN_REST_ROOT/network-map", processor::getCurrentNetworkMap)
+                //remove this
+                delete("$ADMIN_REST_ROOT/nodes/", processor::deleteAllNodes)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
@@ -203,7 +207,7 @@ class NetworkMapService(
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", processor::deleteNode)
                 post("$ADMIN_REST_ROOT/notaries/validating", processor::postValidatingNotaryNodeInfo)
                 post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/nodes/deleteAll", processor::deleteAllNodes)
+                delete("$ADMIN_REST_ROOT/nodes/", processor::deleteAllNodes)
                 post("$ADMIN_REST_ROOT/replaceAllNetworkParameters", processor::replaceAllNetworkParameters)
               }
             }
@@ -388,7 +392,11 @@ class NetworkMapService(
     }
   }
   
-  fun generateDistributedServiceKey(context: RoutingContext) {
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "To generate and retrieve the distributed service key for notary cluster",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  fun getDistributedServiceKey(context: RoutingContext) {
     try {
       val payload = context.bodyAsJson
       val x500Name = CordaX500Name.parse(payload["x500Name"])

@@ -111,7 +111,9 @@ class NetworkMapServiceProcessor(
             }
           }
           if (registeredWithDifferentKey.any()) {
-            val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
+            val names = registeredWithDifferentKey.joinToString("\n") {
+              it.name.toString()
+            }
             val msg = "node failed to registered because the following names have already been registered with different public keys $names"
             logger.warn(msg)
             throw RuntimeException(msg)
@@ -120,7 +122,9 @@ class NetworkMapServiceProcessor(
         .compose {
           val hash = signedNodeInfo.raw.sha256()
           storages.nodeInfo.put(hash.toString(), signedNodeInfo)
-            .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
+            .onSuccess {
+              logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added")
+            }
         }
         .catch { ex ->
           logger.error("failed to add node", ex)
@@ -146,7 +150,7 @@ class NetworkMapServiceProcessor(
     logger.info("adding non-validating notary")
     return try {
       val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
-      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.first(), false)))
+      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.last(), false)))
       updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
     } catch (err: Throwable) {
       logger.error("failed to add a non-validating notary", err)
@@ -288,30 +292,6 @@ class NetworkMapServiceProcessor(
       failedFuture(err)
     }
   }
-  
-  /*@Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete all nodeinfos")
-  fun deleteAllNodes(): Future<Map<String, SignedNodeInfo>> {
-    logger.info("deleting all nodeinfos")
-    return try {
-      // get all node infos
-      storages.nodeInfo.getAll()
-        .compose { mapOfNodes -> // we will be returning this back to the client after we've deleted the nodeinfos
-          // TODO: storage api should have a delete all - this is ugly
-          // delete all the nodes
-          mapOfNodes.map { namedNodeInfo ->
-            storages.nodeInfo.delete(namedNodeInfo.key)
-          }
-            // wait until all delete operations are finished
-            .all()
-            // and return the map of nodes deleted
-            .map { mapOfNodes }
-        }
-    } catch (err: Throwable) {
-      failedFuture(err)
-    }
-  }*/
-  
   
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {

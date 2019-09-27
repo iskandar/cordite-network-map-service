@@ -1,0 +1,40 @@
+pushd build/nodes/nodesRaft
+for N in */; do
+      echo 'compatibilityZoneURL="http://localhost:8081"' >> $N/node.conf
+      echo 'devModeOptions.allowCompatibilityZone=true' >> $N/node.conf
+      pushd $N
+      rm -rf network-parameters nodeInfo-* persistence.mv.db certificates additional-node-infos
+      popd
+done
+popd
+
+mkdir ~/tmp/certificates
+curl http://localhost:8081/network-map/distributed-service -o ~/tmp/certificates/distributedService.jks
+keytool --importkeystore --srcalias distributed-notary-private-key --srckeystore ~/tmp/certificates/distributedService.jks --destkeystore ~/tmp/certificates/nodekeystore.jks
+
+password = cordacadevpass
+
+keytool -list -v -keystore certificates/nodekeystore.jks | grep Alias
+
+pushd build/nodes/nodesRaft
+for N in */; do
+      pushd $N
+      cp -r ~/tmp/certificates .
+      popd
+done
+popd
+
+
+curl http://localhost:8081/network-map/truststore -o ~/tmp/network-truststore.jks
+
+java -jar corda.jar --initial-registration --network-root-truststore ~/tmp/network-truststore.jks --network-root-truststore-password trustpass
+
+pushd build/nodes/nodesRaft
+for N in */; do
+      pushd $N
+      java -jar corda.jar --initial-registration --network-root-truststore ~/tmp/network-truststore.jks --network-root-truststore-password trustpass
+      popd
+done
+popd
+
+./gradlew clean samples:notary-demo:deployNodesRaft
