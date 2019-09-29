@@ -7,7 +7,7 @@
 3. [How do I add a node to a network run using Java?](#3-how-do-i-add-a-node-to-a-network-run-using-java)
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
-6. [How do I add contract to the whitelist](#6-how-do-i-admin-the-embedded-database)
+6. [How do I add contract to the whitelist](#6-how-do-i-add-contract-to-the-whitelist)
 
 ## Questions
 
