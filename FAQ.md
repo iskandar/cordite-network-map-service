@@ -7,6 +7,7 @@
 3. [How do I add a node to a network run using Java?](#3-how-do-i-add-a-node-to-a-network-run-using-java)
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
+6. [How do I add contract to the whitelist](#6-how-do-i-admin-the-embedded-database)
 
 ## Questions
 
@@ -234,3 +235,53 @@ show collections
 # etc
 ```
 
+### 6. How do I add contract to the whitelist
+
+> PLEASE READ THIS FIRST:
+> Corda v4 provides Signature constraint mechanism which provides better flexibility to add new contracts.
+> All nodes in the network using older network-parameters file will not function and shutdown. Delete the network parameter file on each of those and restart the node to automatically download and sync the new version of network-parameters.
+
+
+Cordite network map provides whitelisting api to append or replace the contract. Use POST request to replace all the existing whitelist and PUT request to append the new contract to existing whitelisted contracts. The following endpoint adds or replaces the contract:
+```
+/admin/api/whitelist
+```
+
+1. Get the jwt token using Login API by any of the below two methods:
++ Use the Swagger endpoint
+```
+http://localhost:8080/swagger/#/admin/post_admin_api_login
+```
++ Type the following CURL command in terminal (assuming default credentials)
+```
+curl -X POST -d "{\"user\": \"sa\",\"password\": \"admin\"}" http://localhost:8080//admin/api/login
+```
+
+2. Get hash of all the contracts using one of the following methods:
++ Use the `whitelist.txt` file generated while using `gradle clean deployNodes` command in local 
++ Manually compute hash of all the contract jars
+   + For Windows use the below command in cmd
+   ```
+  certUtil -hashfile <fileName.jar> SHA256
+  ``` 
+  + For Ubuntu/ Linux use the below command in terminal
+  ```
+  sha256sum <fileName.jar>
+  ```
+  + For Mac, use the below command in terminal
+  ```
+  shasum -a 256 <fileName.jar>
+  ```
+
+3. For each of the contract jars, use the following curl request to add contracts to whitelist
+- [ ] To append the contract to existing whitelist
+```
+curl -X PUT -H "Authorization: Bearer <jwt token received in Step 1>" -H "accept: text/plain" -d "<fully qualified contract class name>:<contract hash>" http://localhost:8080//admin/api/whitelist
+```
+
+- [ ] To remove all existing whitelisted contract and add new one
+```
+curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accept: text/plain" -d "<fully qualified contract class name>:<contract hash>" http://localhost:8080//admin/api/whitelist
+```
+
+4. For each node in the network, delete the existing network-parameters file and restart the node
