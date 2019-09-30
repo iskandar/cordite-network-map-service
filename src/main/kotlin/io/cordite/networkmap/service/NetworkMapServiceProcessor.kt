@@ -158,7 +158,7 @@ class NetworkMapServiceProcessor(
 	@ApiOperation(value = """For the non validating distributed notary to upload its signed NodeInfo object to the network map",
     Please ignore the way swagger presents this. To upload a notary info file use:
       <code>
-      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080//admin/api/notaries/nonValidating
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080/admin/api/notaries/distributed/nonValidating
       </code>
       """,
 		consumes = MediaType.APPLICATION_OCTET_STREAM
