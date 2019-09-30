@@ -47,7 +47,7 @@ NMS port used in the example is 8080.
 
 ##### 1. Download the distributedService jks file
 
-Api getDistributedServiceKey retrieves the distributedService jks and the url is `http://localhost:8080/admin/api/notaries`
+Api getDistributedServiceKey retrieves the distributedService jks and the url is `http://localhost:8080/network-map/distributed-service/`
 
 The keystore retrieved using curl is invalid. It will be fixed so till that time download the jks using postman and save the file.  
 
