@@ -111,9 +111,7 @@ class NetworkMapServiceProcessor(
             }
           }
           if (registeredWithDifferentKey.any()) {
-            val names = registeredWithDifferentKey.joinToString("\n") {
-              it.name.toString()
-            }
+            val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
             val msg = "node failed to registered because the following names have already been registered with different public keys $names"
             logger.warn(msg)
             throw RuntimeException(msg)
@@ -122,9 +120,7 @@ class NetworkMapServiceProcessor(
         .compose {
           val hash = signedNodeInfo.raw.sha256()
           storages.nodeInfo.put(hash.toString(), signedNodeInfo)
-            .onSuccess {
-              logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added")
-            }
+            .onSuccess { logger.info("node ${signedNodeInfo.raw.hash} for party ${ni.legalIdentities} added") }
         }
         .catch { ex ->
           logger.error("failed to add node", ex)
