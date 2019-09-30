@@ -43,11 +43,11 @@ Must list the addresses of all the members in the cluster. At least one of the m
 
 #### Running the example CorDapp
 
-NMS port used in the example is 8081. 
+NMS port used in the example is 8080. 
 
 ##### 1. Download the distributedService jks file
 
-Api getDistributedServiceKey retrieves the distributedService jks and the url is `http://localhost:8081/admin/api/notaries`
+Api getDistributedServiceKey retrieves the distributedService jks and the url is `http://localhost:8080/admin/api/notaries`
 
 The keystore retrieved using curl is invalid. It will be fixed so till that time download the jks using postman and save the file.  
 
@@ -96,7 +96,7 @@ This step is required as the space in the name breaks some of the following scri
 cd samples/notary-demo/
 pushd build/nodes/nodesRaft
 for N in */; do
-      echo 'compatibilityZoneURL="http://localhost:8081"' >> $N/node.conf
+      echo 'compatibilityZoneURL="http://localhost:8080"' >> $N/node.conf
       echo 'devModeOptions.allowCompatibilityZone=true' >> $N/node.conf
       pushd $N
       rm -rf network-parameters nodeInfo-* persistence.mv.db certificates additional-node-infos
@@ -120,7 +120,7 @@ popd
 ##### 9. Register the nodes
 
 ```
-curl http://localhost:8081/network-map/truststore -o ~/tmp/network-truststore.jks
+curl http://localhost:8080/network-map/truststore -o ~/tmp/network-truststore.jks
 pushd build/nodes/nodesRaft
 for N in */; do
       pushd $N
@@ -134,7 +134,7 @@ popd
 - [ ] login to the NMS API and cache the token
 
   ```bash
-  TOKEN=`curl -X POST "http://localhost:8081//admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  TOKEN=`curl -X POST "http://localhost:8080//admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
   ```
 
 - [ ] Upload the notary
@@ -142,7 +142,7 @@ popd
     ```bash
     pushd build/nodes/Notary
     NODEINFO=`ls nodeInfo*`
-    curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8081/admin/api/notaries/distributed/nonValidating
+    curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8080/admin/api/notaries/distributed/nonValidating
     popd
     ```
     
