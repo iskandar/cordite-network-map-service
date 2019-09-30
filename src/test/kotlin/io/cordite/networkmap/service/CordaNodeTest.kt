@@ -166,7 +166,7 @@ class CordaNodeTest {
 				}.compose {
 					// set the complete whitelist
 					log.info("deleting all nodes")
-					client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/nodes/deleteAll", "", "Authorization" to key)
+					client.futureDelete("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/nodes/",  "Authorization" to key)
 				}.compose {
 					NMSUtil.waitForNMSUpdate(vertx)
 				}.compose {
