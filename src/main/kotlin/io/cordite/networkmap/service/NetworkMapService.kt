@@ -151,8 +151,6 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
                 get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
                 get("$NETWORK_MAP_ROOT/distributed-service/", thisService::getDistributedServiceKey)
-                //remove this
-                post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
@@ -180,8 +178,6 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/network-parameters/current", processor::getCurrentNetworkParameters)
                 get("$ADMIN_REST_ROOT/build-properties", thisService::serveProperties)
                 get("$ADMIN_REST_ROOT/network-map", processor::getCurrentNetworkMap)
-                //remove this
-                delete("$ADMIN_REST_ROOT/nodes/", processor::deleteAllNodes)
                 router {
                   route("/").handler { context ->
                     if (context.request().path() == root) {
