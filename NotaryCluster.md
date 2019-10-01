@@ -1,6 +1,6 @@
 ### Notary Cluster: 
 
-A cluster of nodes acting as notaries to notarise the transactions. In NMS, we have enabled RAFT based non validating notary cluster.  
+A cluster of nodes acting as notaries to notarise the transactions. In NMS, we have enabled **RAFT based non validating notary cluster**.  
 
 **How it works**   
 Every notary worker node has two legal names. Its own legal name, specified by name, e.g O=Worker 1, C=GB, L=London and the service legal name specified in configuration by notary.serviceLegalName, e.g. O=RAFT, L=Zurich,C=CH. Only the service legal name is included in the network parameters and hence the network map will be advertising only the service identity of the notary cluster. Inside the CorDapp, the notary should be selected based on the notary service identity from the network map cache. Client nodes that request a notarisation by the service name of the notary, will connect to the available worker nodes in a round-robin fashion. The task of a worker node is to verify the notarisation request, the transaction timestamp (if present), and resolve and verify the transaction chain (if the notary service is validating). 
@@ -82,6 +82,8 @@ In deployNodesRaft task, change the node names as below:
  Notary Service 2 `>>` NotaryService2    
 
 This step is required as the space in the name breaks some of the following scripts
+
+Then change `Validating` to `false`
 
 ##### 6. Clean, build and deployNodes
 
