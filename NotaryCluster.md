@@ -49,17 +49,16 @@ NMS port used in the example is 8080.
 
 Api `http://localhost:8080/network-map/distributed-service/` retrieves the distributedService jks.  
 
-The keystore retrieved using curl is invalid. It will be fixed so till that time download the jks using postman and save the file.  
-
-In this example, the file is saved to downloads folder.  
+```
+mkdir ~/tmp/certificates 
+curl -X GET "http://localhost:8080/network-map/distributed-service/" -H "accept: application/octet-stream"  -H "Content-Type: application/json" -d "{  \"x500Name\": \"O=Raft,L=Zurich,C=CH\"}" -o ~/tmp/certificates/distributedService.jks 
+```
 
 ##### 2. Copy the distributedService jks file to tmp and create nodekeystore.jks
 
 Source and destination keystore password: `cordacadevpass`
 
-```
-mkdir ~/tmp/certificates   
-cp ~/Downloads/distributedService.jks ~/tmp/certificates   
+```    
 keytool --importkeystore --srcalias distributed-notary-private-key --srckeystore ~/tmp/certificates/distributedService.jks --destkeystore ~/tmp/certificates/nodekeystore.jks   
 ```
 
