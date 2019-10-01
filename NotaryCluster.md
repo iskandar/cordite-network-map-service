@@ -172,3 +172,9 @@ popd
    ./gradlew samples:notary-demo:notarise
     
    ```     
+   
+#### ToDo:   
+    1. Create a notary cluster with validating notaries
+    2. Check whether it is possible to have validating and non-validating in a cluster
+    3. Test how many notary nodes in a cluster should be up exactly
+    
