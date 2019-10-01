@@ -47,11 +47,11 @@ NMS port used in the example is 8080.
 
 ##### 1. Download the distributedService jks file
 
-Api getDistributedServiceKey retrieves the distributedService jks and the url is `http://localhost:8080/network-map/distributed-service/`
+Api `http://localhost:8080/network-map/distributed-service/` retrieves the distributedService jks.  
 
 The keystore retrieved using curl is invalid. It will be fixed so till that time download the jks using postman and save the file.  
 
-In this example, the file gets saved to downloads folder.  
+In this example, the file is saved to downloads folder.  
 
 ##### 2. Copy the distributedService jks file to tmp and create nodekeystore.jks
 
@@ -75,14 +75,12 @@ Ref link: `https://github.com/corda/corda/tree/389c91374eeb43b76eca01fb8bfec38ab
 
 ##### 5. build.gradle changes
 
-In deployNodesRaft task, change the node names as below:   
+In deployNodesRaft task, change the node names as below:  
 
-| Old Name         | New Name       | 
-| -------------    |:------------- :| 
-| Alice Corp       | AliceCorp      | 
-| Notary Service 0 | NotaryService0 | 
-| Notary Service 1 | NotaryService1 | 
-| Notary Service 2 | NotaryService2 | 
+ Alice Corp       `>>` AliceCorp    
+ Notary Service 0 `>>` NotaryService0   
+ Notary Service 1 `>>` NotaryService1    
+ Notary Service 2 `>>` NotaryService2    
 
 This step is required as the space in the name breaks some of the following scripts
 
@@ -105,7 +103,7 @@ done
 popd
 ```
 
-##### 8. copy the certificates to nodes
+##### 8. Copy the certificates to nodes
 
 ```
 pushd build/nodes/nodesRaft
@@ -134,13 +132,13 @@ popd
 - [ ] login to the NMS API and cache the token
 
   ```bash
-  TOKEN=`curl -X POST "http://localhost:8080//admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
   ```
 
 - [ ] Upload the notary
 
     ```bash
-    pushd build/nodes/Notary
+    pushd build/nodes/nodesRaft/NotaryService2
     NODEINFO=`ls nodeInfo*`
     curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8080/admin/api/notaries/distributed/nonValidating
     popd
@@ -170,6 +168,6 @@ popd
 ##### 13. Run the example
    ```
    cd ../.. 
-    ./gradlew samples:notary-demo:notarise
+   ./gradlew samples:notary-demo:notarise
     
    ```     
