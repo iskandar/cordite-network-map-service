@@ -135,26 +135,26 @@ popd
 ##### 10. Designate the distributed notary
 - [ ] login to the NMS API and cache the token
 
-  ```bash
+  ```
   TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
   ```
 
 
 - [ ] If the notary cluster is non-validating, please execute the below
 
-    ```bash
+    ```
     pushd build/nodes/nodesRaft/NotaryService2
     NODEINFO=`ls nodeInfo*`
-    curl -X POST "http://localhost:8080/admin/api/notaries/distributed/nonValidating "-H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
+    curl -X POST "http://localhost:8080/admin/api/notaries/distributed/nonValidating" -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
     popd
     ```
 
 - [ ] If the notary cluster is validating, please execute the below  
 
-   ```bash
+   ```
       pushd build/nodes/nodesRaft/NotaryService2
       NODEINFO=`ls nodeInfo*`
-      curl -X POST "http://localhost:8080/admin/api/notaries/distributed/validating "-H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
+      curl -X POST "http://localhost:8080/admin/api/notaries/distributed/validating" -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
       popd
     ``` 
     If the notary cluster is validating, please perform this step without fail before running the nodes else while running the nodes, notary nodes will shutdown with the error `Configured as validating: true. Advertised as validating: false`
