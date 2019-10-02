@@ -30,10 +30,13 @@ For each node acting as notary the following should be specified
 serviceLegalName: The legal name of the cluster. `Example: serviceLegalName: "O=Raft,L=Zurich,C=CH"`   
 
 raft: If part of a Raft cluster then specify raft as described below   
-  raft: [
-                        nodeAddress: "localhost:10016",
-                        clusterAddresses: ["localhost:10008"]
-                ]   
+
+  ```raft: [
+        nodeAddress: "localhost:10016",
+        clusterAddresses: ["localhost:10008"]
+     ]   
+  ```
+  
 nodeAddress:   
 The host and port to which to bind the embedded Raft server
 
@@ -81,9 +84,9 @@ In deployNodesRaft task, change the node names as below:
  Notary Service 1 `>>` NotaryService1    
  Notary Service 2 `>>` NotaryService2    
 
-This step is required as the space in the name breaks some of the following scripts
+This step is required as the space in the name breaks some of the following scripts.
 
-Then change `Validating` to `false`
+Then change `Validating` to `false` if you would like to run non-validating cluster.
 
 ##### 6. Clean, build and deployNodes
 
@@ -156,7 +159,7 @@ popd
     ``` 
     If the notary cluster is validating, please perform this step without fail before running the nodes else while running the nodes, notary nodes will shutdown with the error `Configured as validating: true. Advertised as validating: false`
     
-    Please upload one of the notaries's node-info file from the notary cluster. Uploading multiple notaries will result in duplicate notaries.
+    Upload *only one of the notaries's node-info file* from the notary cluster. Uploading multiple notaries will result in duplicate notaries.
     
     API will be  modified in the later release to avoid duplicate entries.  
     
