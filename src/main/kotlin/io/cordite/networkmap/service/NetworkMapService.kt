@@ -203,6 +203,7 @@ class NetworkMapService(
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", processor::deleteNode)
                 post("$ADMIN_REST_ROOT/notaries/validating", processor::postValidatingNotaryNodeInfo)
                 post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
+                post("$ADMIN_REST_ROOT/notaries/distributed/validating", processor::postValidatingDistributedNotary)
                 post("$ADMIN_REST_ROOT/notaries/distributed/nonValidating", processor::postNonValidatingDistributedNotary)
                 delete("$ADMIN_REST_ROOT/nodes/", processor::deleteAllNodes)
                 post("$ADMIN_REST_ROOT/replaceAllNetworkParameters", processor::replaceAllNetworkParameters)

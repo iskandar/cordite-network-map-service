@@ -1,6 +1,6 @@
 ### Notary Cluster: 
 
-A cluster of nodes acting as notaries to notarise the transactions. In NMS, we have enabled **RAFT based non validating notary cluster**.  
+A cluster of nodes acting as notaries to notarise the transactions. In NMS, we have enabled **RAFT based validating and non-validating notary cluster**.  
 
 **How it works**   
 Every notary worker node has two legal names. Its own legal name, specified by name, e.g O=Worker 1, C=GB, L=London and the service legal name specified in configuration by notary.serviceLegalName, e.g. O=RAFT, L=Zurich,C=CH. Only the service legal name is included in the network parameters and hence the network map will be advertising only the service identity of the notary cluster. Inside the CorDapp, the notary should be selected based on the notary service identity from the network map cache. Client nodes that request a notarisation by the service name of the notary, will connect to the available worker nodes in a round-robin fashion. The task of a worker node is to verify the notarisation request, the transaction timestamp (if present), and resolve and verify the transaction chain (if the notary service is validating). 
@@ -136,16 +136,27 @@ popd
   TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
   ```
 
-- [ ] Upload the notary
+
+- [ ] If the notary cluster is non-validating, please execute the below
 
     ```bash
     pushd build/nodes/nodesRaft/NotaryService2
     NODEINFO=`ls nodeInfo*`
-    curl -X POST -H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO http://localhost:8080/admin/api/notaries/distributed/nonValidating
+    curl -X POST "http://localhost:8080/admin/api/notaries/distributed/nonValidating "-H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
     popd
     ```
+
+- [ ] If the notary cluster is validating, please execute the below  
+
+   ```bash
+      pushd build/nodes/nodesRaft/NotaryService2
+      NODEINFO=`ls nodeInfo*`
+      curl -X POST "http://localhost:8080/admin/api/notaries/distributed/validating "-H "Authorization: Bearer $TOKEN" -H "accept: text/plain" -H "Content-Type: application/octet-stream" --data-binary @$NODEINFO 
+      popd
+    ``` 
+    If the notary cluster is validating, please perform this step without fail before running the nodes else while running the nodes, notary nodes will shutdown with the error `Configured as validating: true. Advertised as validating: false`
     
-    Please upload one of the notaries's node-info file. Uploading multiple notaries will result in duplicate notaries.
+    Please upload one of the notaries's node-info file from the notary cluster. Uploading multiple notaries will result in duplicate notaries.
     
     API will be  modified in the later release to avoid duplicate entries.  
     
@@ -173,8 +184,5 @@ popd
     
    ```     
    
-#### ToDo:   
-    1. Create a notary cluster with validating notaries
-    2. Check whether it is possible to have validating and non-validating in a cluster
-    3. Test how many notary nodes in a cluster should be up exactly
+
     
