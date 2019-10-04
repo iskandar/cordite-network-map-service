@@ -15,5 +15,5 @@ This sub project must be rebuilt and `./public` must be checked-in.
 
 ```bash
 npm i
-npm run buil
+npm run build
 ```
