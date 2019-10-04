@@ -16,19 +16,13 @@
 package io.cordite.networkmap.utils
 
 import io.bluebank.braid.core.http.failed
-import io.cordite.networkmap.serialisation.serializeOnContext
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.buffer.impl.BufferImpl
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.JsonObject
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
-import java.nio.ByteBuffer
 import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.MediaType
 

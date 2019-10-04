@@ -31,16 +31,13 @@ import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import io.vertx.kotlin.core.json.jsonObjectOf
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sign
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.sign
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -50,7 +47,6 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.junit.*
 import org.junit.Test
@@ -265,38 +261,6 @@ class NetworkMapServiceTest {
 	}
 	
 	@Test
-	fun `that we can modify the network parameters`(testContext: TestContext) {
-		val async = testContext.async()
-		val nmc = createNetworkMapClient()
-		deleteValidatingNotaries(nmc)
-			// we wait for the NMS to process the request
-			.compose { vertx.sleep(max(1, NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)) }
-			.compose { vertx.sleep(max(1, NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)) } // will need to check these - it seems excessive
-			// at this point the NMS should have created a ParametersUpdate - retrieve the new network map that contains this update
-			.map {
-				val nm = nmc.getNetworkMap().payload
-				// check the update time is right
-				assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
-				val deadLine = nm.parametersUpdate!!.updateDeadline
-				val delay = Duration.between(Instant.now(), deadLine)
-				assert(delay > Duration.ZERO && delay <= NETWORK_PARAM_UPDATE_DELAY)
-				delay // returns the delay
-			}
-			// wait for the update to be applied as per the NetworkMap ParameterUpdate plan
-			.compose { delay -> vertx.sleep(max(1, delay.toMillis() * 2)) }
-			// the network map should be updated with the planned update - the validating notaries should've been deleted
-			.onSuccess {
-				val nm = nmc.getNetworkMap().payload
-				assertNull(nm.parametersUpdate)
-				val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
-				assertEquals(1, nmp.notaries.size)
-				assertTrue(nmp.notaries.all { !it.validating })
-				async.complete()
-			}
-			.catch(testContext::fail)
-	}
-	
-	@Test
 	fun `that we can modify and acknowledge the network parameters`(testContext: TestContext) {
 		val async = testContext.async()
 		val nmc = createNetworkMapClient()
@@ -334,7 +298,6 @@ class NetworkMapServiceTest {
 			}
 			.catch(testContext::fail)
 	}
-	
 	
 	@Test
 	fun `that we can submit a certificate and signature to certman`(context: TestContext) {

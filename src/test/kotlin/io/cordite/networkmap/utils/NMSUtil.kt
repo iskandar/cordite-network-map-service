@@ -15,21 +15,13 @@
  */
 package io.cordite.networkmap.utils
 
-
-import com.fasterxml.jackson.core.type.TypeReference
-import io.cordite.networkmap.service.SimpleNotaryInfo
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
-import io.vertx.core.http.HttpClient
-import io.vertx.core.json.Json
-import net.corda.core.node.NetworkParameters
-import net.corda.core.utilities.loggerFor
 import java.time.Duration
 
 class NMSUtil {
 	companion object {
-		val log = loggerFor<NMSUtil>()
 		fun waitForNMSUpdate(vertx: Vertx): Future<Long> {
 			val extraWait = Duration.ofSeconds(15) // to give a bit more time for CPU starved environments to catchup
 			val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()

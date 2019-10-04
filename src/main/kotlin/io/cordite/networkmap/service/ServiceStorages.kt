@@ -117,6 +117,7 @@ abstract class ServiceStorages {
     val hash: SecureHash = signedParameterHash.verified()
     return latestAcceptedParameters.put(signedParameterHash.sig.by.toString(), hash).map { hash }
   }
+  
   fun latestParametersAccepted(publicKey: PublicKey): Future<SecureHash> {
     return latestAcceptedParameters.get(publicKey.toString())
   }

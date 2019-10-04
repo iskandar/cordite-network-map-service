@@ -247,21 +247,24 @@ class NetworkMapAdminInterfaceTest {
 			.compose { waitForNMSUpdate(vertx) }
 			.compose { getNMSParametersWithRetry() }
 			.onSuccess {
-				val updatedNetworkParameters = it.result()
-				context.assertEquals(1, updatedNetworkParameters.notaries.size, "notaries should be correct count after update")
-				log.info("notary count is correct")
-				context.assertEquals(3, updatedNetworkParameters.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
-				log.info("minimumPlatformVersion is correct")
-				updatedNetworkParameters
+				it.map{ updatedNetworkParameters ->
+					context.assertEquals(1, updatedNetworkParameters.notaries.size, "notaries should be correct count after update")
+					log.info("notary count is correct")
+					context.assertEquals(3, updatedNetworkParameters.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
+					log.info("minimumPlatformVersion is correct")
+				}
 			}
 			.compose {
-				val updatedNetworkParameters = it.result()
-				val keyPair = Crypto.generateKeyPair()
-				val signedHash = updatedNetworkParameters.serialize().hash.serialize().sign(keyPair)
-				client.futurePostRaw("$DEFAULT_NETWORK_MAP_ROOT$NETWORK_MAP_ROOT/ack-parameters", signedHash)
+				it.map{ updatedNetworkParameters->
+					val keyPair = Crypto.generateKeyPair()
+					val signedHash = updatedNetworkParameters.serialize().hash.serialize().sign(keyPair)
+					client.futurePostRaw("$DEFAULT_NETWORK_MAP_ROOT$NETWORK_MAP_ROOT/ack-parameters", signedHash)
+				}
 			}
 			.onSuccess {
-				assertEquals(200, it.statusCode())
+				it.map { httpClientResponse ->
+					assertEquals(200, httpClientResponse.statusCode())
+				}
 			}
 			.onSuccess {
 				async.complete()
@@ -288,7 +291,6 @@ class NetworkMapAdminInterfaceTest {
 				}
 			}
 		}
-	
 	
 	@Test
 	fun `that we can download the truststore`(context: TestContext) {

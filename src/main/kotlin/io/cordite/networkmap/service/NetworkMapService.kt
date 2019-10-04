@@ -306,7 +306,7 @@ class NetworkMapService(
     consumes = MediaType.APPLICATION_OCTET_STREAM)
   fun ackNetworkParametersUpdate(routingContext: RoutingContext) {
     val body = routingContext.body
-    val signedParameterHash = body.bytes.deserializeOnContext<SignedData<SecureHash>>()
+	    val signedParameterHash = body.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.getCurrentNetworkParametersHash()
       .onSuccess {
           if(it == signedParameterHash.verified()){
