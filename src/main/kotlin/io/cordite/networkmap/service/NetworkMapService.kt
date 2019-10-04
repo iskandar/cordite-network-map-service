@@ -20,13 +20,12 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.corda.BraidConfig
 import io.bluebank.braid.corda.rest.AuthSchema
 import io.bluebank.braid.corda.rest.RestConfig
-import io.bluebank.braid.core.async.mapUnit
 import io.bluebank.braid.core.http.HttpServerConfig
+import io.bluebank.braid.core.http.write
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.utils.*
-import io.netty.buffer.ByteBufInputStream
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.swagger.annotations.ApiOperation
@@ -35,34 +34,25 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.buffer.impl.BufferImpl
 import io.vertx.core.http.HttpServerOptions
-import io.vertx.core.json.Json
 import io.vertx.core.net.SelfSignedCertificate
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.StaticHandler
+import io.vertx.kotlin.core.json.get
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.readObject
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.SignedNodeInfo
-import org.apache.sshd.common.config.keys.Identity
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.mvel2.ast.Sign
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.security.PublicKey
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.ws.rs.Consumes
 import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
@@ -157,6 +147,7 @@ class NetworkMapService(
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
                 get("$NETWORK_MAP_ROOT/truststore", thisService::getNetworkTrustStore)
+                get("$NETWORK_MAP_ROOT/distributed-service/", thisService::getDistributedServiceKey)
               }
             }
             if (certificateManagerConfig.doorManEnabled) {
@@ -209,7 +200,9 @@ class NetworkMapService(
                 delete("$ADMIN_REST_ROOT/nodes/:nodeKey", processor::deleteNode)
                 post("$ADMIN_REST_ROOT/notaries/validating", processor::postValidatingNotaryNodeInfo)
                 post("$ADMIN_REST_ROOT/notaries/nonValidating", processor::postNonValidatingNotaryNodeInfo)
-                post("$ADMIN_REST_ROOT/nodes/deleteAll", processor::deleteAllNodes)
+                post("$ADMIN_REST_ROOT/notaries/distributed/validating", processor::postValidatingDistributedNotary)
+                post("$ADMIN_REST_ROOT/notaries/distributed/nonValidating", processor::postNonValidatingDistributedNotary)
+                delete("$ADMIN_REST_ROOT/nodes/", processor::deleteAllNodes)
                 post("$ADMIN_REST_ROOT/replaceAllNetworkParameters", processor::replaceAllNetworkParameters)
               }
             }
@@ -409,7 +402,28 @@ class NetworkMapService(
       }
     }
   }
-
+  
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "To generate and retrieve the distributed service key for notary cluster",
+    response = Buffer::class,
+    produces = MediaType.APPLICATION_OCTET_STREAM)
+  fun getDistributedServiceKey(context: RoutingContext) {
+    try {
+      val payload = context.bodyAsJson
+      val x500Name = CordaX500Name.parse(payload["x500Name"])
+      logger.info("generating distributed service jks files for $x500Name")
+      val stream = certificateManager.generateDistributedServiceKey(x500Name)
+      context.response().apply {
+        putHeader(CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
+        putHeader(CONTENT_DISPOSITION, "attachment; filename=\"distributedService.jks\"")
+        end(Buffer.buffer(stream))
+      }
+    } catch (err: Throwable) {
+      logger.error("failed to generate jks files", err)
+      context.write(err)
+    }
+  }
+  
   @ApiOperation(value = "get the build-time properties")
   fun serveProperties() = buildProperties
 

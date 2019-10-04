@@ -153,7 +153,51 @@ class NetworkMapServiceProcessor(
       Future.failedFuture(err)
     }
   }
-
+	
+	@Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = """For the non validating distributed notary to upload its signed NodeInfo object to the network map",
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080/admin/api/notaries/distributed/nonValidating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postNonValidatingDistributedNotary(nodeInfoBuffer: Buffer): Future<String> {
+    logger.info("adding non-validating distributed notary")
+    //TODO - throw duplicate error if distributed notary exists
+    return try {
+      val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
+      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.last(), false)))
+      updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to add a non-validating distributed notary", err)
+      Future.failedFuture(err)
+    }
+  }
+  
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = """For the validating distributed notary to upload its signed NodeInfo object to the network map",
+    Please ignore the way swagger presents this. To upload a notary info file use:
+      <code>
+      curl -X POST -H "Authorization: Bearer &lt;token&gt;" -H "accept: text/plain" -H  "Content-Type: application/octet-stream" --data-binary @nodeInfo-007A0CAE8EECC5C9BE40337C8303F39D34592AA481F3153B0E16524BAD467533 http://localhost:8080/admin/api/notaries/distributed/validating
+      </code>
+      """,
+    consumes = MediaType.APPLICATION_OCTET_STREAM
+  )
+  fun postValidatingDistributedNotary(nodeInfoBuffer: Buffer): Future<String> {
+    logger.info("adding validating distributed notary")
+    //TODO - throw duplicate error if distributed notary exists
+    return try {
+      val nodeInfo = nodeInfoBuffer.bytes.deserializeOnContext<SignedNodeInfo>().verified()
+      val updater = changeSet(Change.AddNotary(NotaryInfo(nodeInfo.legalIdentities.last(), true)))
+      updateNetworkParameters(updater, "admin updating adding validating notary").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to add a validating distributed notary", err)
+      Future.failedFuture(err)
+    }
+  }
+	
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = """For the validating notary to upload its signed NodeInfo object to the network map.
     Please ignore the way swagger presents this. To upload a notary info file use:

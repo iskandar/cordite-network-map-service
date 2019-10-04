@@ -38,6 +38,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -327,6 +328,28 @@ class CertificateManager(
     return X509KeyStore(TRUST_STORE_PASSWORD).apply {
       setCertificate("cordaintermediateca", doormanCertAndKeyPair.certificate)
       setCertificate("cordarootca", rootCertificateAndKeyPair.certificate)
+    }
+  }
+  fun generateDistributedServiceKey(notaryX500Name: CordaX500Name): ByteArray {
+    val distributedServiceCertAndKey = createCertificateAndKeyPair(
+      doormanCertAndKeyPair,
+      notaryX500Name,
+      CertificateType.SERVICE_IDENTITY
+    )
+    
+    val certificatePath = listOf(
+      doormanCertAndKeyPair.certificate,
+      rootCertificateAndKeyPair.certificate
+    )
+    
+    return ByteArrayOutputStream().use { byteStream ->
+      distributedServiceCertAndKey.toKeyStore(
+        DISTRIBUTED_NOTARY_ALIAS_PREFIX,
+        "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+        NODE_IDENTITY_PASSWORD,
+        certificatePath)
+        .store(byteStream, NODE_IDENTITY_PASSWORD.toCharArray())
+      byteStream.toByteArray()
     }
   }
 }
