@@ -25,11 +25,13 @@ import io.cordite.networkmap.utils.sign
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
 import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import java.security.PublicKey
 
 enum class StorageType {
   FILE,
@@ -55,6 +57,7 @@ abstract class ServiceStorages {
   abstract val networkParameters : Storage<SignedNetworkParameters>
   protected abstract val parameterUpdate : Storage<ParametersUpdate>
   abstract val text : Storage<String>
+  abstract val latestAcceptedParameters : Storage<SecureHash>
 
   abstract fun setupStorage(): Future<Unit>
 
@@ -109,5 +112,13 @@ abstract class ServiceStorages {
     logger.info("storing network parameters $hash with values $newParams")
     return networkParameters.put(hash.toString(), signed).map { hash }
   }
-
+  
+  fun storeLatestParametersAccepted(signedParameterHash: SignedData<SecureHash>): Future<SecureHash> {
+    val hash: SecureHash = signedParameterHash.verified()
+    return latestAcceptedParameters.put(signedParameterHash.sig.by.toString(), hash).map { hash }
+  }
+  
+  fun latestParametersAccepted(publicKey: PublicKey): Future<SecureHash> {
+    return latestAcceptedParameters.get(publicKey.toString())
+  }
 }
