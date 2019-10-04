@@ -15,20 +15,28 @@
  */
 package io.cordite.networkmap.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
+import io.vertx.core.Future.failedFuture
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
+import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpHeaders
+import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sign
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.sign
 import net.corda.core.internal.signWithCert
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
@@ -139,7 +147,8 @@ class NetworkMapServiceTest {
 	
 	private lateinit var vertx: Vertx
 	private lateinit var service: NetworkMapService
-	
+	private lateinit var client: HttpClient
+	private lateinit var currentNetworkParameters: NetworkParameters
 	@Before
 	fun before(context: TestContext) {
 		vertx = Vertx.vertx()
@@ -168,6 +177,14 @@ class NetworkMapServiceTest {
 		completed
 			.compose { service.processor.initialiseWithTestData(vertx = vertx, includeNodes = false) }
 			.setHandler(context.asyncAssertSuccess())
+		
+		client = vertx.createHttpClient(HttpClientOptions()
+			.setDefaultHost(DEFAULT_HOST)
+			.setDefaultPort(PORT)
+			.setSsl(false)
+			.setTrustAll(true)
+			.setVerifyHost(false)
+		)
 	}
 	
 	@After
@@ -244,7 +261,7 @@ class NetworkMapServiceTest {
 	}
 	
 	@Test
-	fun `that we can modify the network parameters`(testContext: TestContext) {
+	fun `that we can modify and acknowledge the network parameters`(testContext: TestContext) {
 		val async = testContext.async()
 		val nmc = createNetworkMapClient()
 		deleteValidatingNotaries(nmc)
@@ -264,17 +281,23 @@ class NetworkMapServiceTest {
 			// wait for the update to be applied as per the NetworkMap ParameterUpdate plan
 			.compose { delay -> vertx.sleep(max(1, delay.toMillis() * 2)) }
 			// the network map should be updated with the planned update - the validating notaries should've been deleted
-			.onSuccess {
+			.compose {
 				val nm = nmc.getNetworkMap().payload
 				assertNull(nm.parametersUpdate)
 				val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
 				assertEquals(1, nmp.notaries.size)
 				assertTrue(nmp.notaries.all { !it.validating })
+				val keyPair = Crypto.generateKeyPair()
+				val signedHash = nmp.serialize().hash.serialize().sign(keyPair)
+				nmc.ackNetworkParametersUpdate(signedHash)
+				service.latestParametersAccepted(keyPair.public)
+			}. onSuccess {
+				val nm = nmc.getNetworkMap().payload
+				assertEquals(it, nm.networkParameterHash)
 				async.complete()
 			}
 			.catch(testContext::fail)
 	}
-	
 	
 	@Test
 	fun `that we can submit a certificate and signature to certman`(context: TestContext) {
@@ -311,6 +334,25 @@ class NetworkMapServiceTest {
 			}
 			.end(payload)
 	}
+	/**
+	 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
+	 * we need to poll the current network parameters api. This method helps to retry calling the api until
+	 * we get the updated nms parameters
+	 */
+	private fun getNMSParametersWithRetry() =
+		vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
+			client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current").map {
+				val updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
+				if(currentNetworkParameters != updatedNetworkParameters){
+					log.info("succeeded in getting updated network parameters")
+					succeededFuture(updatedNetworkParameters)
+				}
+				else {
+					log.info("Still trying to get updated network parameters")
+					failedFuture("Network parameters is not updated")
+				}
+			}
+		}
 	
 	private fun getNetworkParties(nmc: NetworkMapClient) =
 		nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
@@ -352,6 +394,12 @@ class NetworkMapServiceTest {
 		return NodeInfoAndSigned(ni) { _, serialised ->
 			legalIdentity.keyPair.private.sign(serialised.bytes)
 		}
+	}
+	
+	fun waitForNMSUpdate(): Future<Long> {
+		val extraWait = Duration.ofSeconds(15) // to give a bit more time for CPU starved environments to catchup
+		val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()
+		return Future.future<Long>().apply { vertx.setTimer(milliseconds, this::complete) }
 	}
 }
 

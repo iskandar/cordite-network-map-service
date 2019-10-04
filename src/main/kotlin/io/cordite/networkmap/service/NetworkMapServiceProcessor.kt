@@ -289,30 +289,6 @@ class NetworkMapServiceProcessor(
     }
   }
   
-  /*@Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "delete all nodeinfos")
-  fun deleteAllNodes(): Future<Map<String, SignedNodeInfo>> {
-    logger.info("deleting all nodeinfos")
-    return try {
-      // get all node infos
-      storages.nodeInfo.getAll()
-        .compose { mapOfNodes -> // we will be returning this back to the client after we've deleted the nodeinfos
-          // TODO: storage api should have a delete all - this is ugly
-          // delete all the nodes
-          mapOfNodes.map { namedNodeInfo ->
-            storages.nodeInfo.delete(namedNodeInfo.key)
-          }
-            // wait until all delete operations are finished
-            .all()
-            // and return the map of nodes deleted
-            .map { mapOfNodes }
-        }
-    } catch (err: Throwable) {
-      failedFuture(err)
-    }
-  }*/
-  
-  
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {
     logger.trace("serving current notaries")

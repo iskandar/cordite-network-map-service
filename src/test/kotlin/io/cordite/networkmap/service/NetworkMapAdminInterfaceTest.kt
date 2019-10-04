@@ -30,9 +30,12 @@ import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.jsonObjectOf
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.sign
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.core.TestIdentity
 import org.junit.*
@@ -41,6 +44,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.security.KeyStore
+import kotlin.test.assertEquals
 
 @RunWith(VertxUnitRunner::class)
 class NetworkMapAdminInterfaceTest {
@@ -119,7 +123,7 @@ class NetworkMapAdminInterfaceTest {
 	val mdcRule = JunitMDCRule()
 	
 	@Test
-	fun `that we can login, retrieve notaries, nodes, whitelist, and we can modify notaries and whitelist`(context: TestContext) {
+	fun `that we can login, retrieve notaries, nodes, whitelist, and we can modify notaries and whitelist, and we can modify network parameters and acknowledge`(context: TestContext) {
 		val async = context.async()
 		var key = ""
 		var whitelist = ""
@@ -203,7 +207,7 @@ class NetworkMapAdminInterfaceTest {
 				val updated = wls - keyToRemove
 				val newWhiteList = updated.toString()
 				client.futurePut("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/whitelist", newWhiteList, "Authorization" to key)
-			}.compose { waitForNMSUpdate(vertx) }
+			}.compose {waitForNMSUpdate(vertx) }
 			.compose {
 				log.info("getting whitelist")
 				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/whitelist")
@@ -244,10 +248,22 @@ class NetworkMapAdminInterfaceTest {
 			.compose { getNMSParametersWithRetry() }
 			.onSuccess {
 				it.map{ updatedNetworkParameters ->
-					context.assertEquals(1, updatedNetworkParameters!!.notaries!!.size, "notaries should be correct count after update")
+					context.assertEquals(1, updatedNetworkParameters.notaries.size, "notaries should be correct count after update")
 					log.info("notary count is correct")
-					context.assertEquals(3, updatedNetworkParameters!!.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
+					context.assertEquals(3, updatedNetworkParameters.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
 					log.info("minimumPlatformVersion is correct")
+				}
+			}
+			.compose {
+				it.map{ updatedNetworkParameters->
+					val keyPair = Crypto.generateKeyPair()
+					val signedHash = updatedNetworkParameters.serialize().hash.serialize().sign(keyPair)
+					client.futurePostRaw("$DEFAULT_NETWORK_MAP_ROOT$NETWORK_MAP_ROOT/ack-parameters", signedHash)
+				}
+			}
+			.onSuccess {
+				it.map { httpClientResponse ->
+					assertEquals(200, httpClientResponse.statusCode())
 				}
 			}
 			.onSuccess {
@@ -255,7 +271,6 @@ class NetworkMapAdminInterfaceTest {
 			}
 			.catch(context::fail)
 	}
-	
 	
 	/**
 	 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
