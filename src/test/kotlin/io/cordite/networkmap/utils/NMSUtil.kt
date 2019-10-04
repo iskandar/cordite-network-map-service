@@ -15,7 +15,9 @@
  */
 package io.cordite.networkmap.utils
 
+
 import com.fasterxml.jackson.core.type.TypeReference
+import io.cordite.networkmap.service.SimpleNotaryInfo
 import io.vertx.core.Future
 import io.vertx.core.Future.future
 import io.vertx.core.Vertx
@@ -33,17 +35,5 @@ class NMSUtil {
 			val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()
 			return future<Long>().apply { vertx.setTimer(milliseconds, this::complete) }
 		}
-		/**
-		 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
-		 * we need to poll the current network parameters api. This method helps to retry calling the api until
-		 * we get the updated nms parameters
-		 */
-		fun getNMSParametersWithRetry(vertx: Vertx, client: HttpClient) =
-			vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
-				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
-			}.map {
-				log.info("succeeded in getting updated network parameters")
-				Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
-			}
 	}
 }

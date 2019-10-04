@@ -20,8 +20,9 @@ import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.utils.*
-import io.cordite.networkmap.utils.NMSUtil.Companion.getNMSParametersWithRetry
 import io.vertx.core.Future
+import io.vertx.core.Future.failedFuture
+import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
@@ -295,6 +296,45 @@ class NetworkMapServiceTest {
 			.catch(testContext::fail)
 	}
 	
+	@Test
+	fun `that we can modify and acknowledge the network parameters`(testContext: TestContext) {
+		val async = testContext.async()
+		val nmc = createNetworkMapClient()
+		deleteValidatingNotaries(nmc)
+			// we wait for the NMS to process the request
+			.compose { vertx.sleep(max(1, NetworkParameterInputsStorage.DEFAULT_WATCH_DELAY)) }
+			.compose { vertx.sleep(max(1, NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)) } // will need to check these - it seems excessive
+			// at this point the NMS should have created a ParametersUpdate - retrieve the new network map that contains this update
+			.map {
+				val nm = nmc.getNetworkMap().payload
+				// check the update time is right
+				assertNotNull(nm.parametersUpdate, "expecting parameter update plan")
+				val deadLine = nm.parametersUpdate!!.updateDeadline
+				val delay = Duration.between(Instant.now(), deadLine)
+				assert(delay > Duration.ZERO && delay <= NETWORK_PARAM_UPDATE_DELAY)
+				delay // returns the delay
+			}
+			// wait for the update to be applied as per the NetworkMap ParameterUpdate plan
+			.compose { delay -> vertx.sleep(max(1, delay.toMillis() * 2)) }
+			// the network map should be updated with the planned update - the validating notaries should've been deleted
+			.compose {
+				val nm = nmc.getNetworkMap().payload
+				assertNull(nm.parametersUpdate)
+				val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
+				assertEquals(1, nmp.notaries.size)
+				assertTrue(nmp.notaries.all { !it.validating })
+				val keyPair = Crypto.generateKeyPair()
+				val signedHash = nmp.serialize().hash.serialize().sign(keyPair)
+				nmc.ackNetworkParametersUpdate(signedHash)
+				service.latestParametersAccepted(keyPair.public)
+			}. onSuccess {
+				val nm = nmc.getNetworkMap().payload
+				assertEquals(it, nm.networkParameterHash)
+				async.complete()
+			}
+			.catch(testContext::fail)
+	}
+	
 	
 	@Test
 	fun `that we can submit a certificate and signature to certman`(context: TestContext) {
@@ -331,55 +371,25 @@ class NetworkMapServiceTest {
 			}
 			.end(payload)
 	}
-	
-	@Test
-	fun `that we can login, retrieve current network parameters, update it and acknowledge it via a node`(context: TestContext) {
-		val async = context.async()
-		var key = ""
-		
-		log.info("logging in")
-		client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
-			.onSuccess {
-				key = "Bearer $it"
-				log.info("key: $key")
+	/**
+	 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
+	 * we need to poll the current network parameters api. This method helps to retry calling the api until
+	 * we get the updated nms parameters
+	 */
+	private fun getNMSParametersWithRetry() =
+		vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
+			client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current").map {
+				val updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
+				if(currentNetworkParameters != updatedNetworkParameters){
+					log.info("succeeded in getting updated network parameters")
+					succeededFuture(updatedNetworkParameters)
+				}
+				else {
+					log.info("Still trying to get updated network parameters")
+					failedFuture("Network parameters is not updated")
+				}
 			}
-			.compose {
-				log.info("getting current network parameters")
-				client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current")
-			}
-			.onSuccess {
-				log.info("succeeded in getting current network parameters")
-				currentNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})
-			}
-			.compose {
-				log.info("replacing network parameters")
-				val notary1 = NotaryInfo(TestIdentity(CordaX500Name("Notary1", "New York", "US")).party, false)
-				val newNetworkParams = currentNetworkParameters.copy(
-					notaries = listOf(notary1),
-					minimumPlatformVersion = 3
-				)
-				client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParams), "Authorization" to key)
-			}
-			.compose { waitForNMSUpdate() }
-			.compose { getNMSParametersWithRetry(vertx, client) }
-			.onSuccess { updatedNetworkParameters ->
-				context.assertEquals(1, updatedNetworkParameters!!.notaries!!.size, "notaries should be correct count after update")
-				log.info("notary count is correct")
-				context.assertEquals(3, updatedNetworkParameters!!.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
-				log.info("minimumPlatformVersion is correct")
-				updatedNetworkParameters
-			}
-			.compose {
-				val keyPair = Crypto.generateKeyPair()
-				val signedHash = it.serialize().hash.serialize().sign(keyPair)
-				client.futurePostRaw("$DEFAULT_NETWORK_MAP_ROOT$NETWORK_MAP_ROOT/ack-parameters", Json.encode(signedHash))
-			}
-			.onSuccess {
-				assertEquals(200, it.statusCode())
-				async.complete()
-			}
-			.catch(context::fail)
-	}
+		}
 	
 	private fun getNetworkParties(nmc: NetworkMapClient) =
 		nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }

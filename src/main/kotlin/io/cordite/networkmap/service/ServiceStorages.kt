@@ -31,6 +31,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import java.security.PublicKey
 
 enum class StorageType {
   FILE,
@@ -116,5 +117,7 @@ abstract class ServiceStorages {
     val hash: SecureHash = signedParameterHash.verified()
     return latestAcceptedParameters.put(signedParameterHash.sig.by.toString(), hash).map { hash }
   }
-
+  fun latestParametersAccepted(publicKey: PublicKey): Future<SecureHash> {
+    return latestAcceptedParameters.get(publicKey.toString())
+  }
 }

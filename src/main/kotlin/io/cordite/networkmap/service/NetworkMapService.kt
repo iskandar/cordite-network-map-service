@@ -26,6 +26,7 @@ import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
 import io.cordite.networkmap.utils.*
+import io.netty.buffer.ByteBufInputStream
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.swagger.annotations.ApiOperation
@@ -34,6 +35,7 @@ import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.buffer.impl.BufferImpl
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.json.Json
 import io.vertx.core.net.SelfSignedCertificate
@@ -42,21 +44,25 @@ import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.readObject
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.SignedNodeInfo
 import org.apache.sshd.common.config.keys.Identity
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import java.io.ByteArrayOutputStream
-import java.io.File
+import org.mvel2.ast.Sign
+import java.io.*
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.security.PublicKey
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.ws.rs.Consumes
 import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.HttpHeaders.*
 import javax.ws.rs.core.MediaType
@@ -146,7 +152,7 @@ class NetworkMapService(
               unprotected {
                 get(NETWORK_MAP_ROOT, thisService::serveNetworkMap)
                 post("$NETWORK_MAP_ROOT/publish", thisService::postNodeInfo)
-                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::postAckNetworkParameters)
+                post("$NETWORK_MAP_ROOT/ack-parameters", thisService::ackNetworkParametersUpdate)
                 get("$NETWORK_MAP_ROOT/node-info/:hash", thisService::getNodeInfo)
                 get("$NETWORK_MAP_ROOT/network-parameters/:hash", thisService::getNetworkParameter)
                 get("$NETWORK_MAP_ROOT/my-hostname", thisService::getMyHostname)
@@ -296,13 +302,14 @@ class NetworkMapService(
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
-  @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.")
-  fun postAckNetworkParameters(routingContext: RoutingContext) {
-    val signedSecureHash = Json.decodeValue(routingContext.body, Buffer::class.java)
-    val signedParameterHash = signedSecureHash.bytes.deserializeOnContext<SignedData<SecureHash>>()
+  @ApiOperation(value = "For the node operator to acknowledge network map that new parameters were accepted for future update.",
+    consumes = MediaType.APPLICATION_OCTET_STREAM)
+  fun ackNetworkParametersUpdate(routingContext: RoutingContext) {
+    val body = routingContext.body
+    val signedParameterHash = body.bytes.deserializeOnContext<SignedData<SecureHash>>()
     storages.getCurrentNetworkParametersHash()
       .onSuccess {
-          if(it == signedParameterHash.raw){
+          if(it == signedParameterHash.verified()){
             storages.storeLatestParametersAccepted(signedParameterHash)
               // Todo add code to retrieve node info based on the key from nodeInfo storage and change the log message to print node details
               .onSuccess { result ->
@@ -319,6 +326,10 @@ class NetworkMapService(
         logger.error("failed to acknowledge the network parameters sent by node public key ${signedParameterHash.sig.by}")
         routingContext.end(it)
       }
+  }
+  
+  fun latestParametersAccepted(publicKey: PublicKey): Future<SecureHash> {
+    return storages.latestParametersAccepted(publicKey)
   }
 
   @Suppress("MemberVisibilityCanBePrivate")

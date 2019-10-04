@@ -16,12 +16,19 @@
 package io.cordite.networkmap.utils
 
 import io.bluebank.braid.core.http.failed
+import io.cordite.networkmap.serialisation.serializeOnContext
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.buffer.impl.BufferImpl
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.JsonObject
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.serialize
+import java.nio.ByteBuffer
 import javax.ws.rs.core.HttpHeaders
 import javax.ws.rs.core.MediaType
 
@@ -33,7 +40,7 @@ fun HttpClient.futurePost(uri: String, body: String, vararg headers: Pair<String
   return futureRequest(HttpMethod.POST, uri, body, *headers)
 }
 
-fun HttpClient.futurePostRaw(uri: String, body: String, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
+fun HttpClient.futurePostRaw(uri: String, body: Any, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
 	return futureRequestRaw(HttpMethod.POST, uri, body, *headers)
 }
 
@@ -87,7 +94,7 @@ fun HttpClient.futureRequest(method: HttpMethod, uri: String, body: Buffer, vara
   return result
 }
 
-fun HttpClient.futureRequestRaw(method: HttpMethod, uri: String, body: String, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
+fun HttpClient.futureRequestRaw(method: HttpMethod, uri: String, body: Any, vararg headers: Pair<String, String>): Future<HttpClientResponse> {
   val result = Future.future<HttpClientResponse>()
   @Suppress("DEPRECATION")
   this.request(method, uri) { response ->
@@ -97,8 +104,8 @@ fun HttpClient.futureRequestRaw(method: HttpMethod, uri: String, body: String, v
       result.complete(response)
     }
   }
-    .putHeader(HttpHeaders.CONTENT_LENGTH, body.length.toString())
-    .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+    .putHeader(HttpHeaders.CONTENT_LENGTH, body.serialize().bytes.size.toString())
+    .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
     .apply {
       headers.forEach {
         putHeader(it.first, it.second)
@@ -107,7 +114,7 @@ fun HttpClient.futureRequestRaw(method: HttpMethod, uri: String, body: String, v
     .exceptionHandler {
       result.fail(it)
     }
-    .end(body)
+    .end(Buffer.buffer(body.serialize().bytes))
   return result
 }
 

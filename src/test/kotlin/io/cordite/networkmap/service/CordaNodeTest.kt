@@ -28,7 +28,6 @@ import io.vertx.kotlin.core.json.jsonObjectOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.millis
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -39,7 +38,6 @@ import org.junit.*
 import org.junit.runner.RunWith
 import java.net.URL
 import java.security.cert.X509Certificate
-import java.time.Duration
 
 @RunWith(VertxUnitRunner::class)
 class CordaNodeTest {
@@ -67,7 +65,6 @@ class CordaNodeTest {
 	private lateinit var vertx: Vertx
 	private lateinit var service: NetworkMapService
 	private lateinit var client: HttpClient
-	val NETWORK_PARAM_UPDATE_DELAY : Duration = 10.millis
 	
 	@Before
 	fun before(context: TestContext) {
