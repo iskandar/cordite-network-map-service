@@ -21,6 +21,7 @@ import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companio
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
 import io.cordite.networkmap.utils.*
 import io.cordite.networkmap.utils.NMSUtil.Companion.waitForNMSUpdate
+import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
@@ -277,20 +278,22 @@ class NetworkMapAdminInterfaceTest {
 	 * we need to poll the current network parameters api. This method helps to retry calling the api until
 	 * we get the updated nms parameters
 	 */
-	private fun getNMSParametersWithRetry() =
-		vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
+	private fun getNMSParametersWithRetry(): Future<Future<NetworkParameters>> {
+		var count = 0
+		return vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
+			log.info("NMS parameters retry attempt: ${++count}")
 			client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current").map {
 				val updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
-				if(currentNetworkParameters != updatedNetworkParameters){
+				if (currentNetworkParameters != updatedNetworkParameters) {
 					log.info("succeeded in getting updated network parameters")
 					succeededFuture(updatedNetworkParameters)
-				}
-				else {
-					log.info("Still trying to get updated network parameters")
-					failedFuture("Network parameters is not updated")
+				} else {
+					log.info("Network parameters has not been updated yet")
+					throw Exception("Network parameters has not been updated yet")
 				}
 			}
 		}
+	}
 	
 	@Test
 	fun `that we can download the truststore`(context: TestContext) {
