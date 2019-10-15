@@ -17,6 +17,7 @@ package io.cordite.networkmap.utils
 
 import io.cordite.networkmap.service.*
 import io.cordite.networkmap.storage.mongo.MongoStorage
+import io.vertx.core.json.Json
 import io.vertx.ext.auth.AuthProvider
 import io.vertx.ext.auth.User
 import net.corda.core.identity.CordaX500Name
@@ -46,7 +47,8 @@ class NMSOptions(val port: Int = 8080,
                  val mongoConnectionString: String = "embed",
                  val mongodLocation: String = "",
                  val mongodDatabase: String = MongoStorage.DEFAULT_DATABASE,
-                 val rootCA : CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME)) : Options() {
+                 val rootCA : CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
+                 val networkParametersPath: String = "") : Options() {
 
   val authProvider : AuthProvider by lazy {
      when (user) {
@@ -87,14 +89,15 @@ class NMSOptions(val port: Int = 8080,
           DEV_ROOT_CA
         } else {
           CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(nmsOptionsParser.rootX509Name.stringValue))
-        }
+        },
+        networkParametersPath = nmsOptionsParser.networkParametersPath.stringValue
       )
     }
   }
 }
 
 class NMSOptionsParser : Options() {
-  val portOpt = addOption("port", "8080", "web port")
+  val portOpt = addOption("port", "8081", "web port")
   val dbDirectoryOpt = addOption("db", ".db", "database directory for this service")
   val cacheTimeoutOpt = addOption("cache-timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")
   val paramUpdateDelayOpt = addOption("param-update-delay", "10S", "schedule duration for a parameter update")
@@ -117,4 +120,5 @@ class NMSOptionsParser : Options() {
   val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
   val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
   val storageType = addOption("storage-type", StorageType.MONGO.name.toLowerCase(), "file | mongo")
+  val networkParametersPath =  addOption("nmp-path", "", "path to network map parameters file")
 }

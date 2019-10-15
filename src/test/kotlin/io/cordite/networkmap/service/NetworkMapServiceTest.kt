@@ -41,6 +41,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -130,11 +131,11 @@ class NetworkMapServiceTest {
 			"9/wwFw2whBqt8hqRSpfYAME=\n" +
 			"-----END PRIVATE KEY-----\n"
 		
-		@JvmStatic
+		/*@JvmStatic
 		@BeforeClass
 		fun beforeClass() {
 			SerializationTestEnvironment.init()
-		}
+		}*/
 	}
 	
 	@JvmField
@@ -195,6 +196,18 @@ class NetworkMapServiceTest {
 			context.assertTrue(it.succeeded())
 			async.complete()
 		}
+	}
+	
+	@Test
+	fun `that we can configure network map with default network map parameters`(context: TestContext) {
+		val nmc = createNetworkMapClient()
+		val nmp = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash).verified()
+		assertEquals(nmp.minimumPlatformVersion, 4)
+		assertEquals(nmp.maxMessageSize, 10485760)
+		assertEquals(nmp.maxTransactionSize, Int.MAX_VALUE)
+		assertEquals(nmp.epoch, 2)
+		assertEquals(nmp.eventHorizon, 30.days)
+		assertEquals(nmp.packageOwnership, emptyMap())
 	}
 	
 	@Test

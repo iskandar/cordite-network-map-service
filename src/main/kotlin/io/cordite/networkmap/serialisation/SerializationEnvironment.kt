@@ -16,9 +16,12 @@
 package io.cordite.networkmap.serialisation
 
 import com.fasterxml.jackson.databind.module.SimpleModule
+import io.bluebank.braid.corda.serialisation.BraidCordaJacksonInit
+import io.cordite.networkmap.service.NetworkMapServiceProcessor
 import io.vertx.core.json.Json
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
@@ -38,6 +41,7 @@ open class SerializationEnvironment {
     private val log = loggerFor<SerializationEnvironment>()
 
     fun init() {
+      BraidCordaJacksonInit.init()
       SerializationEnvironment().setup()
     }
 
@@ -48,6 +52,7 @@ open class SerializationEnvironment {
         .addSerializer(CordaX500Name::class.java, JacksonSupport.CordaX500NameSerializer)
         .addSerializer(PublicKey::class.java, PublicKeySerializer())
         .addDeserializer(PublicKey::class.java, PublicKeyDeserializer())
+	      .setMixInAnnotation(NetworkParameters::class.java, NetworkParametersMixin::class.java)
       Json.mapper.registerModule(module)
       Json.prettyMapper.registerModule(module)
     }
