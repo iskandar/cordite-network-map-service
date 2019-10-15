@@ -74,14 +74,14 @@ class NetworkMapServiceProcessor(
       whitelistedContractImplementations = mapOf()
     )
   }
-
+  
   // we use a single thread to queue changes to the map, to ensure consistency
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
   private lateinit var certs: CertificateAndKeyPair
 
-  fun start(): Future<Unit> {
+  fun start(networkParameters: NetworkParameters): Future<Unit> {
     certs = certificateManager.networkMapCertAndKeyPair
-    return execute { createNetworkParameters().mapUnit() }
+    return execute {  createNetworkParameters(networkParameters).mapUnit() }
   }
 
   fun stop() {}
@@ -410,13 +410,14 @@ class NetworkMapServiceProcessor(
     return updateNetworkParameters(update, description, Instant.now().plus(paramUpdateDelay))
   }
 
-  private fun createNetworkParameters(): Future<SecureHash> {
+  private fun createNetworkParameters(networkParameters: NetworkParameters): Future<SecureHash> {
     logger.info("creating network parameters ...")
     logger.info("retrieving current network parameter ...")
     return storages.getCurrentSignedNetworkParameters().map { it.raw.hash }
       .recover {
         logger.info("could not find network parameters - creating one from the template")
-        storages.storeNetworkParameters(templateNetworkParameters, certs)
+        //storages.storeNetworkParameters(templateNetworkParameters, certs)
+        storages.storeNetworkParameters(networkParameters!!, certs)
           .compose { hash -> storages.storeCurrentParametersHash(hash) }
           .onSuccess { result ->
             logger.info("network parameters saved $result")
