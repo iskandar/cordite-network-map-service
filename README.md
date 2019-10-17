@@ -109,6 +109,7 @@ java properties (pass with -D<propertyname>=<property-value>) and env variables
 | tls-cert-path               | NMS_TLS_CERT_PATH                   |                                                                                                       | path to cert if TLS is turned on                                                                                         |
 | tls-key-path                | NMS_TLS_KEY_PATH                    |                                                                                                       | path to key if TLS turned on                                                                                             |
 | web-root                    | NMS_WEB_ROOT                        | /                                                                                                     | for remapping the root url for all requests                                                                              |
+| nmp-path                    | NMP_PATH                            |                                                                                                       | path to network parameters file. sample file can be found in resources folder.                                       |
 
 
 ## Doorman protocol
