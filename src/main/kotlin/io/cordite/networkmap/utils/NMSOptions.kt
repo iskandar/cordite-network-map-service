@@ -97,7 +97,7 @@ class NMSOptions(val port: Int = 8080,
 }
 
 class NMSOptionsParser : Options() {
-  val portOpt = addOption("port", "8081", "web port")
+  val portOpt = addOption("port", "8080", "web port")
   val dbDirectoryOpt = addOption("db", ".db", "database directory for this service")
   val cacheTimeoutOpt = addOption("cache-timeout", "2S", "http cache timeout for this service in ISO 8601 duration format")
   val paramUpdateDelayOpt = addOption("param-update-delay", "10S", "schedule duration for a parameter update")
