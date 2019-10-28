@@ -16,6 +16,7 @@
 package io.cordite.networkmap.service
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.cordite.networkmap.serialisation.NetworkParametersMixin
 import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_NON_VALIDATING_NOTARIES
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companion.DEFAULT_DIR_VALIDATING_NOTARIES
@@ -238,20 +239,19 @@ class NetworkMapAdminInterfaceTest {
 			}
 			.compose {
 				log.info("replacing network parameters")
-				val notary1 = NotaryInfo(TestIdentity(CordaX500Name("Notary1", "New York", "US")).party, false)
-				val newNetworkParams = currentNetworkParameters.copy(
-					notaries = listOf(notary1),
-					minimumPlatformVersion = 3
+				val newNetworkParameters:NetworkParametersMixin = Json.mapper.readValue(
+					File("src/test/resources/network-parameters/network-parameters.json").absoluteFile,
+					NetworkParametersMixin::class.java
 				)
-				client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParams), "Authorization" to key)
+				client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/replaceAllNetworkParameters", Json.encode(newNetworkParameters), "Authorization" to key)
 			}
 			.compose { waitForNMSUpdate(vertx) }
 			.compose { getNMSParametersWithRetry() }
 			.onSuccess {
 				it.map{ updatedNetworkParameters ->
-					context.assertEquals(1, updatedNetworkParameters.notaries.size, "notaries should be correct count after update")
+					context.assertEquals(0, updatedNetworkParameters.notaries.size, "notaries should be correct count after update")
 					log.info("notary count is correct")
-					context.assertEquals(3, updatedNetworkParameters.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
+					context.assertEquals(4, updatedNetworkParameters.minimumPlatformVersion, "minimumPlatformVersion should be correct after update")
 					log.info("minimumPlatformVersion is correct")
 				}
 			}
