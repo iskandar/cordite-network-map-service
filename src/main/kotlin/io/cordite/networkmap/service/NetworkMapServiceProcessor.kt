@@ -20,6 +20,7 @@ package io.cordite.networkmap.service
 import io.bluebank.braid.core.async.mapUnit
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
+import io.cordite.networkmap.serialisation.NetworkParametersMixin
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.parseWhitelist
 import io.cordite.networkmap.utils.*
@@ -32,6 +33,7 @@ import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.json.Json
 import io.vertx.ext.web.RoutingContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -365,7 +367,20 @@ class NetworkMapServiceProcessor(
     }.compose { storages.networkParameters.getAll(it) }
       .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() } }
   }
-
+  
+  @ApiOperation(value = "replace current network map", response = String::class)
+  fun replaceAllNetworkParameters(networkParametersMixin: NetworkParametersMixin): Future<String> {
+    logger.info("replacing all network parameters")
+    return try {
+      val newNetworkParameters = Json.mapper.convertValue(networkParametersMixin, NetworkParameters::class.java)
+      val updater = changeSet(Change.ReplaceAllNetworkParameters(newNetworkParameters))
+      updateNetworkParameters(updater, "admin replacing all network parameters").map { "OK" }
+    } catch (err: Throwable) {
+      logger.error("failed to replace the network parameters", err)
+      failedFuture(err)
+    }
+  }
+  
   @ApiOperation(value = "serve current network map as a JSON document", response = NetworkMap::class)
   fun getCurrentNetworkMap(): Future<NetworkMap> {
     return createNetworkMap()
@@ -508,17 +523,7 @@ class NetworkMapServiceProcessor(
         }
       }
   }
-
-  fun replaceAllNetworkParameters(newNetworkParameters: NetworkParameters): Future<String> {
-    logger.info("replacing all network parameters")
-    return try {
-      val updater = changeSet(Change.ReplaceAllNetworkParameters(newNetworkParameters))
-      updateNetworkParameters(updater, "admin replacing all network parameters").map { "OK" }
-    } catch (err: Throwable) {
-      logger.error("failed to replace the network parameters", err)
-      failedFuture(err)
-    }
-  }
+  
   // END: core functions
 
   // BEGIN: utility functions
