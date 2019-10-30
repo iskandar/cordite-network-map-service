@@ -8,7 +8,11 @@
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
 6. [How do I add contract to the whitelist](#6-how-do-i-add-contract-to-the-whitelist)
-7. [How to set up notary cluster](NotaryCluster.md)
+7. [Delete all nodes](#7-delete-all-nodes)
+8. [Delete validating notary](#8-delete-validating-notary)
+9. [Delete non-validating notary](#9-delete-non-validating-notary)
+10. [How to setup a notary cluster](notary-cluster.md)
+11. [Know more about network parameters](network-parameters.md)
 
 ## Questions
 
@@ -286,3 +290,52 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
 ```
 
 4. For each node in the network, delete the existing network-parameters file and restart the node
+
+### 7. Delete all nodes
+
+- [ ] login to the NMS API and cache the token
+
+  ```bash
+  TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  ```
+
+- [ ] delete all nodes
+  ```bash
+  curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/admin/api/nodes/
+  ```  
+
+- [ ] delete node via admin page   
+
+  Login to http://localhost:8080/ and delete the node by clicking on the trash icon.
+  
+  
+### 8. Delete validating notary  
+  `nodeKey` used as data in the below api curl can be copied from the nodeinfo file name.   
+  Sample nodeinfo file name is `nodeInfo-777DA369F066FE34BEDE3E6334A1006A4026A02DD76AFA798204BD015C9965DE`. nodeKey is the hash present in the file name.
+
+- [ ] login to the NMS API and cache the token
+
+  ```bash
+  TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  ```
+  
+- [ ] delete validating notary
+    
+  ```bash
+  curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/admin/api/notaries/validating -d 'nodeKey'
+
+  ```    
+  
+### 9. Delete non-validating notary
+    
+- [ ] login to the NMS API and cache the token
+
+  ```bash
+  TOKEN=`curl -X POST "http://localhost:8080/admin/api/login" -H  "accept: text/plain" -H  "Content-Type: application/json" -d "{  \"user\": \"sa\",  \"password\": \"admin\"}"`
+  ```
+
+- [ ] delete non-validating notary
+  ```bash
+  curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/admin/api/notaries/nonValidating -d 'nodeKey'
+  ```
+
