@@ -8,11 +8,12 @@
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
 6. [How do I add contract to the whitelist](#6-how-do-i-add-contract-to-the-whitelist)
-7. [Delete all nodes](#7-delete-all-nodes)
-8. [Delete validating notary](#8-delete-validating-notary)
-9. [Delete non-validating notary](#9-delete-non-validating-notary)
-10. [How to setup a notary cluster](notary-cluster.md)
-11. [Know more about network parameters](network-parameters.md)
+7. [How do I pass JKS files for NMS](#7-how-do-i-pass-jks-files-for-NMS)
+8. [Delete all nodes](#7-delete-all-nodes)
+9. [Delete validating notary](#8-delete-validating-notary)
+10. [Delete non-validating notary](#9-delete-non-validating-notary)
+11. [How to setup a notary cluster](notary-cluster.md)
+12. [Know more about network parameters](network-parameters.md)
 
 ## Questions
 
@@ -339,3 +340,18 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
   curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/admin/api/notaries/nonValidating -d 'nodeKey'
   ```
 
+### 7. How do I pass JKS files for NMS
+    
+    NMS doesn't support this feature now but it will be included in the future release.
+    
+    Reference: https://gitlab.com/cordite/network-map-service/issues/94
+    
+    ``` 
+    Workaround:
+   
+    Run NMS with Storage type as File. The filestore mode creates a directory for the keys and generates the keys if they don't exist. 
+    `Cert location: network-map-service/.db/certs`. Provide this directory and keys as input while starting NMS.
+    
+    Mount the correct cert directory while running NMS docker version.
+
+    ```
