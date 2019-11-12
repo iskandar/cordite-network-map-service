@@ -20,11 +20,9 @@ import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Indexes
-import com.mongodb.reactivestreams.client.MongoClient
-import com.mongodb.reactivestreams.client.MongoClients
-import com.mongodb.reactivestreams.client.MongoCollection
-import com.mongodb.reactivestreams.client.MongoDatabase
+import com.mongodb.reactivestreams.client.*
 import io.bluebank.braid.core.logging.loggerFor
+import io.cordite.networkmap.storage.mongo.rx.toObservable
 import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
 import io.cordite.networkmap.storage.mongo.serlalisation.JacksonCodecProvider
 import io.cordite.networkmap.storage.mongo.serlalisation.ObjectMapperFactory
@@ -154,12 +152,15 @@ class SubscriberOnFuture<T>(private val future: Future<T> = Future.future()) : S
   }
 }
 
-infix fun <R> KProperty<R>.eq(key: R): Bson {
+infix fun <R> KProperty<R>.eq(value: R) = Filters.eq(bsonName, value)
+infix fun <R> KProperty<R>.`in`(values: Iterable<R>) = Filters.`in`(bsonName, values)
+
+val <R> KProperty<R>.bsonName get() : String {
   val a = this.javaField!!.getDeclaredAnnotation(BsonId::class.java)
   return when (a) {
     null -> this.name
     else -> "_id"
-  }.let { Filters.eq(it, key) }
+  }
 }
 
 enum class IndexType {
@@ -170,4 +171,58 @@ infix fun <R> IndexType.idx(property: KProperty<R>): Bson {
   return when (this) {
     IndexType.HASHED -> Indexes.hashed(property.name)
   }
+}
+
+inline fun <reified TResult, reified Key, reified Value> FindPublisher<TResult>.toFuture(crossinline keyExtractor: TResult.() -> Key, crossinline valueExtractor: TResult.() -> Value) : Future<Map<Key, Value>> {
+  val map = mutableMapOf<Key, Value>()
+  val result = Future.future<Map<Key, Value>>()
+
+  this.toObservable()
+    .subscribe(object : rx.Subscriber<TResult>(), Subscriber<TResult> {
+      override fun onCompleted() {
+        result.complete(map)
+      }
+
+      override fun onComplete() {
+        result.complete(map)
+      }
+
+      override fun onSubscribe(subscription: Subscription?) {}
+
+      override fun onNext(result: TResult) {
+        map[keyExtractor(result)] = valueExtractor(result)
+      }
+
+      override fun onError(exception: Throwable?) {
+        result.fail(exception)
+      }
+    })
+  return result
+}
+
+inline fun <reified TResult, reified Value> FindPublisher<TResult>.toFuture(crossinline valueExtractor: TResult.() -> Value) : Future<List<Value>> {
+  val items = mutableListOf<Value>()
+  val result = Future.future<List<Value>>()
+
+  this.toObservable()
+    .subscribe(object : rx.Subscriber<TResult>(), Subscriber<TResult> {
+      override fun onCompleted() {
+        result.complete(items)
+      }
+
+      override fun onComplete() {
+        result.complete(items)
+      }
+
+      override fun onSubscribe(subscription: Subscription?) {}
+
+      override fun onNext(result: TResult) {
+        items.add(valueExtractor(result))
+      }
+
+      override fun onError(exception: Throwable?) {
+        result.fail(exception)
+      }
+    })
+  return result
 }

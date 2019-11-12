@@ -90,6 +90,13 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       .toList()
       .toFuture<List<String>>()
   }
+  
+  override fun size(): Future<Int> {
+    return bucket.find()
+      .toObservable()
+      .count()
+      .toFuture()
+  }
 
   override fun getAll(keys: List<String>): Future<Map<String, T>> {
     return keys.map { key ->
@@ -109,7 +116,7 @@ abstract class AbstractMongoFileStorage<T : Any>(val client: MongoClient, dbName
       }
   }
 
-  fun getPage(page: Int, pageSize: Int): Future<Map<String, T>> {
+  override fun getPage(page: Int, pageSize: Int): Future<Map<String, T>> {
     return bucket.find().skip(pageSize * (page - 1)).limit(pageSize)
       .toObservable()
       .map { it.filename }

@@ -27,7 +27,6 @@ import io.cordite.networkmap.serialisation.NetworkParametersMixin
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
-import io.cordite.networkmap.service.NetworkMapServiceProcessor.Companion.EXECUTOR
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -175,6 +174,8 @@ class NetworkMapService(
                 get("$ADMIN_REST_ROOT/whitelist", processor::serveWhitelist)
                 get("$ADMIN_REST_ROOT/notaries", processor::serveNotaries)
                 get("$ADMIN_REST_ROOT/nodes", processor::serveNodes)
+                get("$ADMIN_REST_ROOT/nodes/paging-summary", processor::nodeInfoPagingSummary)
+                get("$ADMIN_REST_ROOT/nodes/page", processor::getNodeInfoByPage)
                 get("$ADMIN_REST_ROOT/network-parameters", processor::getAllNetworkParameters)
                 get("$ADMIN_REST_ROOT/network-parameters/current", processor::getCurrentNetworkParameters)
                 get("$ADMIN_REST_ROOT/build-properties", thisService::serveProperties)

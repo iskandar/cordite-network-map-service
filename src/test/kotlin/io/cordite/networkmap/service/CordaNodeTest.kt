@@ -137,6 +137,7 @@ class CordaNodeTest {
 		) {
 			val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
 			log.info("start up the node")
+			
 			val node = startNode(
 				providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"),
 				rpcUsers = listOf(user),
@@ -163,7 +164,8 @@ class CordaNodeTest {
 				.onSuccess {
 					key = "Bearer $it"
 					log.info("key: $key")
-				}.compose {
+				}
+				.compose {
 					// set the complete whitelist
 					log.info("deleting all nodes")
 					client.futureDelete("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/nodes/",  "Authorization" to key)

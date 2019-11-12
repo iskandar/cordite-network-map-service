@@ -171,4 +171,46 @@ class AbstractMongoFileStorageTest {
     }
     return result
   }
+  
+  @Test
+  fun `populate storage and test paging`(context: TestContext) {
+    val testName1  = "test1"
+    val testName2  = "test2"
+    val testName3  = "test3"
+    val fileName1  = "file1"
+    val fileName2  = "file2"
+    val fileName3  = "file3"
+    val async = context.async()
+    storage.put(fileName1, TestData(testName1))
+      .compose { storage.get(fileName1) }
+      .onSuccess { data ->
+        context.assertNotNull(data)
+        context.assertEquals(testName1, data.name)
+      }
+      .compose { storage.put(fileName2, TestData(testName2)) }
+      .compose { storage.get(fileName2) }
+      .onSuccess { data ->
+        context.assertNotNull(data)
+        context.assertEquals(testName2, data.name)
+      }
+      .compose { storage.put(fileName3, TestData(testName3)) }
+      .compose { storage.get(fileName3) }
+      .onSuccess { data ->
+        context.assertNotNull(data)
+        context.assertEquals(testName3, data.name)
+      }
+      .compose { storage.getPage(1, 2) }
+      .onSuccess { data ->
+        context.assertNotNull(data)
+        context.assertTrue(data.containsKey(fileName1))
+        context.assertTrue(data.containsKey(fileName2))
+      }
+      .compose { storage.getPage(2, 2) }
+      .onSuccess { data ->
+        context.assertNotNull(data)
+        context.assertTrue(data.containsKey(fileName3))
+      }
+      .onSuccess { async.complete() }
+      .catch { context.fail(it) }
+  }
 }
