@@ -30,4 +30,6 @@ interface Storage<T> {
   fun delete(key: String): Future<Unit>
   fun exists(key: String): Future<Boolean>
   fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration)
+  fun size(): Future<Int>
+  fun getPage(page: Int, pageSize: Int): Future<Map<String, T>>
 }

@@ -102,7 +102,24 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
         paths.map { path -> File(path).name }
       }
   }
-
+  
+  override fun size(): Future<Int> {
+    val fExists = future<Boolean>()
+    vertx.fileSystem().exists(dir.absolutePath, fExists)
+    return fExists.compose { exists ->
+      if (exists) {
+        val result = future<List<String>>()
+        vertx.fileSystem().readDir(dir.absolutePath, result)
+        result
+      } else {
+        succeededFuture<List<String>>(listOf())
+      }
+    }
+    .compose{
+      succeededFuture(it.size)
+    }
+  }
+  
   override fun getAll(keys: List<String>) : Future<Map<String, T>> {
     return keys.map { key ->
       read(key).map { key to it }
@@ -116,7 +133,15 @@ abstract class AbstractFileBasedNameValueStore<T : Any>(
         getAll(keys)
       }
   }
-
+  
+  override fun getPage(page: Int, pageSize: Int): Future<Map<String, T>> {
+    return getKeys()
+      .compose { keys ->
+        val keysByPage = keys.sorted().drop(pageSize * (page - 1)).take(pageSize)
+        getAll(keysByPage)
+      }
+  }
+  
   override fun serve(key: String, routingContext: RoutingContext, cacheTimeout: Duration) {
     routingContext.handleExceptions {
       routingContext.response().apply {

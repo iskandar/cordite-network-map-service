@@ -19,16 +19,16 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.reactivestreams.client.MongoClient
 import io.bluebank.braid.core.async.mapUnit
+import io.bluebank.braid.core.async.toFuture
 import io.bluebank.braid.core.logging.loggerFor
 import io.cordite.networkmap.storage.Storage
 import io.cordite.networkmap.storage.file.TextStorage
+import io.cordite.networkmap.storage.mongo.rx.toObservable
 import io.cordite.networkmap.storage.mongo.serlalisation.BsonId
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
 import io.vertx.core.impl.NoStackTraceThrowable
 import io.vertx.ext.web.RoutingContext
-import org.reactivestreams.Subscription
-import rx.Subscriber
 import java.time.Duration
 
 class MongoTextStorage(mongoClient: MongoClient,
@@ -90,82 +90,22 @@ class MongoTextStorage(mongoClient: MongoClient,
   }
 
   override fun getKeys(): Future<List<String>> {
-    val list = mutableListOf<String>()
-    val result = Future.future<List<String>>()
-    collection.find()
-      .subscribe(object : Subscriber<KeyValue>(), org.reactivestreams.Subscriber<KeyValue> {
-        override fun onCompleted() {
-          result.complete(list)
-        }
-
-        override fun onComplete() {
-          result.complete(list)
-        }
-
-        override fun onSubscribe(subscription: Subscription?) {}
-
-        override fun onNext(kv: KeyValue) {
-          list.add(kv.key)
-        }
-
-        override fun onError(exception: Throwable?) {
-          result.fail(exception)
-        }
-      })
-    return result
+    return collection
+      .find()
+      .toFuture { key }
   }
-
+  
   override fun getAll(): Future<Map<String, String>> {
-    val map = mutableMapOf<String, String>()
-    val result = Future.future<Map<String, String>>()
-    collection.find()
-      .subscribe(object : Subscriber<KeyValue>(), org.reactivestreams.Subscriber<KeyValue> {
-        override fun onCompleted() {
-          result.complete(map)
-        }
-
-        override fun onComplete() {
-          result.complete(map)
-        }
-
-        override fun onSubscribe(subscription: Subscription?) {}
-
-        override fun onNext(kv: KeyValue) {
-          map[kv.key] = kv.value
-        }
-
-        override fun onError(exception: Throwable?) {
-          result.fail(exception)
-        }
-      })
-    return result
+    return collection
+      .find()
+      .toFuture({ key }, { value })
   }
 
   override fun getAll(keys: List<String>): Future<Map<String, String>> {
-    val map = mutableMapOf<String, String>()
-    val result = Future.future<Map<String, String>>()
-    collection.find()
-      .filter(Filters.`in`(KeyValue::key.name, keys))
-      .subscribe(object : Subscriber<KeyValue>(), org.reactivestreams.Subscriber<KeyValue> {
-        override fun onCompleted() {
-          result.complete(map)
-        }
-
-        override fun onComplete() {
-          result.complete(map)
-        }
-
-        override fun onSubscribe(subscription: Subscription?) {}
-
-        override fun onNext(kv: KeyValue) {
-          map[kv.key] = kv.value
-        }
-
-        override fun onError(exception: Throwable?) {
-          result.fail(exception)
-        }
-      })
-    return result
+    return collection
+      .find()
+      .filter(KeyValue::key `in` keys)
+      .toFuture({ key }, { value })
   }
 
   override fun delete(key: String): Future<Unit> {
@@ -191,7 +131,19 @@ class MongoTextStorage(mongoClient: MongoClient,
         routingContext.end(it)
       }
   }
-
+  
+  override fun size(): Future<Int> {
+    return collection.find()
+      .toObservable()
+      .count()
+      .toFuture()
+  }
+  
+  override fun getPage(page: Int, pageSize: Int): Future<Map<String, String>> {
+    return collection
+      .find().skip(pageSize * (page - 1)).limit(pageSize)
+      .toFuture({ key }, { value })
+  }
 
   data class KeyValue(@BsonId val key: String, val value: String)
 }

@@ -23,11 +23,14 @@ import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.serialisation.NetworkParametersMixin
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.parseWhitelist
+import io.cordite.networkmap.service.NetworkMapService.Companion.ADMIN_REST_ROOT
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.swagger.annotations.ApiOperation
 import io.swagger.annotations.ApiParam
+import io.swagger.annotations.ApiResponse
+import io.swagger.annotations.ApiResponses
 import io.vertx.core.Future
 import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
@@ -76,14 +79,14 @@ class NetworkMapServiceProcessor(
       whitelistedContractImplementations = mapOf()
     )
   }
-  
+
   // we use a single thread to queue changes to the map, to ensure consistency
   private val executor = vertx.createSharedWorkerExecutor(EXECUTOR, 1)
   private lateinit var certs: CertificateAndKeyPair
 
   fun start(networkParameters: NetworkParameters): Future<Unit> {
     certs = certificateManager.networkMapCertAndKeyPair
-    return execute {  createNetworkParameters(networkParameters).mapUnit() }
+    return execute { createNetworkParameters(networkParameters).mapUnit() }
   }
 
   fun stop() {}
@@ -155,8 +158,8 @@ class NetworkMapServiceProcessor(
       Future.failedFuture(err)
     }
   }
-	
-	@Suppress("MemberVisibilityCanBePrivate")
+
+  @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = """For the non validating distributed notary to upload its signed NodeInfo object to the network map",
     Please ignore the way swagger presents this. To upload a notary info file use:
       <code>
@@ -177,7 +180,7 @@ class NetworkMapServiceProcessor(
       Future.failedFuture(err)
     }
   }
-  
+
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = """For the validating distributed notary to upload its signed NodeInfo object to the network map",
     Please ignore the way swagger presents this. To upload a notary info file use:
@@ -199,7 +202,7 @@ class NetworkMapServiceProcessor(
       Future.failedFuture(err)
     }
   }
-	
+
   @Suppress("MemberVisibilityCanBePrivate")
   @ApiOperation(value = """For the validating notary to upload its signed NodeInfo object to the network map.
     Please ignore the way swagger presents this. To upload a notary info file use:
@@ -334,7 +337,7 @@ class NetworkMapServiceProcessor(
       failedFuture(err)
     }
   }
-  
+
   @ApiOperation(value = "serve set of notaries", response = SimpleNotaryInfo::class, responseContainer = "List")
   fun serveNotaries(routingContext: RoutingContext) {
     logger.trace("serving current notaries")
@@ -367,7 +370,7 @@ class NetworkMapServiceProcessor(
     }.compose { storages.networkParameters.getAll(it) }
       .map { networkParams -> networkParams.mapValues { entry -> entry.value.verified() } }
   }
-  
+
   @ApiOperation(value = "replace current network map", response = String::class)
   fun replaceAllNetworkParameters(networkParametersMixin: NetworkParametersMixin): Future<String> {
     logger.info("replacing all network parameters")
@@ -380,7 +383,7 @@ class NetworkMapServiceProcessor(
       failedFuture(err)
     }
   }
-  
+
   @ApiOperation(value = "serve current network map as a JSON document", response = NetworkMap::class)
   fun getCurrentNetworkMap(): Future<NetworkMap> {
     return createNetworkMap()
@@ -404,6 +407,77 @@ class NetworkMapServiceProcessor(
         })
       }
       .catch { context.end(it) }
+  }
+
+  @Suppress("MemberVisibilityCanBePrivate")
+  @ApiOperation(value = "retrieve nodeinfos size and total number of pages", response = NodeInfoPagingSummary::class)
+  @ApiResponses(
+    value = [
+      ApiResponse(code = 200, message = "OK"),
+      ApiResponse(code = 400, message = "pageSize should be greater than zero"),
+      ApiResponse(code = 500, message = "Internal server error")
+    ]
+  )
+  fun nodeInfoPagingSummary(@ApiParam(
+    name="pageSize",
+    required = false,
+    defaultValue = "10",
+    value = "page size - must be greater than zero"
+  ) pageSize: Int = 10): Future<NodeInfoPagingSummary> {
+    logger.info("retrieving the paging summary of nodeInfos")
+    check(pageSize > 0) { "pageSize should be greater than zero" }
+    return storages.nodeInfo.size()
+      .map { size ->
+        NodeInfoPagingSummary(
+          size,
+          size.div(pageSize),
+          pageSize
+        )
+      }
+  }
+
+  @ApiOperation(value = "serve a page of node Infos", response = NodeInfosByPage::class)
+  @ApiResponses(
+    value = [
+      ApiResponse(code = 200, message = "OK"),
+      ApiResponse(code = 400, message = "pageSize should be greater than zero"),
+      ApiResponse(code = 400, message = "page should be greater than zero"),
+      ApiResponse(code = 404, message = "requested page should be lesser than total pages"),
+      ApiResponse(code = 500, message = "Internal server error")
+    ]
+  )
+  fun getNodeInfoByPage(@ApiParam(defaultValue = "1", name="page", required = true, value = "page number - must be greater than 0")
+                        @QueryParam("page") page: Int,
+                        @ApiParam(defaultValue = "10", name="pageSize", required = true, value = "page size - must be greater than zero")
+                        @QueryParam("pageSize") pageSize: Int): Future<NodeInfosByPage> {
+    var nextPageUrl: String? = null
+    check(pageSize > 0) { "pageSize should be greater than zero" }
+    check(page > 0) { "page should be greater than zero" }
+    return storages.nodeInfo.size()
+      .onSuccess {
+        assert(it != 0) { "Error while getting total number of nodes" }
+        val totalPages = it / pageSize
+        assert(page <= totalPages) { "requested page should be lesser than total pages" }
+        nextPageUrl = if (page < totalPages) "$ADMIN_REST_ROOT/nodes/page?pageSize=$pageSize&page=${page + 1}" else null
+      }
+      .compose {
+        storages.nodeInfo.getPage(page, pageSize)
+      }
+      .map { mapOfNodes ->
+        val simpleNodeInfos = mapOfNodes.map { namedNodeInfo ->
+          val node = namedNodeInfo.value.verified()
+          SimpleNodeInfo(
+            nodeKey = namedNodeInfo.key,
+            addresses = node.addresses,
+            parties = node.legalIdentitiesAndCerts.map { NameAndKey(it.name, it.owningKey) },
+            platformVersion = node.platformVersion
+          )
+        }
+        NodeInfosByPage(
+          simpleNodeInfos,
+          nextPageUrl
+        )
+      }
   }
 
   @Suppress("MemberVisibilityCanBePrivate")
@@ -523,7 +597,7 @@ class NetworkMapServiceProcessor(
         }
       }
   }
-  
+
   // END: core functions
 
   // BEGIN: utility functions
@@ -542,3 +616,6 @@ class NetworkMapServiceProcessor(
   }
   // END: utility functions
 }
+
+data class NodeInfoPagingSummary(val totalNoOfNodeInfos: Int, val totalPages: Int, val pageSize: Int)
+data class NodeInfosByPage(val simpleNodeInfos: List<SimpleNodeInfo>, val nextPage: String?)
