@@ -81,9 +81,6 @@ You can configure the service using `-D` system properties. See the section for
 
 Java properties (pass with -D<propertyname>=<property-value>) and env variables:
 
-
-java properties (pass with -D<propertyname>=<property-value>) and env variables
-
 | Property                    | Env Variable                        | Default                                                                                               | Description                                                                                                              |
 | --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | auth-password               | NMS_AUTH_PASSWORD                   | admin                                                                                                 | system admin password                                                                                                    |
