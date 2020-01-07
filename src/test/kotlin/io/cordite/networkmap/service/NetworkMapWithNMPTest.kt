@@ -15,23 +15,18 @@
  */
 package io.cordite.networkmap.service
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.NMSUtil.Companion.createNetworkMapClient
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
-import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.utilities.days
-import net.corda.node.services.network.NetworkMapClient
-import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.URL
-import java.time.Duration
 import kotlin.test.assertEquals
 
 @RunWith(VertxUnitRunner::class)
@@ -109,8 +104,9 @@ class NetworkMapWithNMPTest {
 	}
 	
 	@Test
-	fun `that we can configure network map with network parameters`(context: TestContext) {
-		val nmc = createNetworkMapClient()
+	fun `that we can configure network map with network parameters`() {
+		val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+		val nmc = createNetworkMapClient(rootCert, PORT)
 		val nmp = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash).verified()
 		assertEquals(nmp.minimumPlatformVersion, 4)
 		assertEquals(nmp.maxMessageSize, 10485760)
@@ -118,11 +114,5 @@ class NetworkMapWithNMPTest {
 		assertEquals(nmp.epoch, 2)
 		assertEquals(nmp.eventHorizon, 30.days)
 		assertEquals(nmp.packageOwnership, emptyMap())
-	}
-	
-	private fun createNetworkMapClient(): NetworkMapClient {
-		return NetworkMapClient(URL("http://localhost:$PORT$DEFAULT_NETWORK_MAP_ROOT"), MOCK_VERSION_INFO).apply {
-			start(service.certificateManager.rootCertificateAndKeyPair.certificate)
-		}
 	}
 }

@@ -15,33 +15,32 @@
  */
 package io.cordite.networkmap.service
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.bluebank.braid.core.async.getOrThrow
 import io.cordite.networkmap.utils.*
+import io.cordite.networkmap.utils.NMSUtil.Companion.createAliceSignedNodeInfo
 import io.cordite.networkmap.utils.NMSUtil.Companion.createNetworkMapClient
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
-import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
-import io.vertx.kotlin.core.json.jsonObjectOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import org.junit.*
 import org.junit.runner.RunWith
+import java.io.IOException
 import java.net.URL
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 @RunWith(VertxUnitRunner::class)
-class CordaNodeTest {
+class RejectNodeKeyChangeTest {
 	companion object {
-		val log = loggerFor<CordaNodeTest>()
-		
+		val log = loggerFor<RejectNodeKeyChangeTest>()
 		@JvmField
 		@ClassRule
 		val mdcClassRule = JunitMDCRule()
@@ -115,10 +114,10 @@ class CordaNodeTest {
 	}
 	
 	@Test
-	fun `run node, check node count and delete all nodes`(context: TestContext) {
-		val portAllocation = PreallocatedFreePortAllocation()
-		
+	fun `that we can register node twice with same legal name but different keys`(context: TestContext) {
 		val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+		
+		val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
 		
 		val zoneParams = SharedCompatibilityZoneParams(URL("http://localhost:$PORT$DEFAULT_NETWORK_MAP_ROOT"), null, {
 			service.addNotaryInfos(it).getOrThrow()
@@ -126,62 +125,76 @@ class CordaNodeTest {
 		}, rootCert)
 		
 		internalDriver(
-			portAllocation = portAllocation,
+			portAllocation = PreallocatedFreePortAllocation(),
 			compatibilityZone = zoneParams,
-			notarySpecs = listOf(NotarySpec(CordaX500Name("NotaryService", "Zurich", "CH"))),
+			notarySpecs = listOf(),
 			notaryCustomOverrides = mapOf("devMode" to false),
 			startNodesInProcess = false,
-			driverDirectory = createTempDir().toPath()
+			driverDirectory = createTempDir("tmp1").toPath()
 		) {
-			val user = User("user1", "test", permissions = setOf("InvokeRpc.getNetworkParameters", "InvokeRpc.networkMapSnapshot"))
 			log.info("start up the node")
-			
 			val node = startNode(
-				providedName = CordaX500Name("CordaTestNode", "Southwold", "GB"),
+				providedName = CordaX500Name("CordaTestNode", "Southworld", "GB"),
 				rpcUsers = listOf(user),
 				customOverrides = mapOf("devMode" to false)
 			).getOrThrow()
-			
+			node.stop()
+		}
+		internalDriver(
+			portAllocation = PreallocatedFreePortAllocation(),
+			compatibilityZone = zoneParams,
+			notarySpecs = listOf(),
+			notaryCustomOverrides = mapOf("devMode" to false),
+			startNodesInProcess = false,
+			driverDirectory = createTempDir("tmp2").toPath()
+		) {
+			log.info("start up the node")
+			val node = startNode(
+				providedName = CordaX500Name("CordaTestNode", "Southworld", "GB"),
+				rpcUsers = listOf(user),
+				customOverrides = mapOf("devMode" to false)
+			).getOrThrow()
 			val nodeRpc = node.rpc
 			log.info("node started. going to sleep to wait for the NMS to update")
 			NMSUtil.waitForNMSUpdate(vertx) // plenty of time for the NMS to synchronise
 			val nmc = createNetworkMapClient(rootCert, PORT)
 			val nm = nmc.getNetworkMap().payload
-			val nmp = nmc.getNetworkParameters(nm.networkParameterHash).verified()
-			context.assertEquals(nodeRpc.networkParameters, nmp)
 			val nodeNodes = nodeRpc.networkMapSnapshot().toSet()
 			val nmNodes = nm.nodeInfoHashes.map { nmc.getNodeInfo(it) }.toSet()
-			context.assertEquals(nodeNodes, nmNodes)
-			context.assertEquals(2, nodeNodes.size)
-			log.info("corda network node has the same nodes as the network map")
-			
-			log.info("logging into NMS to delete all nodes")
-			var key = ""
-			val async = context.async()
-			client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to ADMIN_USER_NAME, "password" to ADMIN_PASSWORD))
-				.onSuccess {
-					key = "Bearer $it"
-					log.info("key: $key")
-				}
-				.compose {
-					// set the complete whitelist
-					log.info("deleting all nodes")
-					client.futureDelete("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/nodes/",  "Authorization" to key)
-				}.compose {
-					NMSUtil.waitForNMSUpdate(vertx)
-				}.compose {
-					log.info("get nodes")
-					client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/nodes")
-				}
-				.onSuccess {
-					log.info("succeeded getting nodes")
-					val nodes = Json.decodeValue(it, object : TypeReference<List<SimpleNodeInfo>>() {})
-					context.assertEquals(0, nodes.size, "nodes should be correct count")
-					log.info("node count is correct")
-				}.onSuccess {
-					async.complete()
-				}
-				.catch(context::fail)
+			//NetworkMap does not have two nodes as network map rejected publish nodeInfo when the node with the same legal name tried to publish with different key
+			context.assertTrue(nmNodes.size!=nodeNodes.size)
+			}
+	}
+	
+	@Test
+	fun `that we can not test publish api for the same node name with a different key`(context: TestContext) {
+		val rootCert = service.certificateManager.rootCertificateAndKeyPair.certificate
+		val nmc = createNetworkMapClient(rootCert, PORT)
+		
+		val sni1 = createAliceSignedNodeInfo(service)
+		nmc.publish(sni1.signed)
+		//Thread.sleep(NETWORK_MAP_QUEUE_DELAY.toMillis() * 2)
+		NMSUtil.waitForNMSUpdate(vertx)
+		val nm = nmc.getNetworkMap().payload
+		val nhs = nm.nodeInfoHashes
+		context.assertEquals(1, nhs.size)
+		assertEquals(sni1.signed.raw.hash, nhs[0])
+		
+		val sni2 = createAliceSignedNodeInfo(service)
+		
+		val pk1 = sni1.nodeInfo.legalIdentities.first().owningKey
+		val pk2 = sni2.nodeInfo.legalIdentities.first().owningKey
+		assertNotEquals(pk1, pk2)
+		try {
+			nmc.publish(sni2.signed)
+			throw RuntimeException("should have throw IOException complaining that the node has been registered before")
+		} catch (err: Throwable) {
+			if (err !is IOException) {
+				throw err
+			}
+			NMSUtil.waitForNMSUpdate(vertx)
+			assertEquals(1, nmc.getNetworkMap().payload.nodeInfoHashes.size)
+			assertEquals("Response Code 500: node failed to register because the following names have already been registered with different public keys O=Alice Corp, L=Madrid, C=ES", err.message)
 		}
 	}
 }

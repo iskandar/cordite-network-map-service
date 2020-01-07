@@ -441,7 +441,8 @@ class NetworkMapService(
       vertx = vertx,
       storages = storages,
       certificateManager = certificateManager,
-      paramUpdateDelay = nmsOptions.paramUpdateDelay
+      paramUpdateDelay = nmsOptions.paramUpdateDelay,
+      allowNodeKeyChange = nmsOptions.allowNodeKeyChange
     )
     return createNetworkParameters().map{
       processor.start(it)

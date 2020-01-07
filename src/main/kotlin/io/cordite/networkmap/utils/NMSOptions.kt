@@ -17,7 +17,6 @@ package io.cordite.networkmap.utils
 
 import io.cordite.networkmap.service.*
 import io.cordite.networkmap.storage.mongo.MongoStorage
-import io.vertx.core.json.Json
 import io.vertx.ext.auth.AuthProvider
 import io.vertx.ext.auth.User
 import net.corda.core.identity.CordaX500Name
@@ -48,7 +47,8 @@ class NMSOptions(val port: Int = 8080,
                  val mongodLocation: String = "",
                  val mongodDatabase: String = MongoStorage.DEFAULT_DATABASE,
                  val rootCA : CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
-                 val networkParametersPath: String = "") : Options() {
+                 val networkParametersPath: String = "",
+                 val allowNodeKeyChange: Boolean = false) : Options() {
 
   val authProvider : AuthProvider by lazy {
      when (user) {
@@ -90,7 +90,8 @@ class NMSOptions(val port: Int = 8080,
         } else {
           CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(nmsOptionsParser.rootX509Name.stringValue))
         },
-        networkParametersPath = nmsOptionsParser.networkParametersPath.stringValue
+        networkParametersPath = nmsOptionsParser.networkParametersPath.stringValue,
+        allowNodeKeyChange = nmsOptionsParser.allowNodeKeyChange.booleanValue
       )
     }
   }
@@ -121,4 +122,5 @@ class NMSOptionsParser : Options() {
   val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
   val storageType = addOption("storage-type", StorageType.MONGO.name.toLowerCase(), "file | mongo")
   val networkParametersPath =  addOption("nmp-path", "", "path to network map parameters file")
+  val allowNodeKeyChange =  addOption("allow-node-key-change", "false", "to allow registration of a node with same legal name but different legal identity with NMS")
 }

@@ -23,7 +23,6 @@ import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage.Companio
 import io.cordite.networkmap.utils.*
 import io.cordite.networkmap.utils.NMSUtil.Companion.waitForNMSUpdate
 import io.vertx.core.Future
-import io.vertx.core.Future.failedFuture
 import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
@@ -33,13 +32,10 @@ import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import io.vertx.kotlin.core.json.jsonObjectOf
 import net.corda.core.crypto.Crypto
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.sign
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.core.TestIdentity
 import org.junit.*
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
@@ -131,7 +127,7 @@ class NetworkMapAdminInterfaceTest {
 		var whitelist = ""
 		
 		log.info("logging in")
-		val future = client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
+		client.futurePost("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/login", jsonObjectOf("user" to "sa", "password" to ""))
 			.onSuccess {
 				key = "Bearer $it"
 				log.info("key: $key")

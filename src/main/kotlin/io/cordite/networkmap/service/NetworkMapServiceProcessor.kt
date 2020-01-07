@@ -63,7 +63,8 @@ class NetworkMapServiceProcessor(
   vertx: Vertx,
   private val storages: ServiceStorages,
   private val certificateManager: CertificateManager,
-  val paramUpdateDelay: Duration
+  val paramUpdateDelay: Duration,
+  private val allowNodeKeyChange: Boolean
 ) {
   companion object {
     private val logger = loggerFor<NetworkMapServiceProcessor>()
@@ -102,24 +103,26 @@ class NetworkMapServiceProcessor(
       return storages.nodeInfo.getAll()
         .onSuccess { nodes ->
           // flatten the current nodes to Party -> PublicKey map
-          val registered = nodes.flatMap { namedSignedNodeInfo ->
-            namedSignedNodeInfo.value.verified().legalIdentitiesAndCerts.map { partyAndCertificate ->
-              partyAndCertificate.party.name to partyAndCertificate.owningKey
+          if(!allowNodeKeyChange) {
+            val registered = nodes.flatMap { namedSignedNodeInfo ->
+              namedSignedNodeInfo.value.verified().legalIdentitiesAndCerts.map { partyAndCertificate ->
+                partyAndCertificate.party.name to partyAndCertificate.owningKey
+              }
+            }.toMap()
+  
+            // now filter the party and certs of the nodeinfo we're trying to register
+            val registeredWithDifferentKey = partyAndCerts.filter {
+              // looking for where the public keys differ
+              registered[it.party.name].let { pk ->
+                pk != null && pk != it.owningKey
+              }
             }
-          }.toMap()
-
-          // now filter the party and certs of the nodeinfo we're trying to register
-          val registeredWithDifferentKey = partyAndCerts.filter {
-            // looking for where the public keys differ
-            registered[it.party.name].let { pk ->
-              pk != null && pk != it.owningKey
+            if (registeredWithDifferentKey.any()) {
+              val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
+              val msg = "node failed to register because the following names have already been registered with different public keys $names"
+              logger.warn(msg)
+              throw RuntimeException(msg)
             }
-          }
-          if (registeredWithDifferentKey.any()) {
-            val names = registeredWithDifferentKey.joinToString("\n") { it.name.toString() }
-            val msg = "node failed to registered because the following names have already been registered with different public keys $names"
-            logger.warn(msg)
-            throw RuntimeException(msg)
           }
         }
         .compose {
@@ -155,7 +158,7 @@ class NetworkMapServiceProcessor(
       updateNetworkParameters(updater, "admin updating adding non-validating notary").map { "OK" }
     } catch (err: Throwable) {
       logger.error("failed to add a non-validating notary", err)
-      Future.failedFuture(err)
+      failedFuture(err)
     }
   }
 
@@ -505,8 +508,7 @@ class NetworkMapServiceProcessor(
     return storages.getCurrentSignedNetworkParameters().map { it.raw.hash }
       .recover {
         logger.info("could not find network parameters - creating one from the template")
-        //storages.storeNetworkParameters(templateNetworkParameters, certs)
-        storages.storeNetworkParameters(networkParameters!!, certs)
+        storages.storeNetworkParameters(networkParameters, certs)
           .compose { hash -> storages.storeCurrentParametersHash(hash) }
           .onSuccess { result ->
             logger.info("network parameters saved $result")
