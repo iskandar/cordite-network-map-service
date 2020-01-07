@@ -8,10 +8,10 @@
 4. [How do I join the Cordite Test network?](#4-how-do-i-join-the-cordite-test-network)
 5. [How do I admin the embedded database](#5-how-do-i-admin-the-embedded-database)
 6. [How do I add contract to the whitelist](#6-how-do-i-add-contract-to-the-whitelist)
-7. [How do I pass JKS files for NMS](#7-how-do-i-pass-jks-files-for-NMS)
-8. [Delete all nodes](#7-delete-all-nodes)
-9. [Delete validating notary](#8-delete-validating-notary)
-10. [Delete non-validating notary](#9-delete-non-validating-notary)
+7. [How do I pass JKS files for NMS](#7-how-do-i-pass-jks-files-for-nms)
+8. [Delete all nodes](#8-delete-all-nodes)
+9. [Delete validating notary](#9-delete-validating-notary)
+10. [Delete non-validating notary](#10-delete-non-validating-notary)
 11. [How to setup a notary cluster](notary-cluster.md)
 12. [Know more about network parameters](network-parameters.md)
 
@@ -77,6 +77,13 @@ java -jar network-map-service.jar
   ```bash
   ./gradlew clean deployNodes
   ```
+  
+  or to build quickly
+  
+  ```bash
+  ./gradlew clean workflow-kotlin:deployNodes
+  ```
+
   
 - [ ] add the `compatibilityZoneURL` and `devModeOptions.allowCompatibilityZone` to the node.config within each node directory and ensure that all state is removed from the node directories
 
@@ -292,7 +299,78 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
 
 4. For each node in the network, delete the existing network-parameters file and restart the node
 
-### 7. Delete all nodes
+### 7. How do I pass JKS files for NMS
+
+#### Step 1: To generate root keystore if not already created by other means(Optional)     
+ 
+- [ ] Create ca key pair and ca pem file
+    ```bash
+    keytool -genkeypair -keyalg EC -keysize 256 -alias ca -dname "CN=Root CA, OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB" -ext bc:ca:true,pathlen:1 -ext bc:c -ext eku=serverAuth,clientAuth,anyExtendedKeyUsage -ext ku=digitalSignature,keyCertSign,cRLSign -keystore ca.jks -storepass changeme -keypass changeme
+      
+    keytool -exportcert -rfc -alias ca -keystore ca.jks -storepass changeme -keypass changeme > ca.pem
+    ```  
+    
+- [ ] Create key pairs with cert and key alias  
+    ```bash
+    keytool -genkeypair -keyalg EC -keysize 256 -alias cert -dname "CN=Root CA, OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB" -ext bc:ca:true,pathlen:1 -ext bc:c -ext eku=serverAuth,clientAuth,anyExtendedKeyUsage -ext ku=digitalSignature,keyCertSign,cRLSign -keystore root.jks -storepass changeme -keypass changeme
+     
+    keytool -genkeypair -keyalg EC -keysize 256 -alias key -dname "CN=Root CA, OU=Cordite Foundation Network, O=Cordite Foundation, L=London, ST=London, C=GB" -ext bc:ca:true,pathlen:1 -ext bc:c -ext eku=serverAuth,clientAuth,anyExtendedKeyUsage -ext ku=digitalSignature,keyCertSign,cRLSign -keystore root.jks -storepass changeme -keypass changeme
+    ```
+    
+- [ ] Create certificate signing request and import into keystore root.jks  
+    ```bash
+    keytool -certreq -alias cert -keystore root.jks -storepass changeme -keypass changeme | keytool -gencert -ext eku=serverAuth,clientAuth,anyExtendedKeyUsage -ext bc:ca:true,pathlen:1 -ext bc:c -ext ku=digitalSignature,keyCertSign,cRLSign -rfc -keystore ca.jks -alias ca -storepass changeme -keypass changeme > cert.pem
+      
+    keytool -certreq -alias key -keystore root.jks -storepass changeme -keypass changeme | keytool -gencert -ext eku=serverAuth,clientAuth,anyExtendedKeyUsage -ext bc:ca:true,pathlen:1 -ext bc:c -ext ku=digitalSignature,keyCertSign,cRLSign -rfc -keystore ca.jks -alias ca -storepass changeme -keypass changeme > key.pem
+        
+    keytool -importcert -noprompt -file cert.pem -alias cert -keystore root.jks -storepass changeme -keypass changeme
+    
+    keytool -importcert -noprompt -file key.pem -alias key -keystore root.jks -storepass changeme -keypass changeme
+    ```
+     `Note:   
+     importcert will show an error "Failed to establish chain from reply" as the issuer ca certificate is not in the keychain and this can be ignored`
+
+- [ ] If the generated root.jks is passed to NMS, we will get invalid signature so to resolve that issue, follow the below steps 
+    ```bash
+    mv root.jks old.jks
+      
+    keytool -importkeystore -srcstorepass changeme -srckeystore old.jks -deststorepass changeme -destkeystore old.p12 -deststoretype pkcs12 
+    
+    openssl pkcs12 -in old.p12 -out pemfile.pem -nodes -passin pass:changeme -passout pass:changeme
+    
+    openssl pkcs12 -export -in pemfile.pem -name cert -out cert.p12 -passin pass:changeme -passout pass:changeme
+    
+    openssl pkcs12 -export -in pemfile.pem -name key -out key.p12 -passin pass:changeme -passout pass:changeme
+    
+    keytool -importkeystore -srcstorepass changeme -srckeystore cert.p12 -deststorepass changeme -destkeystore root.jks -srcstoretype pkcs12 
+    
+    keytool -importkeystore -srcstorepass changeme -srckeystore key.p12 -deststorepass changeme -destkeystore root.jks -srcstoretype pkcs12 
+
+    ```
+- [ ] Check keystore 
+    ```bash
+    keytool -list -v -keystore root.jks -storepass changeme
+    ```
+#### Step 2: Pass root keystore and start NMS   
+    
+- [ ] Run NMS jar by passing path to root jks file using `root-ca-file-path` property  
+
+    ```bash
+    java -jar -Droot-ca-file-path="<path to the file>" network-map-service.jar
+    ```
+        
+- [ ] Run NMS via docker
+
+    ```bash
+    docker run -v "<path to the file>":/opt/cordite/certs -e NMS_ROOT_CA_FILE_PATH="<path to the file>" -p 8080:8080 cordite/network-map
+    ```   
+    
+    Sample:
+    ```bash
+    docker run -v ~/tmp/:/opt/cordite/certs/ -e NMS_ROOT_CA_FILE_PATH=/opt/cordite/certs/root.jks -p 8080:8080 cordite/network-map
+    ```
+    
+### 8. Delete all nodes
 
 - [ ] login to the NMS API and cache the token
 
@@ -310,7 +388,7 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
   Login to http://localhost:8080/ and delete the node by clicking on the trash icon.
   
   
-### 8. Delete validating notary  
+### 9. Delete validating notary  
   `nodeKey` used as data in the below api curl can be copied from the nodeinfo file name.   
   Sample nodeinfo file name is `nodeInfo-777DA369F066FE34BEDE3E6334A1006A4026A02DD76AFA798204BD015C9965DE`. nodeKey is the hash present in the file name.
 
@@ -327,7 +405,7 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
 
   ```    
   
-### 9. Delete non-validating notary
+### 10. Delete non-validating notary
     
 - [ ] login to the NMS API and cache the token
 
@@ -340,18 +418,3 @@ curl -X POST -H "Authorization: Bearer <jwt token received in Step 1>" -H "accep
   curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/admin/api/notaries/nonValidating -d 'nodeKey'
   ```
 
-### 7. How do I pass JKS files for NMS
-    
-    NMS doesn't support this feature now but it will be included in the future release.
-    
-    Reference: https://gitlab.com/cordite/network-map-service/issues/94
-    
-    ``` 
-    Workaround:
-   
-    Run NMS with Storage type as File. The filestore mode creates a directory for the keys and generates the keys if they don't exist. 
-    `Cert location: network-map-service/.db/certs`. Provide this directory and keys as input while starting NMS.
-    
-    Mount the correct cert directory while running NMS docker version.
-
-    ```

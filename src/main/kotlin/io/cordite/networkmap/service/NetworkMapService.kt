@@ -27,6 +27,9 @@ import io.cordite.networkmap.serialisation.NetworkParametersMixin
 import io.cordite.networkmap.serialisation.SerializationEnvironment
 import io.cordite.networkmap.serialisation.deserializeOnContext
 import io.cordite.networkmap.serialisation.serializeOnContext
+import io.cordite.networkmap.service.CertificateManager.Companion.ROOT_CERT_KEY
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage.Companion.DEFAULT_CHILD_DIR
+import io.cordite.networkmap.storage.file.CertificateAndKeyPairStorage.Companion.DEFAULT_JKS_FILE
 import io.cordite.networkmap.utils.*
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -50,6 +53,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.*
 import java.net.HttpURLConnection
@@ -98,9 +102,12 @@ class NetworkMapService(
   internal lateinit var processor: NetworkMapServiceProcessor
   private val authService = AuthService(nmsOptions.authProvider)
   internal val certificateManager = CertificateManager(vertx, storages.certAndKeys, certificateManagerConfig)
+  private val rootCAFilePath = nmsOptions.rootCAFilePath
   
   fun startup(): Future<Unit> {
     // N.B. Ordering is important here
+    if(!rootCAFilePath.isNullOrEmpty())
+      storeRootCertInStorage()
     return storages.setupStorage()
       .compose { startCertManager() }
       .compose { startProcessor() }
@@ -111,7 +118,12 @@ class NetworkMapService(
     processor.stop()
     return Future.succeededFuture(Unit)
   }
-  
+  private fun storeRootCertInStorage(){
+    val rootFile = File("${nmsOptions.dbDirectory}/$DEFAULT_CHILD_DIR/$ROOT_CERT_KEY")
+    rootFile.mkdirs()
+    val fileBuffer = vertx.fileSystem().readFileBlocking(nmsOptions.rootCAFilePath)
+    vertx.fileSystem().writeFileBlocking("${rootFile.absolutePath}/$DEFAULT_JKS_FILE", fileBuffer)
+  }
   private fun startupBraid(): Future<Unit> {
     try {
       val thisService = this

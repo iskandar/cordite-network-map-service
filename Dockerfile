@@ -25,6 +25,7 @@ ENV NMS_CERTMAN=true
 ENV NMS_PORT=8080
 ENV NMS_DB=db
 ENV NMS_MONGO_CONNECTION_STRING=mongodb://localhost:27017
+ENV NMS_ROOT_CA_FILE_PATH=certs/root.jks
 #ENV NMS_MONGOD_LOCATION=/opt/cordite/mongodb-linux-x86_64-amazon2-4.0.4/bin/mongod
 
 WORKDIR /opt/cordite
@@ -40,7 +41,7 @@ RUN yum install -y java-1.8.0-openjdk-headless shadow-utils.x86_64 \
 
 USER cordite
 
-VOLUME /opt/cordite/db /opt/cordite/logs
+VOLUME /opt/cordite/db /opt/cordite/logs /opt/cordite/certs
 
 COPY target/network-map-service/lib/ /opt/cordite/lib/
 COPY target/network-map-service/network-map-service.jar /opt/cordite/network-map-service.jar

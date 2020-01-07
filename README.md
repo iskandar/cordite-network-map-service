@@ -108,6 +108,7 @@ Java properties (pass with -D<propertyname>=<property-value>) and env variables:
 | web-root                      | NMS_WEB_ROOT                      | /                                                                                                  | for remapping the root url for all requests                                                                           |
 | nmp-path                      | NMS_NMP_PATH                      |                                                                                                    | path to network parameters file. sample file can be found in resources folder.                                        |
 | allowNodeKeyChange            | NMS_ALLOW_NODE_KEY_CHANGE         | false                                                                                              | to allow registration of a node with same legal name but different legal identity with NMS                            |
+| root-ca-file-path             | NMS_ROOT_CA_FILE_PATH             |                                                                                                    | path to root cert file                                                                                                   |
 
 ## Node re-registration with same legal name but different identity/key
 
