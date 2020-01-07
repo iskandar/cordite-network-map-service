@@ -15,20 +15,16 @@
  */
 package io.cordite.networkmap.service
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.cordite.networkmap.changeset.Change
 import io.cordite.networkmap.changeset.changeSet
 import io.cordite.networkmap.storage.file.NetworkParameterInputsStorage
 import io.cordite.networkmap.utils.*
 import io.vertx.core.Future
-import io.vertx.core.Future.failedFuture
-import io.vertx.core.Future.succeededFuture
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpHeaders
-import io.vertx.core.json.Json
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import net.corda.core.crypto.Crypto
@@ -69,8 +65,6 @@ import kotlin.test.*
 @RunWith(VertxUnitRunner::class)
 class NetworkMapServiceTest {
 	companion object {
-		private val log = contextLogger()
-		
 		init {
 			SerializationTestEnvironment.init()
 		}
@@ -130,12 +124,6 @@ class NetworkMapServiceTest {
 			"6AzrYrzpG5Iq+c0510nMTM8WAZaYEmKVs5Vy0KZ3O9j4zXE1dKcKGHuLHc5nXMss\n" +
 			"9/wwFw2whBqt8hqRSpfYAME=\n" +
 			"-----END PRIVATE KEY-----\n"
-		
-		/*@JvmStatic
-		@BeforeClass
-		fun beforeClass() {
-			SerializationTestEnvironment.init()
-		}*/
 	}
 	
 	@JvmField
@@ -199,7 +187,7 @@ class NetworkMapServiceTest {
 	}
 	
 	@Test
-	fun `that we can configure network map with default network map parameters`(context: TestContext) {
+	fun `that we can configure network map with default network map parameters`() {
 		val nmc = createNetworkMapClient()
 		val nmp = nmc.getNetworkParameters(nmc.getNetworkMap().payload.networkParameterHash).verified()
 		assertEquals(nmp.minimumPlatformVersion, 4)
@@ -269,7 +257,7 @@ class NetworkMapServiceTest {
 			if (err !is IOException) {
 				throw err
 			}
-			assertEquals("Response Code 500: node failed to registered because the following names have already been registered with different public keys O=Alice Corp, L=Madrid, C=ES", err.message)
+			assertEquals("Response Code 500: node failed to register because the following names have already been registered with different public keys O=Alice Corp, L=Madrid, C=ES", err.message)
 		}
 	}
 	
@@ -347,25 +335,6 @@ class NetworkMapServiceTest {
 			}
 			.end(payload)
 	}
-	/**
-	 * Network Map parameters update happens after a delay period. In order to test whether the update has happened,
-	 * we need to poll the current network parameters api. This method helps to retry calling the api until
-	 * we get the updated nms parameters
-	 */
-	private fun getNMSParametersWithRetry() =
-		vertx.retry(maxRetries = 5, sleepMillis = 1_000) {
-			client.futureGet("$DEFAULT_NETWORK_MAP_ROOT$ADMIN_REST_ROOT/network-parameters/current").map {
-				val updatedNetworkParameters = Json.decodeValue(it, object : TypeReference<NetworkParameters>() {})!!
-				if(currentNetworkParameters != updatedNetworkParameters){
-					log.info("succeeded in getting updated network parameters")
-					succeededFuture(updatedNetworkParameters)
-				}
-				else {
-					log.info("Still trying to get updated network parameters")
-					failedFuture("Network parameters is not updated")
-				}
-			}
-		}
 	
 	private fun getNetworkParties(nmc: NetworkMapClient) =
 		nmc.getNetworkMap().payload.nodeInfoHashes.map { nmc.getNodeInfo(it) }
@@ -407,12 +376,6 @@ class NetworkMapServiceTest {
 		return NodeInfoAndSigned(ni) { _, serialised ->
 			legalIdentity.keyPair.private.sign(serialised.bytes)
 		}
-	}
-	
-	fun waitForNMSUpdate(): Future<Long> {
-		val extraWait = Duration.ofSeconds(15) // to give a bit more time for CPU starved environments to catchup
-		val milliseconds = (NETWORK_PARAM_UPDATE_DELAY + CACHE_TIMEOUT + extraWait).toMillis()
-		return Future.future<Long>().apply { vertx.setTimer(milliseconds, this::complete) }
 	}
 }
 
