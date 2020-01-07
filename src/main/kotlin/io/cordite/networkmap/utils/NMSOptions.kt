@@ -48,8 +48,8 @@ class NMSOptions(val port: Int = 8080,
                  val mongodDatabase: String = MongoStorage.DEFAULT_DATABASE,
                  val rootCA : CertificateAndKeyPair = CertificateManager.createSelfSignedCertificateAndKeyPair(CertificateManagerConfig.DEFAULT_ROOT_NAME),
                  val networkParametersPath: String = "",
+                 val rootCAFilePath: String = "",
                  val allowNodeKeyChange: Boolean = false) : Options() {
-
   val authProvider : AuthProvider by lazy {
      when (user) {
        is InMemoryUser -> InMemoryAuthProvider(user)
@@ -91,6 +91,7 @@ class NMSOptions(val port: Int = 8080,
           CertificateManager.createSelfSignedCertificateAndKeyPair(CordaX500Name.parse(nmsOptionsParser.rootX509Name.stringValue))
         },
         networkParametersPath = nmsOptionsParser.networkParametersPath.stringValue,
+        rootCAFilePath = nmsOptionsParser.rootCAFilePath.stringValue,
         allowNodeKeyChange = nmsOptionsParser.allowNodeKeyChange.booleanValue
       )
     }
@@ -120,7 +121,8 @@ class NMSOptionsParser : Options() {
   val mongoConnectionOpt = addOption("mongo-connection-string", "embed", "MongoDB connection string. If set to `embed` will start its own mongo instance")
   val mongodLocationOpt = addOption("mongod-location", "", "optional location of pre-existing mongod server")
   val mongodDatabaseOpt = addOption("mongod-database", MongoStorage.DEFAULT_DATABASE, "name for mongo database")
-  val storageType = addOption("storage-type", StorageType.MONGO.name.toLowerCase(), "file | mongo")
+  val storageType = addOption("storage-type", StorageType.FILE.name.toLowerCase(), "file | mongo")
   val networkParametersPath =  addOption("nmp-path", "", "path to network map parameters file")
+  val rootCAFilePath = addOption("root-ca-file-path", "", "path to root cert file")
   val allowNodeKeyChange =  addOption("allow-node-key-change", "false", "to allow registration of a node with same legal name but different legal identity with NMS")
 }

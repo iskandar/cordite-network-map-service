@@ -56,7 +56,7 @@ import javax.ws.rs.core.HttpHeaders.CONTENT_TYPE
 
 class CertificateManager(
     private val vertx: Vertx,
-    private val storage: Storage<CertificateAndKeyPair>,
+    val storage: Storage<CertificateAndKeyPair>,
     private val config: CertificateManagerConfig) {
 
   companion object {
@@ -179,7 +179,9 @@ class CertificateManager(
   private fun ensureRootCertExists(): Future<Unit> {
     logger.info("checking for root certificate")
     return storage.get(ROOT_CERT_KEY)
-      .onSuccess { logger.info("root certificate found") }
+      .onSuccess {
+	      logger.info("root certificate found")
+      }
       .recover {
         // we couldn't find the cert - so generate one
         logger.warn("didn't find our root certificate")
