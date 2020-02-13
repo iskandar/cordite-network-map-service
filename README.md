@@ -20,7 +20,7 @@
 - [License](#license)
 
 ## Supported tags and respective Dockerfile links
-* `v0.5` `latest` - latest stable release
+* `v0.5.1` `latest` - latest stable release
 * `edge` - latest master build, unstable
 
 ## Design criteria and Features
