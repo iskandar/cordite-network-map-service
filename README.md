@@ -1,3 +1,5 @@
+> As the maintainers of Cordite, we value every community member's positive contribution of time and effort. We made a choice to open source the code making it free and available for everyone. As the use of Cordite grows so does the demands for support and maintenance. We have introduced a Cordite subscription to be able to provide support and maintenance to those organisations who are reliant on Cordite. The subscription will prioritise your issues and answer your calls for support. It will also accelerate the roadmap and delivery of your feature requests. If you are intending to use Cordite in production we would recommend your company evaluates the value of a Cordite subscription. If this is of interest to you then please drop an email to community@cordite.foundation 
+
 ## Contents
 
 - [Supported tags and respective Dockerfile links](#supported-tags-and-respective-dockerfile-links)
